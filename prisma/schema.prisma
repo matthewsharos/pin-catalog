@@ -1,0 +1,48 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Pin {
+  id                Int       @id @default(autoincrement())
+  pinId             String?   @unique  // Pin&Pop numerical ID
+  pinName           String
+  imageUrl          String?
+  series            String?
+  origin            String?
+  edition           String?
+  releaseDate       DateTime?
+  tags              String[]
+  isCollected       Boolean   @default(false)
+  isMystery         Boolean   @default(false)
+  isLimitedEdition  Boolean   @default(false)
+  rarity            String?
+  year              Int?
+  pinpopUrl         String?
+  userPhotos        UserPhoto[]
+  comments          Comment[]
+  isDeleted         Boolean   @default(false)
+  isWishlist        Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model UserPhoto {
+  id        Int      @id @default(autoincrement())
+  url       String
+  pin       Pin      @relation(fields: [pinId], references: [id])
+  pinId     Int
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  pin       Pin      @relation(fields: [pinId], references: [id])
+  pinId     Int
+  createdAt DateTime @default(now())
+}

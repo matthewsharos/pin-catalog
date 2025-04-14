@@ -1,0 +1,1 @@
+-- Baseline migration to match existing database state
