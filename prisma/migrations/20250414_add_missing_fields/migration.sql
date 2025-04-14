@@ -1,0 +1,4 @@
+-- Add missing fields to Pin table
+ALTER TABLE "Pin" ADD COLUMN IF NOT EXISTS "rarity" TEXT;
+ALTER TABLE "Pin" ADD COLUMN IF NOT EXISTS "year" INTEGER;
+ALTER TABLE "Pin" ADD COLUMN IF NOT EXISTS "pinpopUrl" TEXT;

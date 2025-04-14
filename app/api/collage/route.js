@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import * as htmlToImage from 'html-to-image';
-import fs from 'fs/promises';
-import path from 'path';
+import { put } from '@vercel/blob';
+import { createCanvas, loadImage } from 'canvas';
 
 const prisma = new PrismaClient();
 
@@ -37,32 +36,83 @@ export async function POST(request) {
 
     const pins = await prisma.pin.findMany({ where, take: 100 });
 
-    // Generate HTML for collage
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <body>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; padding: 20px; background: #f0f0f0;">
-          ${pins.map(pin => `<div style="text-align: center; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <img src="${pin.imageUrl}" style="width: 120px; height: 120px; object-fit: contain;" alt="${pin.pinName}" />
-            <p style="margin: 5px 0; font-size: 12px; font-family: Arial;">${pin.pinName}</p>
-          </div>`).join('')}
-        </div>
-      </body>
-      </html>
-    `;
+    // Generate a collage using canvas
+    const pinsPerRow = 5;
+    const pinSize = 150;
+    const padding = 10;
+    const rows = Math.ceil(pins.length / pinsPerRow);
+    
+    const canvasWidth = pinsPerRow * (pinSize + padding) + padding;
+    const canvasHeight = rows * (pinSize + padding) + padding;
+    
+    const canvas = createCanvas(canvasWidth, canvasHeight);
+    const ctx = canvas.getContext('2d');
+    
+    // Fill background
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    // Draw title
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText(`Pin Collage - ${pins.length} pins`, padding, padding + 20);
+    
+    // Draw pins
+    const drawPins = async () => {
+      for (let i = 0; i < pins.length; i++) {
+        const pin = pins[i];
+        const row = Math.floor(i / pinsPerRow);
+        const col = i % pinsPerRow;
+        
+        const x = col * (pinSize + padding) + padding;
+        const y = row * (pinSize + padding) + padding + 40; // Add space for title
+        
+        // Draw pin background
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x, y, pinSize, pinSize);
+        
+        try {
+          if (pin.imageUrl) {
+            const img = await loadImage(pin.imageUrl);
+            // Draw image maintaining aspect ratio
+            const aspectRatio = img.width / img.height;
+            let drawWidth, drawHeight;
+            
+            if (aspectRatio > 1) {
+              drawWidth = pinSize - 20;
+              drawHeight = drawWidth / aspectRatio;
+            } else {
+              drawHeight = pinSize - 20;
+              drawWidth = drawHeight * aspectRatio;
+            }
+            
+            const drawX = x + (pinSize - drawWidth) / 2;
+            const drawY = y + (pinSize - drawHeight) / 2;
+            
+            ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+          }
+        } catch (err) {
+          console.error(`Failed to load image for pin ${pin.pinId}:`, err);
+          // Draw placeholder
+          ctx.fillStyle = '#ddd';
+          ctx.fillRect(x + 10, y + 10, pinSize - 20, pinSize - 20);
+        }
+      }
+    };
+    
+    await drawPins();
+    
+    // Convert canvas to buffer
+    const buffer = canvas.toBuffer('image/png');
+    
+    // Upload to Vercel Blob Storage
+    const filename = `collage-${Date.now()}.png`;
+    const blob = await put(filename, buffer, {
+      access: 'public',
+      contentType: 'image/png'
+    });
 
-    // Save temporary HTML file
-    const tempDir = path.join(process.cwd(), 'tmp');
-    await fs.mkdir(tempDir, { recursive: true });
-    const tempFilePath = path.join(tempDir, 'collage.html');
-    await fs.writeFile(tempFilePath, htmlContent);
-
-    // Convert HTML to image (this would need a Vercel-compatible solution like a serverless function with puppeteer)
-    // For now, we'll simulate a URL to the collage
-    const collageUrl = `/tmp/collage-${Date.now()}.png`;
-
-    return NextResponse.json({ collageUrl });
+    return NextResponse.json({ collageUrl: blob.url });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to generate collage' }, { status: 500 });

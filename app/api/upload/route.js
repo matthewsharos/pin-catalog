@@ -1,5 +1,5 @@
-import { writeFile } from 'fs/promises';
 import { NextResponse } from 'next/server';
+import { put } from '@vercel/blob';
 import path from 'path';
 
 export async function POST(req) {
@@ -14,20 +14,18 @@ export async function POST(req) {
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
     // Create a unique filename
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-    const filename = `pin-photo-${uniqueSuffix}${path.extname(file.name)}`;
+    const filename = `pin-photo-${uniqueSuffix}${path.extname(file.name || '.jpg')}`;
     
-    // Save to public/uploads directory
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    await writeFile(path.join(uploadDir, filename), buffer);
+    // Upload to Vercel Blob Storage
+    const blob = await put(filename, file, {
+      access: 'public',
+    });
 
     // Return the URL for the uploaded image
     return NextResponse.json({ 
-      url: `/uploads/${filename}`
+      url: blob.url
     });
   } catch (error) {
     console.error('Error uploading file:', error);

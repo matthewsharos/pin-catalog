@@ -2,5 +2,9 @@
   "buildCommand": "prisma generate && next build",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "",
+    "BLOB_READ_WRITE_TOKEN": ""
+  }
 }
