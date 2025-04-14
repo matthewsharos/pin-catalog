@@ -13,7 +13,7 @@ import Link from 'next/link';
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || ''  // Empty string will use relative URLs
+  baseURL: ''  // Use relative URLs by default, which will work across all domains
 });
 
 const fetcher = async (url) => {
@@ -88,7 +88,13 @@ export default function PinCatalog() {
         showDeleted: showDeleted.toString(),
       });
 
+      // Debug logging
+      console.log('Fetching pins with URL:', `/api/pins?${params}`);
+      console.log('Current domain:', window.location.origin);
+      console.log('API base URL:', api.defaults.baseURL);
+      
       const response = await api.get(`/api/pins?${params}`);
+      console.log('API response:', response.status, response.statusText);
       const data = response.data;
       
       // Update pins without triggering loading state
@@ -109,6 +115,17 @@ export default function PinCatalog() {
       }
     } catch (error) {
       console.error('Error fetching pins:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method
+        }
+      });
       toast.error('Failed to load pins');
       // Even on error, we should stop showing the loading state
       setInitialLoad(false);
@@ -147,6 +164,17 @@ export default function PinCatalog() {
       toast.success('Pins marked as collected');
     } catch (error) {
       console.error('Error marking pins as collected:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method
+        }
+      });
       toast.error('Failed to mark pins as collected');
     }
   };
@@ -164,6 +192,17 @@ export default function PinCatalog() {
       toast.success('Pins deleted successfully');
     } catch (error) {
       console.error('Error deleting pins:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method
+        }
+      });
       toast.error('Failed to delete pins');
     }
   };
@@ -179,6 +218,17 @@ export default function PinCatalog() {
     } catch (error) {
       console.error('Full error object:', error);
       console.error('Error response:', error.response?.data);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method
+        }
+      });
       toast.error(`Failed to load pin details: ${error.response?.data?.details || error.message}`);
     }
   };
@@ -206,6 +256,17 @@ export default function PinCatalog() {
       toast.success('Pin updated');
     } catch (error) {
       console.error('Error updating pin:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method
+        }
+      });
       toast.error('Failed to update pin');
     }
   };
@@ -284,6 +345,17 @@ export default function PinCatalog() {
       setSelectedTag('');
     } catch (error) {
       console.error('Error applying tags:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method
+        }
+      });
       toast.error('Failed to apply tags');
     }
   };
@@ -310,6 +382,17 @@ export default function PinCatalog() {
       setIsCollectedBulkAction(null);
     } catch (error) {
       console.error('Error updating pins:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method
+        }
+      });
       toast.error('Failed to update pins');
     } finally {
       setLoading(false);
