@@ -123,25 +123,21 @@ export default function EditTagsModal({ pin, onClose, onSave }) {
         <div className="mb-6">
           <h3 className="text-lg font-medium text-white mb-2">Add Existing Tag</h3>
           <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-gray-700 rounded-lg">
-            {availableTags
-              .filter(tag => {
-                const tagName = typeof tag === 'object' ? tag.name : tag;
-                return !selectedTags.includes(tagName);
-              })
-              .map((tag, index) => (
+            {availableTags.map((tag, index) => (
                 <button
                   key={index}
                   onClick={() => handleAddTag(tag)}
-                  className="px-3 py-1 bg-gray-600 hover:bg-purple-700 rounded-full text-white transition-colors"
+                  className={`px-3 py-1 rounded-full text-white transition-colors ${
+                    selectedTags.includes(typeof tag === 'object' ? tag.name : tag)
+                      ? 'bg-purple-700 opacity-50'
+                      : 'bg-gray-600 hover:bg-purple-700'
+                  }`}
                 >
                   {typeof tag === 'object' ? tag.name : tag}
                 </button>
               ))}
-            {availableTags.filter(tag => {
-              const tagName = typeof tag === 'object' ? tag.name : tag;
-              return !selectedTags.includes(tagName);
-            }).length === 0 && (
-              <p className="text-gray-400">No more tags available</p>
+            {availableTags.length === 0 && (
+              <p className="text-gray-400">No tags available</p>
             )}
           </div>
         </div>
