@@ -503,7 +503,7 @@ export default function PinCatalog() {
           </div>
 
           {/* Row 2: Status Buttons */}
-          <div className="flex bg-gray-800 rounded-lg p-0.5 space-x-0.5">
+          <div className="inline-flex bg-gray-800 rounded-lg p-0.5 space-x-0.5">
             <button
               onClick={(e) => handleStatusFilterChange('all', true, e)}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
