@@ -30,15 +30,9 @@ export default function PinCatalog() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortField, setSortField] = useState('updatedAt');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [selectedPins, setSelectedPins] = useState([]);
   const [filterYears, setFilterYears] = useState([]);
   const [filterCategories, setFilterCategories] = useState([]);
   const [filterOrigin, setFilterOrigin] = useState('');
-  const [statusFilters, setStatusFilters] = useState({
-    collected: false,
-    uncollected: false,
-    wishlist: false
-  });
   const [filterOptions, setFilterOptions] = useState({
     years: [],
     series: [],
@@ -51,7 +45,6 @@ export default function PinCatalog() {
   const [showTagModal, setShowTagModal] = useState(false);
   const [selectedTag, setSelectedTag] = useState('');
   const [editingTags, setEditingTags] = useState(null);
-  const [isCollectedBulkAction, setIsCollectedBulkAction] = useState(null);
 
   const searchInputRef = useRef(null);
   const contentRef = useRef(null);
@@ -85,9 +78,6 @@ export default function PinCatalog() {
         year: filterYears.join(','),
         category: filterCategories.join(','),
         origin: filterOrigin,
-        collected: statusFilters.collected ? 'true' : '',
-        wishlist: statusFilters.wishlist ? 'true' : '',
-        uncollected: statusFilters.uncollected ? 'true' : '',
       });
 
       // Debug logging
@@ -134,7 +124,7 @@ export default function PinCatalog() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, sortField, sortOrder, filterYears, filterCategories, filterOrigin, statusFilters, initialLoad]);
+  }, [page, debouncedSearch, sortField, sortOrder, filterYears, filterCategories, filterOrigin, initialLoad]);
 
   useEffect(() => {
     fetchPins();
@@ -150,22 +140,14 @@ export default function PinCatalog() {
     setPage(1);
   };
 
-  const handleCheckboxChange = (pinId) => {
-    setSelectedPins(prev => 
-      prev.includes(pinId) 
-        ? prev.filter(id => id !== pinId) 
-        : [...prev, pinId]
-    );
-  };
-
-  const handleMarkCollected = async () => {
+  const handleEditPin = async (pinId) => {
     try {
-      await api.post('/api/pins/bulk-collect', { pinIds: selectedPins });
-      fetchPins();
-      setSelectedPins([]);
-      toast.success('Pins marked as collected');
+      console.log('Pin object:', pins.find(p => p.id === pinId));
+      const response = await api.get(`/api/pins/${pinId}`);
+      setEditingPin(response.data);
+      setShowEditModal(true);
     } catch (error) {
-      console.error('Error marking pins as collected:', error);
+      console.error('Error fetching pin details:', error);
       console.error('Error details:', {
         message: error.message,
         status: error.response?.status,
@@ -177,20 +159,11 @@ export default function PinCatalog() {
           method: error.config?.method
         }
       });
-      toast.error('Failed to mark pins as collected');
+      toast.error('Failed to fetch pin details');
     }
   };
 
-  const handleUpdatePinStatus = async (pinIds, status) => {
-    if (!Array.isArray(pinIds)) {
-      pinIds = [pinIds]; // Convert single ID to array
-    }
-    
-    if (pinIds.length === 0) {
-      toast.error('No pins selected');
-      return;
-    }
-
+  const handleUpdatePinStatus = async (pinId, status) => {
     try {
       setLoading(true);
       
@@ -220,79 +193,20 @@ export default function PinCatalog() {
           isDeleted: false,
           isWishlist: false
         };
-      } else if (status === 'delete') {
-        updates = {
-          isCollected: false,
-          isDeleted: true,
-          isWishlist: false
-        };
       }
       
       const response = await api.post('/api/pins/bulk-update', {
-        pinIds: pinIds,
+        pinIds: [pinId],
         updates: updates
       });
 
-      toast.success(`Updated ${pinIds.length} ${pinIds.length === 1 ? 'pin' : 'pins'}`);
-      // Clear selection after successful update
-      setSelectedPins([]);
+      toast.success('Pin updated');
       fetchPins();
     } catch (error) {
       console.error('Error updating pin status:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          method: error.config?.method
-        }
-      });
-      toast.error('Failed to update pin status');
+      toast.error('Failed to update pin');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleEditPin = async (pinId) => {
-    try {
-      console.log('Pin object:', pins.find(p => p.id === pinId));
-      console.log('Making API request to:', `/api/pins/${pinId}`);
-      const response = await api.get(`/api/pins/${pinId}`);
-      console.log('API Response:', response.data);
-      setEditingPin(response.data);
-      setShowEditModal(true);
-    } catch (error) {
-      console.error('Full error object:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          method: error.config?.method
-        }
-      });
-      toast.error(`Failed to load pin details: ${error.response?.data?.details || error.message}`);
-    }
-  };
-
-  const handleNextPin = () => {
-    const currentIndex = pins.findIndex(p => p.id === editingPin.id);
-    if (currentIndex < pins.length - 1) {
-      handleEditPin(pins[currentIndex + 1].id);
-    }
-  };
-
-  const handlePrevPin = () => {
-    const currentIndex = pins.findIndex(p => p.id === editingPin.id);
-    if (currentIndex > 0) {
-      handleEditPin(pins[currentIndex - 1].id);
     }
   };
 
@@ -356,11 +270,6 @@ export default function PinCatalog() {
     setFilterYears([]);
     setFilterCategories([]);
     setFilterOrigin('');
-    setStatusFilters({
-      collected: false,
-      uncollected: false,
-      wishlist: false
-    });
     setPage(1);
     // Restore focus to search input after clearing
     if (searchInputRef.current) {
@@ -371,130 +280,6 @@ export default function PinCatalog() {
   const handleFilterChange = (setter, value) => {
     setter(value);
     setPage(1); // Reset to first page when filters change
-  };
-
-  const handleStatusFilterChange = (field, value) => {
-    setStatusFilters(prev => ({ ...prev, [field]: value }));
-    setPage(1); // Reset to first page when filters change
-  };
-
-  const handleApplyTags = async () => {
-    if (!selectedPins.length || !selectedTag) {
-      toast.error('Please select pins and a tag');
-      return;
-    }
-
-    try {
-      const response = await axios.post('/api/pins/bulk-update', {
-        pinIds: selectedPins,
-        updates: {
-          tags: [selectedTag]
-        }
-      });
-
-      toast.success(`Added tag to ${selectedPins.length} pins`);
-      // Clear selection after successful update
-      setSelectedPins([]);
-      fetchPins();
-      setSelectedTag('');
-    } catch (error) {
-      console.error('Error applying tags:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          method: error.config?.method
-        }
-      });
-      toast.error('Failed to apply tags');
-    }
-  };
-
-  const handleBulkCollectedUpdate = async (isCollected) => {
-    if (!selectedPins.length) {
-      toast.error('Please select pins first');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await axios.post('/api/pins/bulk-update', {
-        pinIds: selectedPins,
-        updates: {
-          isCollected
-        }
-      });
-
-      toast.success(`Updated ${selectedPins.length} pins`);
-      // Clear selection after successful update
-      setSelectedPins([]);
-      fetchPins();
-      setIsCollectedBulkAction(null);
-    } catch (error) {
-      console.error('Error updating pins:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          method: error.config?.method
-        }
-      });
-      toast.error('Failed to update pins');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBulkAction = async (action) => {
-    if (selectedPins.length === 0) {
-      toast.error('No pins selected');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      let updates = {};
-
-      switch (action) {
-        case 'collected':
-          updates = { isCollected: true, isDeleted: false, isWishlist: false };
-          break;
-        case 'uncollected':
-          updates = { isCollected: false, isDeleted: true, isWishlist: false };
-          break;
-        case 'wishlist':
-          updates = { isCollected: false, isDeleted: true, isWishlist: true };
-          break;
-        case 'uncategorize':
-          updates = { isCollected: false, isDeleted: false, isWishlist: false };
-          break;
-        case 'delete':
-          updates = { isCollected: false, isDeleted: true, isWishlist: false };
-          break;
-      }
-
-      const response = await api.post('/api/pins/bulk-update', {
-        pinIds: selectedPins,
-        updates
-      });
-
-      toast.success(`Updated ${selectedPins.length} pins`);
-      setSelectedPins([]);
-      fetchPins();
-    } catch (error) {
-      console.error('Error performing bulk action:', error);
-      toast.error('Failed to update pins');
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Only show full-page loading on initial app load
@@ -579,61 +364,6 @@ export default function PinCatalog() {
               >
                 Clear Search
               </button>
-              
-              {/* Status Filter Buttons */}
-              <div className="flex items-center space-x-2">
-                <div className="flex bg-gray-800 rounded-lg p-1 space-x-1">
-                  <button
-                    onClick={() => {
-                      setStatusFilters({
-                        collected: false,
-                        uncollected: false,
-                        wishlist: false
-                      });
-                    }}
-                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                      !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    Uncategorized
-                  </button>
-                  <button
-                    onClick={() => handleStatusFilterChange('collected', !statusFilters.collected)}
-                    className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
-                      statusFilters.collected
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    <FaCheck className={`mr-1 ${statusFilters.collected ? 'opacity-100' : 'opacity-50'}`} />
-                    Collected
-                  </button>
-                  <button
-                    onClick={() => handleStatusFilterChange('uncollected', !statusFilters.uncollected)}
-                    className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
-                      statusFilters.uncollected
-                        ? 'bg-yellow-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    <FaTimes className={`mr-1 ${statusFilters.uncollected ? 'opacity-100' : 'opacity-50'}`} />
-                    Uncollected
-                  </button>
-                  <button
-                    onClick={() => handleStatusFilterChange('wishlist', !statusFilters.wishlist)}
-                    className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
-                      statusFilters.wishlist
-                        ? 'bg-blue-400 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    <span className={`mr-1 ${statusFilters.wishlist ? 'opacity-100' : 'opacity-50'}`}>🙏</span>
-                    Wishlist
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -772,52 +502,6 @@ export default function PinCatalog() {
         </div>
       </div>
 
-      {/* Bulk Actions */}
-      {selectedPins.length > 0 && (
-        <div className="mb-4 p-4 bg-gray-800 rounded-lg shadow-md">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div className="mb-2 md:mb-0">
-              <span className="text-white">{selectedPins.length} pins selected</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => handleUpdatePinStatus(selectedPins, 'collected')}
-                className="px-2 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
-              >
-                <FaCheck className="mr-1" /> Collected
-              </button>
-              
-              <button
-                onClick={() => handleUpdatePinStatus(selectedPins, 'uncollected')}
-                className="px-2 py-1 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center"
-              >
-                <FaTimes className="mr-1" /> Uncollected
-              </button>
-              
-              <button
-                onClick={() => handleUpdatePinStatus(selectedPins, 'wishlist')}
-                className="px-2 py-1 text-sm bg-blue-400 text-white rounded-lg hover:bg-blue-500 transition-colors flex items-center"
-              >
-                <span className="mr-1">🙏</span> Wishlist
-              </button>
-              
-              <button
-                onClick={() => handleUpdatePinStatus(selectedPins, 'uncategorize')}
-                className="px-2 py-1 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center"
-              >
-                <FaQuestionCircle className="mr-1" /> Uncategorize
-              </button>
-              
-              <button
-                onClick={() => handleUpdatePinStatus(selectedPins, 'delete')}
-                className="px-2 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
-              >
-                <FaTrash className="mr-1" /> Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       <div className="bg-gray-800 rounded-lg overflow-hidden">
         {loading && !initialLoad ? (
           <div className="flex justify-center items-center py-8">
@@ -828,49 +512,26 @@ export default function PinCatalog() {
           <>
             {pins.length > 0 ? (
               <div>
-                {/* Select All Checkbox */}
-                <div className="p-4 border-b border-gray-700 flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedPins.length > 0 && selectedPins.length === pins.length}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedPins(pins.map(pin => pin.id));
-                      } else {
-                        setSelectedPins([]);
-                      }
-                    }}
-                    className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500 mr-2"
-                  />
-                  <span className="text-gray-300 text-sm">
-                    {selectedPins.length === 0 
-                      ? "Select All" 
-                      : selectedPins.length === pins.length 
-                        ? "Deselect All" 
-                        : `${selectedPins.length} selected`}
-                  </span>
-                  
-                  {/* Sort Controls */}
-                  <div className="ml-auto flex items-center space-x-3">
-                    <div className="flex items-center text-sm text-gray-400">
-                      <span className="mr-2">Sort by:</span>
-                      <select 
-                        value={`${sortField}-${sortOrder}`}
-                        onChange={(e) => {
-                          const [field, order] = e.target.value.split('-');
-                          setSortField(field);
-                          setSortOrder(order);
-                        }}
-                        className="bg-gray-700 border-gray-600 rounded text-white text-sm p-1"
-                      >
-                        <option value="updatedAt-desc">Recently Updated</option>
-                        <option value="releaseDate-desc">Newest First</option>
-                        <option value="releaseDate-asc">Oldest First</option>
-                        <option value="pinName-asc">Name (A-Z)</option>
-                        <option value="pinName-desc">Name (Z-A)</option>
-                        <option value="series-asc">Series (A-Z)</option>
-                      </select>
-                    </div>
+                {/* Sort Controls */}
+                <div className="p-4 border-b border-gray-700 flex items-center justify-end">
+                  <div className="flex items-center text-sm text-gray-400">
+                    <span className="mr-2">Sort by:</span>
+                    <select 
+                      value={`${sortField}-${sortOrder}`}
+                      onChange={(e) => {
+                        const [field, order] = e.target.value.split('-');
+                        setSortField(field);
+                        setSortOrder(order);
+                      }}
+                      className="bg-gray-700 border-gray-600 rounded text-white text-sm p-1"
+                    >
+                      <option value="updatedAt-desc">Recently Updated</option>
+                      <option value="releaseDate-desc">Newest First</option>
+                      <option value="releaseDate-asc">Oldest First</option>
+                      <option value="pinName-asc">Name (A-Z)</option>
+                      <option value="pinName-desc">Name (Z-A)</option>
+                      <option value="series-asc">Series (A-Z)</option>
+                    </select>
                   </div>
                 </div>
                 
@@ -880,8 +541,6 @@ export default function PinCatalog() {
                     <div 
                       key={pin.id} 
                       className={`bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg ${
-                        selectedPins.includes(pin.id) ? 'ring-2 ring-blue-500' : ''
-                      } ${
                         pin.isCollected && !pin.isDeleted ? 'border-t-2 border-green-500' : ''
                       } ${
                         pin.isDeleted && pin.isWishlist ? 'border-t-2 border-blue-400' : ''
@@ -889,16 +548,6 @@ export default function PinCatalog() {
                         pin.isDeleted && !pin.isWishlist ? 'border-t-2 border-yellow-500' : ''
                       }`}
                     >
-                      {/* Card Header - Checkbox */}
-                      <div className="absolute top-2 left-2 z-10">
-                        <input
-                          type="checkbox"
-                          checked={selectedPins.includes(pin.id)}
-                          onChange={() => handleCheckboxChange(pin.id)}
-                          className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                        />
-                      </div>
-                      
                       {/* Pin Image */}
                       <div 
                         className="relative aspect-square bg-gray-900 cursor-pointer overflow-hidden"
@@ -1103,8 +752,6 @@ export default function PinCatalog() {
             setEditingPin(null);
           }}
           onSave={handleUpdatePin}
-          onNext={pins.findIndex(p => p.id === editingPin.id) < pins.length - 1 ? handleNextPin : null}
-          onPrev={pins.findIndex(p => p.id === editingPin.id) > 0 ? handlePrevPin : null}
         />
       )}
       {showAddPinModal && (
