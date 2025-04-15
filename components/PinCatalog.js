@@ -856,24 +856,7 @@ export default function PinCatalog() {
                         </td>
                         <td className="p-2 text-center">
                           <div className="flex justify-center">
-                            {pin.isCollected && (
-                              pin.isDeleted ? (
-                                <span className="text-blue-400" title="In Wishlist">🙏</span>
-                              ) : (
-                                <FaCheck className="text-green-500" title="Collected" />
-                              )
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2 text-center">
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            <button
-                              onClick={() => handleEditPin(pin.id)}
-                              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center"
-                            >
-                              <FaEdit className="mr-1" /> Edit
-                            </button>
-                            {showDeleted ? (
+                            {pin.isDeleted ? (
                               <button
                                 onClick={() => handleRestorePins([pin.id])}
                                 className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
@@ -881,20 +864,11 @@ export default function PinCatalog() {
                                 <FaCheck className="mr-1" /> Restore
                               </button>
                             ) : (
-                              <>
-                                <button
-                                  onClick={() => handleToggleCollected(pin.id, !pin.isCollected)}
-                                  className={`px-2 py-1 text-xs ${pin.isCollected ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white rounded transition-colors flex items-center`}
-                                >
-                                  {pin.isCollected ? <FaCheck className="mr-1" /> : <FaTimes className="mr-1" />} {pin.isCollected ? 'Collected' : 'Not Collected'}
-                                </button>
-                                <button
-                                  onClick={() => handleDeletePin(pin.id)}
-                                  className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center"
-                                >
-                                  <FaTrash className="mr-1" /> Delete
-                                </button>
-                              </>
+                              pin.isCollected ? (
+                                <FaCheck className="text-green-500" title="Collected" />
+                              ) : (
+                                <FaTimes className="text-yellow-500" title="Not Collected" />
+                              )
                             )}
                           </div>
                         </td>
@@ -930,8 +904,8 @@ export default function PinCatalog() {
                     <div 
                       key={pin.id} 
                       className={`bg-gray-800 rounded-lg p-3 shadow ${
-                        pin.isCollected ? 'border-l-4 border-green-500' : ''
-                      }`}
+                        pin.isCollected && !pin.isDeleted ? 'border-l-4 border-green-500' : ''
+                      } ${pin.isDeleted ? 'border-l-4 border-red-500' : ''}`}
                     >
                       <div className="flex items-start space-x-3">
                         <div className="flex-shrink-0">
@@ -981,37 +955,16 @@ export default function PinCatalog() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        <button
-                          onClick={() => handleEditPin(pin.id)}
-                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center"
-                        >
-                          <FaEdit className="mr-1" /> Edit
-                        </button>
-                        {showDeleted ? (
+                      {pin.isDeleted && (
+                        <div className="flex justify-center mt-2">
                           <button
                             onClick={() => handleRestorePins([pin.id])}
                             className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
                           >
                             <FaCheck className="mr-1" /> Restore
                           </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleToggleCollected(pin.id, !pin.isCollected)}
-                              className={`px-2 py-1 text-xs ${pin.isCollected ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white rounded transition-colors flex items-center`}
-                            >
-                              {pin.isCollected ? <FaCheck className="mr-1" /> : <FaTimes className="mr-1" />} {pin.isCollected ? 'Collected' : 'Not Collected'}
-                            </button>
-                            <button
-                              onClick={() => handleDeletePin(pin.id)}
-                              className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center"
-                            >
-                              <FaTrash className="mr-1" /> Delete
-                            </button>
-                          </>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
