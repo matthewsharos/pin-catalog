@@ -10,6 +10,10 @@ import AddPinModal from './AddPinModal';
 import EditTagsModal from './EditTagsModal';
 import Link from 'next/link';
 import YearFilterModal from './YearFilterModal';
+import { Dancing_Script } from 'next/font/google';
+import SmokeEffect from './SmokeEffect';
+
+const dancingScript = Dancing_Script({ subsets: ['latin'] });
 
 // Create axios instance with base URL
 const api = axios.create({
@@ -55,7 +59,9 @@ export default function PinCatalog() {
   const [showYearFilterModal, setShowYearFilterModal] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [smokeEffects, setSmokeEffects] = useState([]);
   const yearButtonRef = useRef(null);
+  const sortButtonRef = useRef(null);
 
   const searchInputRef = useRef(null);
   const contentRef = useRef(null);
@@ -194,73 +200,101 @@ export default function PinCatalog() {
     }
   };
 
-  const handleUpdatePinStatus = async (pinId, status) => {
+  const handleUpdatePinStatus = async (pinId, newStatus) => {
     try {
-      setLoading(true);
-      
+      // Get pin position before updating
+      const pinElement = document.querySelector(`[data-pin-id="${pinId}"]`);
+      const rect = pinElement?.getBoundingClientRect();
+      const position = rect ? {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      } : null;
+
+      // Get color based on status
+      let smokeColor;
+      if (newStatus === 'collected') {
+        smokeColor = 'green';
+      } else if (newStatus === 'uncollected') {
+        smokeColor = 'brown';
+      } else if (newStatus === 'wishlist') {
+        smokeColor = 'blue';
+      }
+
+      // Add smoke effect
+      if (position && smokeColor) {
+        const effectId = Date.now();
+        setSmokeEffects(prev => [...prev, {
+          id: effectId,
+          color: smokeColor,
+          position
+        }]);
+      }
+
       let updates = {};
       
-      if (status === 'collected') {
+      if (newStatus === 'collected') {
         updates = {
           isCollected: true,
           isDeleted: false,
           isWishlist: false
         };
-      } else if (status === 'uncollected') {
+      } else if (newStatus === 'uncollected') {
         updates = {
           isCollected: false,
           isDeleted: true,
           isWishlist: false
         };
-      } else if (status === 'wishlist') {
+      } else if (newStatus === 'wishlist') {
         updates = {
           isCollected: false,
           isDeleted: true,
           isWishlist: true
         };
-      } else if (status === 'uncategorize') {
+      } else if (newStatus === 'uncategorize') {
         updates = {
           isCollected: false,
           isDeleted: false,
           isWishlist: false
         };
       }
-      
-      const response = await api.post('/api/pins/bulk-update', {
+
+      await api.post('/api/pins/bulk-update', {
         pinIds: [pinId],
         updates: updates
       });
 
+      // Remove pin from list
+      setPins(prev => prev.filter(p => p.id !== pinId));
+      
       toast.success('Pin updated');
-      fetchPins();
     } catch (error) {
       console.error('Error updating pin status:', error);
-      toast.error('Failed to update pin');
-    } finally {
-      setLoading(false);
+      toast.error('Failed to update pin status');
     }
   };
 
-  const handleUpdatePin = async (pin) => {
+  const handleUpdatePin = async (updatedPin) => {
     try {
-      await api.put(`/api/pins/${pin.id}`, pin);
-      fetchPins();
-      setShowEditModal(false);
-      setEditingPin(null);
-      toast.success('Pin updated');
+      const response = await api.put(`/api/pins/${updatedPin.id}`, updatedPin);
+      const savedPin = response.data;
+      
+      // Remove the pin from the current view if its status changed
+      if (savedPin.status !== updatedPin.status) {
+        setPins(prev => prev.filter(p => p.id !== savedPin.id));
+        setTotal(prev => prev - 1);
+      } else {
+        // Otherwise just update it
+        setPins(prev => prev.map(p => p.id === savedPin.id ? savedPin : p));
+      }
+      
+      // Only close modal if it's not a status-only update
+      if (!('status' in updatedPin && Object.keys(updatedPin).length === 2)) {
+        setShowEditModal(false);
+      }
+      
+      toast.success('Pin updated successfully');
     } catch (error) {
       console.error('Error updating pin:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          method: error.config?.method
-        }
-      });
       toast.error('Failed to update pin');
     }
   };
@@ -383,11 +417,14 @@ export default function PinCatalog() {
     setPage(1);
   };
 
-  // Close year dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (yearButtonRef.current && !yearButtonRef.current.contains(event.target)) {
         setShowYearDropdown(false);
+      }
+      if (sortButtonRef.current && !sortButtonRef.current.contains(event.target)) {
+        setShowSortMenu(false);
       }
     };
 
@@ -408,42 +445,55 @@ export default function PinCatalog() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800 text-white">
+    <div className={`min-h-screen bg-gray-800 text-white ${dancingScript.variable}`}>
       {/* Sticky Header Navigation */}
       <div className="sticky top-0 z-50 bg-gray-900 shadow-lg">
         {/* Row 1: Logo, Title, Pin Count, Action Buttons */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-          <div className="flex items-center space-x-4">
-            <img src="/icon.png" alt="Pin Icon" className="w-8 h-8" />
-            <h1 className="text-2xl font-bold text-white">
-              Sharos Pin Catalog
-            </h1>
-            <span className="text-gray-300 text-sm">
-              {total} {total === 1 ? 'pin' : 'pins'} total
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowTagModal(true)}
-              className="h-7 px-2 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
-            >
-              <FaTags className="mr-1.5 text-xs" />
-              Tags
-            </button>
-            <button
-              onClick={() => setShowAddPinModal(true)}
-              className="h-7 px-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-            >
-              <FaPlus className="mr-1 text-xs" />
-              Pin
-            </button>
+        <div className="px-2 py-1.5">
+          <div className="flex items-center justify-between">
+            {/* Logo and Title */}
+            <div className="flex items-center space-x-2">
+              <img
+                src="/icon.png"
+                alt="Pin Icon"
+                className="w-12 h-12 sm:w-16 sm:h-16"
+              />
+              <div className="flex items-center space-x-3">
+                <h1 className={`${dancingScript.className} text-2xl sm:text-3xl font-medium`}>
+                  <span className="hidden sm:inline">Sharos Pin </span>
+                  <span>Catalog</span>
+                </h1>
+                <div className="text-gray-400 text-sm">
+                  {total.toLocaleString()} pins
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-2">
+              <Link
+                href="/tags"
+                className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                title="Manage Tags"
+              >
+                <FaTags />
+                <span>Tags</span>
+              </Link>
+              <button
+                onClick={() => setShowAddPinModal(true)}
+                className="h-7 px-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+              >
+                <FaPlus className="mr-1 text-xs" />
+                Pin
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Search and Filter Section */}
-        <div className="space-y-2 px-4 py-2">
+        <div className="px-2 pb-3">
           {/* Row 1: Search, Clear, Year */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 mb-2">
             <div className="relative flex-grow">
               <input
                 type="text"
@@ -554,10 +604,10 @@ export default function PinCatalog() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="px-4 py-6">
         {/* Sort Controls */}
         <div className="flex justify-end mb-4">
-          <div className="relative">
+          <div className="relative" ref={sortButtonRef}>
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
               className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
@@ -618,6 +668,7 @@ export default function PinCatalog() {
           {pins.map((pin) => (
             <div 
               key={pin.id} 
+              data-pin-id={pin.id}
               className={`bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg ${
                 pin.isCollected && !pin.isDeleted ? 'border-t-2 border-green-500' : ''
               } ${
@@ -685,7 +736,7 @@ export default function PinCatalog() {
                           className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
                           title="Mark as Uncollected"
                         >
-                          <FaTimes className="text-sm" />
+                          <FaTimes className="mr-1 text-sm" />
                         </button>
                       </>
                     ) : (
@@ -760,34 +811,63 @@ export default function PinCatalog() {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col md:flex-row justify-between items-center text-gray-300">
-        <div className="flex items-center space-x-4 mb-4 md:mb-0">
-          <button
-            onClick={() => setPage(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
-          <span>
-            Page {page} of {Math.ceil(total / 100)}
-          </span>
-          <button
-            onClick={() => setPage(Math.min(Math.ceil(total / 100), page + 1))}
-            disabled={page >= Math.ceil(total / 100)}
-            className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
+      {/* Pagination */}
+      {Math.ceil(total / 100) > 1 && (
+        <div className="mt-4 flex justify-center">
+          <div className="flex items-center space-x-3 text-sm text-gray-300">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-2 py-0.5 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+            >
+              Previous
+            </button>
+            <span className="text-xs">
+              Page {page} of {Math.ceil(total / 100)}
+            </span>
+            <button
+              onClick={() => setPage(Math.min(Math.ceil(total / 100), page + 1))}
+              disabled={page >= Math.ceil(total / 100)}
+              className="px-2 py-0.5 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+            >
+              Next
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {showEditModal && editingPin && (
         <EditPin
           pin={editingPin}
           isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingPin(null);
+          }}
           onSave={handleUpdatePin}
+          onStatusChange={() => {
+            fetchPins();
+          }}
+          onEditTags={(pin) => {
+            setEditingTags(pin);
+            setShowTagModal(true);
+          }}
+          onNext={() => {
+            const currentIndex = pins.findIndex(p => p.id === editingPin.id);
+            if (currentIndex < pins.length - 1) {
+              setEditingPin(pins[currentIndex + 1]);
+            } else if (currentIndex === pins.length - 1) {
+              // If we're on the last pin, close the modal
+              setShowEditModal(false);
+              setEditingPin(null);
+            }
+          }}
+          onPrev={() => {
+            const currentIndex = pins.findIndex(p => p.id === editingPin.id);
+            if (currentIndex > 0) {
+              setEditingPin(pins[currentIndex - 1]);
+            }
+          }}
         />
       )}
       
@@ -820,6 +900,18 @@ export default function PinCatalog() {
           onSave={handleTagsUpdated}
         />
       )}
+
+      {/* Smoke Effects */}
+      {smokeEffects.map(effect => (
+        <SmokeEffect
+          key={effect.id}
+          color={effect.color}
+          position={effect.position}
+          onComplete={() => {
+            setSmokeEffects(prev => prev.filter(e => e.id !== effect.id));
+          }}
+        />
+      ))}
     </div>
   );
 }

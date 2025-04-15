@@ -1,5 +1,6 @@
 import { Inter } from 'next/font/google'
 import { Pacifico } from 'next/font/google'
+import { Dancing_Script } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 
@@ -10,6 +11,7 @@ const pacifico = Pacifico({
   display: 'swap',
   variable: '--font-pacifico',
 })
+const dancingScript = Dancing_Script({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'Sharos Pin Catalog',

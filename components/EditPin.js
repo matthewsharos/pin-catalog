@@ -1,41 +1,44 @@
 "use client";
 
-import { useState } from 'react';
-import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLeft } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
+import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLeft, FaTags } from 'react-icons/fa';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import SmokeEffect from './SmokeEffect';
 
-export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev }) {
+export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onStatusChange, onEditTags }) {
   const [formData, setFormData] = useState({
     pinName: pin?.pinName || '',
     series: pin?.series || '',
     origin: pin?.origin || '',
-    edition: pin?.edition || '',
     releaseDate: pin?.releaseDate ? new Date(pin.releaseDate).toISOString().split('T')[0] : '',
-    isCollected: pin?.isCollected || false,
-    isMystery: pin?.isMystery || false,
-    isLimitedEdition: pin?.isLimitedEdition || false,
+    status: pin?.status || 'all',
     comment: '',
-    userImage: null
+    userImage: null,
+    isLimitedEdition: pin?.isLimitedEdition || false
   });
 
-  const [userImages, setUserImages] = useState(pin?.userPhotos || []);
   const [comments, setComments] = useState(pin?.comments || []);
+  const [smokeEffects, setSmokeEffects] = useState([]);
+
+  // Update form data when pin changes
+  useEffect(() => {
+    setFormData({
+      pinName: pin?.pinName || '',
+      series: pin?.series || '',
+      origin: pin?.origin || '',
+      releaseDate: pin?.releaseDate ? new Date(pin.releaseDate).toISOString().split('T')[0] : '',
+      status: pin?.status || 'all',
+      comment: '',
+      userImage: null,
+      isLimitedEdition: pin?.isLimitedEdition || false
+    });
+    setComments(pin?.comments || []);
+  }, [pin]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
-    // Handle edition as integer
-    if (name === 'edition') {
-      // Only allow numeric input for edition
-      const numericValue = value.replace(/\D/g, '');
-      setFormData(prev => ({
-        ...prev,
-        [name]: numericValue
-      }));
-      return;
-    }
     
     setFormData(prev => ({
       ...prev,
@@ -51,9 +54,8 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev }) {
         formData.append('image', file);
         const response = await axios.post('/api/upload', formData);
         
-        // Add the new image to the userImages state
-        const newImage = { url: response.data.url };
-        setUserImages(prev => [...prev, newImage]);
+        // Update the pin image
+        setFormData(prev => ({ ...prev, userImage: response.data.url }));
         
         toast.success('Image uploaded successfully');
       } catch (error) {
@@ -96,22 +98,91 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev }) {
         pinName: formData.pinName,
         series: formData.series,
         origin: formData.origin,
-        edition: formData.edition,
         releaseDate: formData.releaseDate || null,
-        isCollected: formData.isCollected,
-        isMystery: formData.isMystery,
-        isLimitedEdition: formData.isLimitedEdition,
-        userImages: userImages.map(img => img.url),
-        comments
+        status: formData.status,
+        comments,
+        isLimitedEdition: formData.isLimitedEdition
       };
       
-      console.log('Saving pin with images:', updatedPin.userImages);
+      console.log('Saving pin:', updatedPin);
       
       await onSave(updatedPin);
       onClose();
     } catch (error) {
       console.error('Error updating pin:', error);
       toast.error('Failed to update pin');
+    }
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    try {
+      // Get button position for smoke effect
+      const buttonElement = document.querySelector(`[data-status="${newStatus}"]`);
+      const rect = buttonElement?.getBoundingClientRect();
+      const position = rect ? {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      } : null;
+
+      // Get color based on status
+      let smokeColor;
+      if (newStatus === 'collected') {
+        smokeColor = 'green';
+      } else if (newStatus === 'uncollected') {
+        smokeColor = 'brown';
+      } else if (newStatus === 'wishlist') {
+        smokeColor = 'blue';
+      }
+
+      // Add smoke effect
+      if (position && smokeColor) {
+        const effectId = Date.now();
+        setSmokeEffects(prev => [...prev, {
+          id: effectId,
+          color: smokeColor,
+          position
+        }]);
+      }
+
+      let updates = {};
+      
+      if (newStatus === 'collected') {
+        updates = {
+          isCollected: true,
+          isDeleted: false,
+          isWishlist: false
+        };
+      } else if (newStatus === 'uncollected') {
+        updates = {
+          isCollected: false,
+          isDeleted: true,
+          isWishlist: false
+        };
+      } else if (newStatus === 'wishlist') {
+        updates = {
+          isCollected: false,
+          isDeleted: true,
+          isWishlist: true
+        };
+      } else if (newStatus === 'uncategorize') {
+        updates = {
+          isCollected: false,
+          isDeleted: false,
+          isWishlist: false
+        };
+      }
+
+      await axios.post('/api/pins/bulk-update', {
+        pinIds: [pin.id],
+        updates: updates
+      });
+
+      toast.success('Pin updated');
+      onStatusChange?.(); // Call onStatusChange to refresh pins list
+      onNext?.(); // Move to next pin
+    } catch (error) {
+      console.error('Error updating pin status:', error);
+      toast.error('Failed to update pin status');
     }
   };
 
@@ -122,19 +193,17 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev }) {
         {onPrev && (
           <button
             onClick={onPrev}
-            className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-            title="Previous Pin"
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-full transition-colors z-10"
           >
-            <FaChevronLeft size={24} />
+            <FaChevronLeft size={20} />
           </button>
         )}
         {onNext && (
           <button
             onClick={onNext}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-            title="Next Pin"
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-full transition-colors z-10"
           >
-            <FaChevronRight size={24} />
+            <FaChevronRight size={20} />
           </button>
         )}
 
@@ -148,34 +217,79 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev }) {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Display-only fields */}
           <div className="space-y-4">
-            {/* Pin Image */}
+            {/* Pin Image with Upload */}
             {pin?.imageUrl && (
-              <div className="flex justify-center">
-                <img
-                  src={pin.imageUrl}
-                  alt={pin.pinName}
-                  className="max-w-xs rounded-lg border border-gray-700"
-                />
+              <div className="flex flex-col items-center space-y-3">
+                <label className="relative cursor-pointer group">
+                  <img
+                    src={pin.imageUrl}
+                    alt={pin.pinName}
+                    className="max-w-xs rounded-lg border border-gray-700 group-hover:opacity-75 transition-opacity"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-black bg-opacity-50 rounded-lg p-2">
+                      <FaUpload className="text-white text-xl" />
+                    </div>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                {/* Status Buttons */}
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    data-status="collected"
+                    onClick={() => handleStatusChange('collected')}
+                    className={`h-7 px-2 text-xs rounded-lg transition-colors flex items-center ${
+                      formData.status === 'collected' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    Collected
+                  </button>
+                  <button
+                    type="button"
+                    data-status="uncollected"
+                    onClick={() => handleStatusChange('uncollected')}
+                    className={`h-7 px-2 text-xs rounded-lg transition-colors flex items-center ${
+                      formData.status === 'uncollected' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    Uncollected
+                  </button>
+                  <button
+                    type="button"
+                    data-status="wishlist"
+                    onClick={() => handleStatusChange('wishlist')}
+                    className={`h-7 px-2 text-xs rounded-lg transition-colors flex items-center ${
+                      formData.status === 'wishlist' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    Wishlist
+                  </button>
+                </div>
               </div>
             )}
 
             {/* Pin ID and Pin&Pop Link in one row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-gray-300 font-medium">Pin ID:</span>
-                <span className="text-white">{pin?.pinId || 'No Pin ID'}</span>
-                {pin?.pinpopUrl && (
-                  <a
-                    href={pin.pinpopUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-pink-400 hover:text-pink-300 flex items-center ml-2"
-                    title="View on Pin&Pop"
-                  >
-                    <FaCandyCane size={18} />
-                  </a>
-                )}
-              </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-400">Pin ID:</span>
+              <span className="font-mono">{pin.pinId || '-'}</span>
+              {pin.isLimitedEdition && (
+                <FaCandyCane className="text-pink-500 ml-2" title="Limited Edition" />
+              )}
+              <button
+                type="button"
+                onClick={() => onEditTags?.(pin)}
+                className="text-gray-400 hover:text-purple-400 transition-colors"
+                title="Edit Tags"
+              >
+                <FaTags />
+              </button>
             </div>
           </div>
 
@@ -215,64 +329,16 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev }) {
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-white mb-2">Edition</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-300">Release Date</label>
                 <input
-                  type="number"
-                  name="edition"
-                  value={formData.edition}
+                  type="date"
+                  name="releaseDate"
+                  value={formData.releaseDate}
                   onChange={handleChange}
-                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Edition number"
-                  min="0"
+                  className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300">Release Date</label>
-              <input
-                type="date"
-                name="releaseDate"
-                value={formData.releaseDate}
-                onChange={handleChange}
-                className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  name="isCollected"
-                  checked={formData.isCollected}
-                  onChange={handleChange}
-                  className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                />
-                <span className="text-gray-300">Collected</span>
-              </label>
-
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  name="isLimitedEdition"
-                  checked={formData.isLimitedEdition}
-                  onChange={handleChange}
-                  className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                />
-                <span className="text-gray-300">Limited Edition</span>
-              </label>
-
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  name="isMystery"
-                  checked={formData.isMystery}
-                  onChange={handleChange}
-                  className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                />
-                <span className="text-gray-300">Mystery Pin</span>
-              </label>
             </div>
           </div>
 
@@ -326,48 +392,7 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev }) {
             )}
           </div>
 
-          {/* User Photos Section - Moved to bottom of modal for better visibility */}
-          <div className="space-y-4 mt-8 border-t border-gray-700 pt-6">
-            <div className="flex justify-between items-center">
-              <label className="block text-lg font-medium text-gray-200">Your Photos</label>
-              <label className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
-                <FaUpload className="mr-2" />
-                <span>Upload Photo</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
-            
-            {userImages.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <p>No photos uploaded yet. Add your own photos of this pin!</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-                {userImages.map((img, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={img.url}
-                      alt={`User uploaded ${index + 1}`}
-                      className="w-full h-40 object-cover rounded-lg border border-gray-700"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setUserImages(prev => prev.filter((_, i) => i !== index))}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <FaTimes size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
+          {/* Save/Cancel buttons */}
           <div className="flex justify-end space-x-3 pt-6">
             <button
               type="button"
@@ -385,6 +410,18 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev }) {
           </div>
         </form>
       </div>
+
+      {/* Smoke Effects */}
+      {smokeEffects.map(effect => (
+        <SmokeEffect
+          key={effect.id}
+          color={effect.color}
+          position={effect.position}
+          onComplete={() => {
+            setSmokeEffects(prev => prev.filter(e => e.id !== effect.id));
+          }}
+        />
+      ))}
     </div>
   );
 }

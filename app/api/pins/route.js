@@ -62,6 +62,7 @@ export async function GET(req) {
           { pinId: { contains: search, mode: 'insensitive' } },
           { series: { contains: search, mode: 'insensitive' } },
           { origin: { contains: search, mode: 'insensitive' } },
+          { tags: { hasSome: [search] } }
         ]
       });
     }

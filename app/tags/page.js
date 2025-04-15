@@ -13,6 +13,12 @@ export default function TagsPage() {
   const [error, setError] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter tags based on search query
+  const filteredTags = tags.filter(tag => 
+    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Fetch all tags
   const fetchTags = async () => {
@@ -98,6 +104,27 @@ export default function TagsPage() {
         </h1>
       </div>
 
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search tags..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+            >
+              <FaTimes size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Create Tag Form */}
       <div className="bg-gray-800 rounded-lg p-6 mb-6">
         <h2 className="text-xl font-semibold text-white mb-4">Create New Tag</h2>
@@ -152,7 +179,7 @@ export default function TagsPage() {
       {/* Tag List */}
       <div className="bg-gray-800 rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl text-white">Available Tags ({tags.length})</h2>
+          <h2 className="text-xl text-white">All Tags ({filteredTags.length})</h2>
           {selectedTags.length > 0 && (
             <div className="flex items-center space-x-2">
               <span className="text-gray-300">{selectedTags.length} selected</span>
@@ -172,11 +199,11 @@ export default function TagsPage() {
           </div>
         ) : error ? (
           <div className="text-red-500 text-center py-4">{error}</div>
-        ) : tags.length === 0 ? (
+        ) : filteredTags.length === 0 ? (
           <div className="text-gray-400 text-center py-8">No tags available</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {tags.map((tag, index) => (
+            {filteredTags.map((tag, index) => (
               <div 
                 key={index} 
                 className={`rounded-lg p-3 flex justify-between items-center cursor-pointer transition-colors ${
