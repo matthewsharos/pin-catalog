@@ -42,7 +42,6 @@ export default function PinCatalog() {
   const [filterSeries, setFilterSeries] = useState([]);
   const [filterLimitedEdition, setFilterLimitedEdition] = useState(false);
   const [filterMystery, setFilterMystery] = useState(false);
-  const [filterOrigin, setFilterOrigin] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterOptions, setFilterOptions] = useState({
     years: [],
@@ -82,7 +81,6 @@ export default function PinCatalog() {
 
   const fetchPins = useCallback(async () => {
     try {
-      // Only show loading indicator on initial load
       if (initialLoad) {
         setLoading(true);
       }
@@ -99,12 +97,12 @@ export default function PinCatalog() {
 
       // Category filter (tags)
       if (filterCategories.length > 0) {
-        queryParams.set('tags', filterCategories.join(','));
+        queryParams.set('category', filterCategories.join(','));
       }
 
       // Origin filter
       if (filterOrigins.length > 0) {
-        queryParams.set('origins', filterOrigins.join(','));
+        queryParams.set('origin', filterOrigins.join(','));
       }
 
       // Series filter
@@ -116,9 +114,13 @@ export default function PinCatalog() {
       if (filterLimitedEdition) queryParams.set('limitedEdition', 'true');
       if (filterMystery) queryParams.set('mystery', 'true');
 
-      // Status filter
-      if (filterStatus) {
-        queryParams.set('status', filterStatus);
+      // Status filters
+      if (filterStatus === 'collected') {
+        queryParams.set('collected', 'true');
+      } else if (filterStatus === 'uncollected') {
+        queryParams.set('uncollected', 'true');
+      } else if (filterStatus === 'wishlist') {
+        queryParams.set('wishlist', 'true');
       }
 
       // Sort and pagination
@@ -126,14 +128,14 @@ export default function PinCatalog() {
       queryParams.set('sortOrder', sortOrder);
       queryParams.set('page', page.toString());
 
+      console.log('Fetching with params:', queryParams.toString()); // Debug log
+
       const response = await api.get(`/api/pins?${queryParams.toString()}`);
       const data = response.data;
 
-      // Update pins without triggering loading state
       setPins(data.pins || []);
       setTotal(data.total || 0);
       
-      // Update filter options based on current filters
       setFilterOptions({
         years: data.filterOptions?.years || [],
         series: data.filterOptions?.series || [],
@@ -141,20 +143,13 @@ export default function PinCatalog() {
         tags: data.filterOptions?.tags || [],
       });
       
-      // After first successful load, set initialLoad to false
       if (initialLoad) {
         setInitialLoad(false);
       }
     } catch (error) {
       console.error('Error fetching pins:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
+      console.error('Error details:', error.response?.data);
       setError('Failed to load pins');
-      // Even on error, we should stop showing the loading state
       setInitialLoad(false);
     } finally {
       setLoading(false);
