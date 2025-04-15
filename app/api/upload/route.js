@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BlobServiceClient } from '@vercel/blob';
+import { put } from '@vercel/blob';
 import path from 'path';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -54,31 +54,26 @@ export async function POST(req) {
     // Create a unique filename
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
     const filename = `pin-photo-${uniqueSuffix}${path.extname(file.name || '.jpg')}`;
-    
-    // Initialize Blob Service Client
-    const blobService = new BlobServiceClient({
-      url: 'https://blob.vercel-storage.com',
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
 
-    // Convert File to Buffer for upload
-    const buffer = Buffer.from(await file.arrayBuffer());
+    try {
+      // Upload to Vercel Blob
+      const { url } = await put(filename, file, {
+        access: 'public',
+        addRandomSuffix: false,
+      });
 
-    // Upload to Vercel Blob Storage
-    const { url } = await blobService.upload({
-      data: buffer,
-      contentType: file.type,
-      name: filename,
-      access: 'public',
-      addRandomSuffix: false,
-      cacheControl: 'public, max-age=31536000',
-    });
-
-    // Return the URL for the uploaded image
-    return NextResponse.json({ 
-      url: url,
-      success: true
-    });
+      // Return the URL for the uploaded image
+      return NextResponse.json({ 
+        url: url,
+        success: true
+      });
+    } catch (uploadError) {
+      console.error('Upload error:', uploadError);
+      return NextResponse.json(
+        { error: 'Error uploading to storage: ' + uploadError.message },
+        { status: 503 }
+      );
+    }
   } catch (error) {
     console.error('Error details:', {
       name: error.name,
@@ -87,16 +82,8 @@ export async function POST(req) {
       code: error.code
     });
 
-    // Check for specific error types
-    if (error.name === 'BlobError') {
-      return NextResponse.json(
-        { error: 'Storage service error: ' + error.message },
-        { status: 503 }
-      );
-    }
-
     return NextResponse.json(
-      { error: 'Error uploading file: ' + error.message },
+      { error: 'Error processing request: ' + error.message },
       { status: 500 }
     );
   }
