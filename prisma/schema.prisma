@@ -32,11 +32,14 @@ model Pin {
 }
 
 model UserPhoto {
-  id        Int      @id @default(autoincrement())
-  url       String
-  pin       Pin      @relation(fields: [pinId], references: [id])
-  pinId     Int
-  createdAt DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  url          String?
+  filename     String
+  contentType  String  // e.g., "image/jpeg", "image/png"
+  data         Bytes    // Binary image data (for smaller images)
+  pin          Pin      @relation(fields: [pinId], references: [id])
+  pinId        Int
+  createdAt    DateTime @default(now())
 }
 
 model Comment {

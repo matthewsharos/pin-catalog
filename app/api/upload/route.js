@@ -1,16 +1,5 @@
 import { NextResponse } from 'next/server';
-import { put, getSignedUrl } from '@vercel/blob';
-
-if (!process.env.BLOB_READ_WRITE_TOKEN) {
-  throw new Error('BLOB_READ_WRITE_TOKEN is not set');
-}
-
-// Define allowed origins
-const allowedOrigins = [
-  'https://www.sharospins.com',
-  'http://localhost:3000',
-  'https://pin-catalog.vercel.app'
-];
+import prisma from '../../../lib/prisma';
 
 // Helper function to add CORS headers
 const corsHeaders = (origin) => ({
@@ -19,6 +8,13 @@ const corsHeaders = (origin) => ({
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
   'Access-Control-Max-Age': '86400',
 });
+
+// Define allowed origins
+const allowedOrigins = [
+  'https://www.sharospins.com',
+  'http://localhost:3000',
+  'https://pin-catalog.vercel.app'
+];
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -65,22 +61,16 @@ export async function GET(req) {
     }
 
     // Generate a signed URL for client-side upload
-    const { url, clientUploadToken } = await getSignedUrl({
-      access: 'public',
-      allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp'],
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
+    // Removed this block as it's not needed with database image storage
 
     return NextResponse.json(
       { 
-        url, 
-        clientUploadToken, 
         success: true 
       },
       { headers: corsHeaders(origin) }
     );
   } catch (error) {
-    console.error('URL generation error:', error);
+    console.error('Error:', error);
 
     return NextResponse.json(
       { error: error.message },
@@ -92,7 +82,6 @@ export async function GET(req) {
   }
 }
 
-// Keep the POST endpoint for compatibility
 export async function POST(req) {
   const origin = req.headers.get('origin') || '';
   
@@ -107,6 +96,7 @@ export async function POST(req) {
   try {
     const data = await req.formData();
     const file = data.get('image');
+    const pinId = parseInt(data.get('pinId') || '0', 10);
 
     if (!file) {
       return NextResponse.json(
@@ -118,14 +108,57 @@ export async function POST(req) {
       );
     }
 
-    // Upload to Vercel Blob
-    const { url } = await put(file.name, file, {
-      access: 'public',
-      token: process.env.BLOB_READ_WRITE_TOKEN
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'File too large. Maximum size is 5MB.' },
+        { 
+          status: 400,
+          headers: corsHeaders(origin)
+        }
+      );
+    }
+
+    // Validate file type
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Invalid file type. Only JPEG, PNG and WebP images are allowed.' },
+        { 
+          status: 400,
+          headers: corsHeaders(origin)
+        }
+      );
+    }
+
+    // Convert file to ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const filename = `${timestamp}_${file.name.replace(/\s+/g, '_')}`;
+
+    // Store in database
+    const userPhoto = await prisma.userPhoto.create({
+      data: {
+        filename: filename,
+        contentType: file.type,
+        data: buffer,
+        // Only associate with a pin if pinId is provided and valid
+        ...(pinId > 0 ? { pin: { connect: { id: pinId } } } : {})
+      }
     });
 
+    // Create a URL for the image
+    const imageUrl = `/api/images/${userPhoto.id}`;
+
     return NextResponse.json(
-      { url, success: true },
+      { 
+        id: userPhoto.id,
+        url: imageUrl,
+        filename: userPhoto.filename,
+        success: true 
+      },
       { headers: corsHeaders(origin) }
     );
 

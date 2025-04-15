@@ -1,14 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
-    // This will be overridden by NEXT_PUBLIC_API_URL in Vercel environment variables
-    NEXT_PUBLIC_API_URL: process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000',
-    // Use the same URL for the Vercel deployment
-    NEXT_PUBLIC_VERCEL_URL: process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000'
+    NEXT_PUBLIC_API_URL: 'http://localhost:3000',
   },
   swcMinify: true,
   compiler: {

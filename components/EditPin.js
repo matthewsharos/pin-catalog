@@ -68,7 +68,9 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
         throw new Error('Invalid file type. Only JPEG, PNG and WebP images are allowed.');
       }
 
-      const response = await uploadImage(file);
+      // Upload image with pin ID if available
+      const pinId = pin?.id || null;
+      const response = await uploadImage(file, pinId);
       
       if (response.data?.url) {
         setFormData(prev => ({ ...prev, userImage: response.data.url }));
