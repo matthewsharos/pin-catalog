@@ -533,119 +533,110 @@ export default function PinCatalog() {
           animation: wiggle 0.5s ease-in-out;
         }
       `}</style>
-      {/* Header with Logo and Add Button */}
-      <div className="sticky top-0 bg-gray-900 py-2 z-10 shadow-md">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2">
-          <div className="flex items-center space-x-4">
-            <img 
-              src="/icon.png" 
-              alt="Pin Catalog Logo" 
-              className="h-10 w-10 md:h-12 md:w-12 cursor-pointer transition-transform hover:scale-110" 
-              onClick={scrollToTop}
-            />
-            <h1 
-              className="text-2xl md:text-3xl text-white cursor-pointer hover:text-blue-300 transition-colors" 
-              style={{ fontFamily: 'var(--font-pacifico)', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}
-              onClick={scrollToTop}
-            >
-              Sharos Pin Catalog
-            </h1>
-          </div>
-          <div className="flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-4 mt-2 md:mt-0 w-full md:w-auto">
-            <div className="text-gray-300 mr-2 text-sm md:text-base">
-              {total} {total === 1 ? 'pin' : 'pins'} total
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-gray-900 shadow-lg border-b border-gray-800 py-4">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+            <div className="flex items-center">
+              <img src="/pin-icon.png" alt="Pin Icon" className="w-8 h-8 mr-2" />
+              <h1 className="text-2xl font-bold text-white">
+                Sharos Pin Catalog
+              </h1>
             </div>
-            <div className="flex flex-wrap gap-2 w-full md:w-auto">
-              <Link href="/tags" className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                Manage Tags
-              </Link>
-              <button
-                onClick={() => setShowAddPinModal(true)}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Add Pin
-              </button>
+            <div className="flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-4 mt-2 md:mt-0 w-full md:w-auto">
+              <div className="text-gray-300 mr-2 text-sm md:text-base">
+                {total} {total === 1 ? 'pin' : 'pins'} total
+              </div>
+              <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                <Link href="/tags" className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                  Manage Tags
+                </Link>
+                <button
+                  onClick={() => setShowAddPinModal(true)}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Add Pin
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search Row */}
-      <div className="mb-4">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
-          <div className="relative flex-1 w-full">
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search pins..."
-              className="w-full p-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
           
-          <div className="flex items-center gap-2 mt-2 md:mt-0">
-            <button
-              type="button"
-              onClick={clearAllFilters}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              Clear Search
-            </button>
+          {/* Search Row - Now in sticky header */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
+            <div className="relative flex-1 w-full">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search pins..."
+                className="w-full p-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            </div>
             
-            {/* Status Filter Buttons */}
-            <div className="flex items-center space-x-2">
-              <div className="flex bg-gray-800 rounded-lg p-1 space-x-1">
-                <button
-                  onClick={() => {
-                    setStatusFilters({
-                      collected: false,
-                      uncollected: false,
-                      wishlist: false
-                    });
-                  }}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                    !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  Uncategorized
-                </button>
-                <button
-                  onClick={() => handleStatusFilterChange('collected', !statusFilters.collected)}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
-                    statusFilters.collected
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  <FaCheck className={`mr-1 ${statusFilters.collected ? 'opacity-100' : 'opacity-50'}`} />
-                  Collected
-                </button>
-                <button
-                  onClick={() => handleStatusFilterChange('uncollected', !statusFilters.uncollected)}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
-                    statusFilters.uncollected
-                      ? 'bg-yellow-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  <FaTimes className={`mr-1 ${statusFilters.uncollected ? 'opacity-100' : 'opacity-50'}`} />
-                  Uncollected
-                </button>
-                <button
-                  onClick={() => handleStatusFilterChange('wishlist', !statusFilters.wishlist)}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
-                    statusFilters.wishlist
-                      ? 'bg-blue-400 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  <span className={`mr-1 ${statusFilters.wishlist ? 'opacity-100' : 'opacity-50'}`}>🙏</span>
-                  Wishlist
-                </button>
+            <div className="flex items-center gap-2 mt-2 md:mt-0">
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Clear Search
+              </button>
+              
+              {/* Status Filter Buttons */}
+              <div className="flex items-center space-x-2">
+                <div className="flex bg-gray-800 rounded-lg p-1 space-x-1">
+                  <button
+                    onClick={() => {
+                      setStatusFilters({
+                        collected: false,
+                        uncollected: false,
+                        wishlist: false
+                      });
+                    }}
+                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                      !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    Uncategorized
+                  </button>
+                  <button
+                    onClick={() => handleStatusFilterChange('collected', !statusFilters.collected)}
+                    className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
+                      statusFilters.collected
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    <FaCheck className={`mr-1 ${statusFilters.collected ? 'opacity-100' : 'opacity-50'}`} />
+                    Collected
+                  </button>
+                  <button
+                    onClick={() => handleStatusFilterChange('uncollected', !statusFilters.uncollected)}
+                    className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
+                      statusFilters.uncollected
+                        ? 'bg-yellow-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    <FaTimes className={`mr-1 ${statusFilters.uncollected ? 'opacity-100' : 'opacity-50'}`} />
+                    Uncollected
+                  </button>
+                  <button
+                    onClick={() => handleStatusFilterChange('wishlist', !statusFilters.wishlist)}
+                    className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
+                      statusFilters.wishlist
+                        ? 'bg-blue-400 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    <span className={`mr-1 ${statusFilters.wishlist ? 'opacity-100' : 'opacity-50'}`}>🙏</span>
+                    Wishlist
+                  </button>
+                </div>
               </div>
             </div>
           </div>
