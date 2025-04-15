@@ -16,6 +16,7 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
     status: pin?.status || 'all',
     comment: '',
     userImage: null,
+    imageUrl: pin?.imageUrl || '',
     isLimitedEdition: pin?.isLimitedEdition || false
   });
 
@@ -32,6 +33,7 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
       status: pin?.status || 'all',
       comment: '',
       userImage: null,
+      imageUrl: pin?.imageUrl || '',
       isLimitedEdition: pin?.isLimitedEdition || false
     });
     setComments(pin?.comments || []);
@@ -78,7 +80,11 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
       });
       
       // Set the data URL as the image source
-      setFormData(prev => ({ ...prev, userImage: dataUrl }));
+      setFormData(prev => ({ 
+        ...prev, 
+        userImage: dataUrl,
+        imageUrl: dataUrl 
+      }));
       toast.success('Image uploaded successfully', { id: loadingToast });
       
     } catch (error) {
@@ -268,12 +274,12 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
           {/* Display-only fields */}
           <div className="space-y-4">
             {/* Pin Image with Upload */}
-            {pin?.imageUrl && (
+            {formData.imageUrl && (
               <div className="flex flex-col items-center space-y-3">
                 <label className="relative cursor-pointer group">
                   <img
-                    src={pin.imageUrl}
-                    alt={pin.pinName}
+                    src={formData.imageUrl}
+                    alt={formData.pinName}
                     className="max-w-xs rounded-lg border border-gray-700 group-hover:opacity-75 transition-opacity"
                   />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
