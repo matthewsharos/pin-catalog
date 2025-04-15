@@ -672,13 +672,6 @@ export default function PinCatalog() {
                         >
                           <span className="text-xs">🙏</span>
                         </button>
-                        <button
-                          onClick={() => handleEditPin(pin.id)}
-                          className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-purple-600 hover:text-white"
-                          title="Edit Pin"
-                        >
-                          <FaEdit className="text-sm" />
-                        </button>
                       </>
                     ) : (
                       // UNCATEGORIZED pins - show collected, uncollected, and wishlist buttons

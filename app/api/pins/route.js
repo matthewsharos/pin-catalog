@@ -20,51 +20,57 @@ export async function GET(req) {
     const uncollected = searchParams.get('uncollected') || '';
     
     // Build the where clause for filtering
-    const where = {};
+    const where = {
+      AND: [] // Use AND to combine different filter types
+    };
     
     // Status filters
     if (collected === 'true' || wishlist === 'true' || uncollected === 'true') {
-      // If any status filter is active, build an OR condition
-      where.OR = [];
+      // If any status filter is active, build an OR condition for statuses
+      const statusConditions = [];
       
       if (collected === 'true') {
-        where.OR.push({ isCollected: true, isDeleted: false });
+        statusConditions.push({ isCollected: true, isDeleted: false });
       }
       
       if (uncollected === 'true') {
         // Uncollected pins are explicitly marked as uncollected (isDeleted=true but not wishlist)
-        where.OR.push({ isCollected: false, isDeleted: true, isWishlist: false });
+        statusConditions.push({ isCollected: false, isDeleted: true, isWishlist: false });
       }
       
       if (wishlist === 'true') {
-        where.OR.push({ isDeleted: true, isWishlist: true });
+        statusConditions.push({ isDeleted: true, isWishlist: true });
       }
+
+      where.AND.push({ OR: statusConditions });
     } else {
       // Default behavior - show pins that haven't been categorized yet
-      where.AND = [
-        { isCollected: false },
-        { isDeleted: false },
-        { isWishlist: false }
-      ];
+      where.AND.push({
+        AND: [
+          { isCollected: false },
+          { isDeleted: false },
+          { isWishlist: false }
+        ]
+      });
     }
     
     // Search functionality
     if (search) {
-      where.OR = where.OR || [];
-      where.OR.push(
-        { pinName: { contains: search, mode: 'insensitive' } },
-        { pinId: { contains: search, mode: 'insensitive' } },
-        { series: { contains: search, mode: 'insensitive' } },
-        { origin: { contains: search, mode: 'insensitive' } },
-      );
+      where.AND.push({
+        OR: [
+          { pinName: { contains: search, mode: 'insensitive' } },
+          { pinId: { contains: search, mode: 'insensitive' } },
+          { series: { contains: search, mode: 'insensitive' } },
+          { origin: { contains: search, mode: 'insensitive' } },
+        ]
+      });
     }
     
     // Filter by year
     if (year) {
       const years = year.split(',').filter(y => y);
       if (years.length > 0) {
-        where.OR = where.OR || [];
-        where.OR.push({
+        where.AND.push({
           year: {
             in: years.map(y => parseInt(y, 10))
           }
@@ -76,8 +82,7 @@ export async function GET(req) {
     if (category) {
       const categories = category.split(',').filter(c => c);
       if (categories.length > 0) {
-        where.OR = where.OR || [];
-        where.OR.push({
+        where.AND.push({
           tags: {
             hasSome: categories
           }
@@ -87,10 +92,12 @@ export async function GET(req) {
     
     // Filter by origin
     if (origin) {
-      where.origin = {
-        contains: origin,
-        mode: 'insensitive'
-      };
+      where.AND.push({
+        origin: {
+          contains: origin,
+          mode: 'insensitive'
+        }
+      });
     }
     
     // Sorting
