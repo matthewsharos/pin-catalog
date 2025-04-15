@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export function middleware(request) {
   // Get the origin of the request
-  const origin = request.headers.get('origin') || '';
+  const origin = request.headers.get('origin') || '*';
   
   // Get the pathname from the URL
   const { pathname } = request.nextUrl;
@@ -11,21 +11,26 @@ export function middleware(request) {
   if (pathname.startsWith('/api')) {
     // Handle preflight requests
     if (request.method === 'OPTIONS') {
-      const response = new NextResponse(null, { status: 204 });
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      response.headers.set('Access-Control-Max-Age', '86400'); // 24 hours
-      return response;
+      return new NextResponse(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+          'Access-Control-Max-Age': '86400', // 24 hours
+          'Vary': 'Origin'
+        }
+      });
     }
 
-    // Create a new response or use the original
+    // For actual requests, create a new response
     const response = NextResponse.next();
     
     // Add CORS headers
-    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Origin', origin);
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    response.headers.set('Vary', 'Origin');
     
     return response;
   }
