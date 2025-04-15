@@ -587,7 +587,7 @@ export default function PinCatalog() {
       {/* Sticky Header Navigation */}
       <div className="sticky top-0 z-50 bg-gray-900 shadow-lg">
         {/* Row 1: Logo, Title, Pin Count, Action Buttons */}
-        <div className="px-2 py-1.5">
+        <div className="px-2 sm:px-6 py-1.5">
           <div className="flex items-center justify-between">
             {/* Header */}
             <div className="flex items-center">
@@ -628,7 +628,7 @@ export default function PinCatalog() {
         </div>
 
         {/* Search and Filter Section */}
-        <div className="px-2 pb-3">
+        <div className="px-2 sm:px-6 pb-3">
           {/* Row 1: Search */}
           <div className="flex items-center space-x-2 mb-2">
             <div className="relative flex-grow">
@@ -818,7 +818,7 @@ export default function PinCatalog() {
         </div>
 
         {/* Pin Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 p-4">
           {pins.map((pin) => (
             <div 
               key={pin.id} 
