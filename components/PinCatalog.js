@@ -468,9 +468,9 @@ export default function PinCatalog() {
       wishlist: false
     });
     setPage(1);
-    // Restore focus to search input after clearing
+    // Remove focus from search input after clearing
     if (searchInputRef.current) {
-      searchInputRef.current.focus();
+      searchInputRef.current.blur();
     }
   };
 
