@@ -43,11 +43,7 @@ export default function PinCatalog() {
   const [filterLimitedEdition, setFilterLimitedEdition] = useState(false);
   const [filterMystery, setFilterMystery] = useState(false);
   const [filterOrigin, setFilterOrigin] = useState('');
-  const [statusFilters, setStatusFilters] = useState({
-    collected: false,
-    uncollected: false,
-    wishlist: false
-  });
+  const [filterStatus, setFilterStatus] = useState('');
   const [filterOptions, setFilterOptions] = useState({
     years: [],
     series: [],
@@ -120,10 +116,9 @@ export default function PinCatalog() {
       if (filterLimitedEdition) queryParams.set('limitedEdition', 'true');
       if (filterMystery) queryParams.set('mystery', 'true');
 
-      // Status filters - find the active status
-      const activeStatus = Object.entries(statusFilters).find(([_, isActive]) => isActive);
-      if (activeStatus) {
-        queryParams.set('status', activeStatus[0]); // Use the status name (collected, uncollected, wishlist)
+      // Status filter
+      if (filterStatus) {
+        queryParams.set('status', filterStatus);
       }
 
       // Sort and pagination
@@ -175,7 +170,7 @@ export default function PinCatalog() {
     filterSeries,
     filterLimitedEdition,
     filterMystery,
-    statusFilters,
+    filterStatus,
     initialLoad
   ]);
 
@@ -361,11 +356,7 @@ export default function PinCatalog() {
     setFilterSeries([]);
     setFilterLimitedEdition(false);
     setFilterMystery(false);
-    setStatusFilters({
-      collected: false,
-      uncollected: false,
-      wishlist: false
-    });
+    setFilterStatus('');
     setPage(1);
     // Restore focus to search input after clearing
     if (searchInputRef.current) {
@@ -379,11 +370,7 @@ export default function PinCatalog() {
   };
 
   const handleStatusFilter = (status) => {
-    setStatusFilters(prev => ({
-      collected: status === 'collected',
-      uncollected: status === 'uncollected',
-      wishlist: status === 'wishlist'
-    }));
+    setFilterStatus(status === 'all' ? '' : status);
     setPage(1);
   };
 
@@ -532,7 +519,7 @@ export default function PinCatalog() {
             <button
               onClick={() => handleStatusFilter('all')}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
-                !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
+                !filterStatus
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
@@ -543,7 +530,7 @@ export default function PinCatalog() {
             <button
               onClick={() => handleStatusFilter('collected')}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
-                statusFilters.collected
+                filterStatus === 'collected'
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
@@ -554,7 +541,7 @@ export default function PinCatalog() {
             <button
               onClick={() => handleStatusFilter('uncollected')}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
-                statusFilters.uncollected
+                filterStatus === 'uncollected'
                   ? 'bg-yellow-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
@@ -565,7 +552,7 @@ export default function PinCatalog() {
             <button
               onClick={() => handleStatusFilter('wishlist')}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
-                statusFilters.wishlist
+                filterStatus === 'wishlist'
                   ? 'bg-blue-400 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
