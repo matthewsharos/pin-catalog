@@ -227,7 +227,7 @@ export async function POST(req) {
       isCollected: false,
       isMystery,
       isLimitedEdition,
-      pinpopUrl: url
+      pinpopUrl: `https://pinandpop.com/pins/${pinId}`
     };
 
     // Create the pin in the database
