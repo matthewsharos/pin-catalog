@@ -6,7 +6,6 @@ import { toast } from 'react-hot-toast';
 import { FaSearch, FaEdit, FaTrash, FaCheck, FaQuestionCircle, FaPlus, FaImages, FaCandyCane, FaTags, FaStar, FaTimes } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 import EditPin from './EditPin';
-import DeleteConfirmation from './DeleteConfirmation';
 import AddPinModal from './AddPinModal';
 import EditTagsModal from './EditTagsModal';
 import Link from 'next/link';
@@ -47,7 +46,6 @@ export default function PinCatalog() {
     tags: [],
   });
   const [editingPin, setEditingPin] = useState(null);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showAddPinModal, setShowAddPinModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
@@ -183,19 +181,64 @@ export default function PinCatalog() {
     }
   };
 
-  const handleDeleteSelected = async () => {
-    setShowDeleteConfirmation(true);
-  };
+  const handleUpdatePinStatus = async (pinIds, status) => {
+    if (!Array.isArray(pinIds)) {
+      pinIds = [pinIds]; // Convert single ID to array
+    }
+    
+    if (pinIds.length === 0) {
+      toast.error('No pins selected');
+      return;
+    }
 
-  const confirmDelete = async () => {
     try {
-      await api.post('/api/pins/bulk-delete', { pinIds: selectedPins });
-      fetchPins();
+      setLoading(true);
+      
+      let updates = {};
+      
+      if (status === 'collected') {
+        updates = {
+          isCollected: true,
+          isDeleted: false,
+          isWishlist: false
+        };
+      } else if (status === 'uncollected') {
+        updates = {
+          isCollected: false,
+          isDeleted: false,
+          isWishlist: false
+        };
+      } else if (status === 'wishlist') {
+        updates = {
+          isCollected: false,
+          isDeleted: true,
+          isWishlist: true
+        };
+      } else if (status === 'uncategorize') {
+        updates = {
+          isCollected: false,
+          isDeleted: false,
+          isWishlist: false
+        };
+      } else if (status === 'delete') {
+        updates = {
+          isCollected: false,
+          isDeleted: true,
+          isWishlist: false
+        };
+      }
+      
+      const response = await api.post('/api/pins/bulk-update', {
+        pinIds: pinIds,
+        updates: updates
+      });
+
+      toast.success(`Updated ${pinIds.length} ${pinIds.length === 1 ? 'pin' : 'pins'}`);
+      // Clear selection after successful update
       setSelectedPins([]);
-      setShowDeleteConfirmation(false);
-      toast.success('Pins deleted successfully');
+      fetchPins();
     } catch (error) {
-      console.error('Error deleting pins:', error);
+      console.error('Error updating pin status:', error);
       console.error('Error details:', {
         message: error.message,
         status: error.response?.status,
@@ -207,7 +250,9 @@ export default function PinCatalog() {
           method: error.config?.method
         }
       });
-      toast.error('Failed to delete pins');
+      toast.error('Failed to update pin status');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -462,75 +507,6 @@ export default function PinCatalog() {
     }
   };
 
-  const handleUpdatePinStatus = async (pinIds, status) => {
-    if (!Array.isArray(pinIds)) {
-      pinIds = [pinIds]; // Convert single ID to array
-    }
-    
-    if (pinIds.length === 0) {
-      toast.error('No pins selected');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      let updates = {};
-      
-      if (status === 'collected') {
-        updates = {
-          isCollected: true,
-          isDeleted: false,
-          isWishlist: false
-        };
-      } else if (status === 'uncollected') {
-        updates = {
-          isCollected: false,
-          isDeleted: false,
-          isWishlist: false
-        };
-      } else if (status === 'wishlist') {
-        updates = {
-          isCollected: false,
-          isDeleted: true,
-          isWishlist: true
-        };
-      } else if (status === 'uncategorize') {
-        updates = {
-          isCollected: false,
-          isDeleted: false,
-          isWishlist: false
-        };
-      }
-      
-      const response = await api.post('/api/pins/bulk-update', {
-        pinIds: pinIds,
-        updates: updates
-      });
-
-      toast.success(`Updated ${pinIds.length} ${pinIds.length === 1 ? 'pin' : 'pins'}`);
-      // Clear selection after successful update
-      setSelectedPins([]);
-      fetchPins();
-    } catch (error) {
-      console.error('Error updating pin status:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          method: error.config?.method
-        }
-      });
-      toast.error('Failed to update pin status');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Only show full-page loading on initial app load
   if (initialLoad && loading) {
     return (
@@ -742,7 +718,7 @@ export default function PinCatalog() {
               </button>
               
               <button
-                onClick={() => handleDeleteSelected()}
+                onClick={() => handleUpdatePinStatus(selectedPins, 'delete')}
                 className="px-2 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
               >
                 <FaTrash className="mr-1" /> Delete
@@ -1138,12 +1114,6 @@ export default function PinCatalog() {
           onPrev={pins.findIndex(p => p.id === editingPin.id) > 0 ? handlePrevPin : null}
         />
       )}
-      <DeleteConfirmation
-        isOpen={showDeleteConfirmation}
-        onClose={() => setShowDeleteConfirmation(false)}
-        onConfirm={confirmDelete}
-        count={selectedPins.length}
-      />
       {showAddPinModal && (
         <AddPinModal
           onClose={() => setShowAddPinModal(false)}
