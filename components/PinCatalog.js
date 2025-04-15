@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { FaSearch, FaEdit, FaTrash, FaCheck, FaQuestionCircle, FaPlus, FaImages, FaCandyCane, FaTags, FaStar, FaTimes, FaInbox, FaChevronDown, FaHeart, FaCalendar } from 'react-icons/fa';
+import { FaSearch, FaEdit, FaTrash, FaCheck, FaQuestionCircle, FaPlus, FaImages, FaCandyCane, FaTags, FaStar, FaTimes, FaInbox, FaChevronDown, FaHeart, FaCalendar, FaSort } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 import EditPin from './EditPin';
 import AddPinModal from './AddPinModal';
@@ -27,7 +27,7 @@ export default function PinCatalog() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortField, setSortField] = useState('updatedAt');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -54,6 +54,7 @@ export default function PinCatalog() {
   const [editingTags, setEditingTags] = useState(null);
   const [showYearFilterModal, setShowYearFilterModal] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const yearButtonRef = useRef(null);
 
   const searchInputRef = useRef(null);
@@ -66,12 +67,12 @@ export default function PinCatalog() {
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchInput);
+      setDebouncedSearch(searchQuery);
       setPage(1); // Reset to first page when search changes
     }, 300); // Wait 300ms after last keystroke before searching
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchQuery]);
 
   const fetchPins = useCallback(async () => {
     try {
@@ -151,6 +152,23 @@ export default function PinCatalog() {
       setSortOrder('asc');
     }
     setPage(1);
+  };
+
+  const getSortLabel = () => {
+    switch (sortField) {
+      case 'updatedAt':
+        return 'Recently Updated';
+      case 'releaseDate':
+        return 'Release Date';
+      case 'pinName':
+        return 'Pin Name';
+      case 'series':
+        return 'Series';
+      case 'origin':
+        return 'Origin';
+      default:
+        return 'Unknown';
+    }
   };
 
   const handleEditPin = async (pinId) => {
@@ -278,7 +296,7 @@ export default function PinCatalog() {
 
   // Clear all filters and reset search
   const clearAllFilters = () => {
-    setSearchInput('');
+    setSearchQuery('');
     setDebouncedSearch('');
     setFilterYears([]);
     setFilterCategories([]);
@@ -405,151 +423,130 @@ export default function PinCatalog() {
             </span>
           </div>
           <div className="flex items-center space-x-2">
-            <Link 
-              href="/tags" 
-              className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+            <button
+              onClick={() => setShowTagModal(true)}
+              className="h-7 px-2 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
             >
-              <FaTags className="mr-1" />
-              Manage Tags
-            </Link>
+              <FaTags className="mr-1.5 text-xs" />
+              Tags
+            </button>
             <button
               onClick={() => setShowAddPinModal(true)}
-              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+              className="h-7 px-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
             >
-              <FaPlus className="mr-1" />
-              Add Pin
+              <FaPlus className="mr-1 text-xs" />
+              Pin
             </button>
           </div>
         </div>
 
-        {/* Row 2: Search, Filters, Status Buttons */}
-        <div className="px-4 py-2 flex items-center space-x-3">
-          {/* Search with Icon */}
-          <div className="relative w-64">
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search pins..."
-              className="w-full h-8 pl-8 pr-3 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <FaSearch className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
-          </div>
-
-          {/* Clear Search */}
-          <button
-            type="button"
-            onClick={clearAllFilters}
-            className="h-8 px-3 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center"
-          >
-            <FaTimes className="mr-1" />
-            Clear
-          </button>
-
-          {/* Years Filter Button */}
-          <div className="relative" ref={yearButtonRef}>
+        {/* Search and Filter Section */}
+        <div className="space-y-2 px-4 py-2">
+          {/* Row 1: Search, Clear, Year */}
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                placeholder="Search pins..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 h-7 bg-gray-800 text-white text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                ref={searchInputRef}
+              />
+              <FaSearch className="absolute left-2.5 top-2 text-gray-400 text-xs" />
+            </div>
+            
             <button
-              onClick={() => setShowYearDropdown(!showYearDropdown)}
-              className={`h-8 px-3 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center ${
-                filterYears.length > 0 ? 'ring-2 ring-blue-500' : ''
-              }`}
+              onClick={() => {
+                setSearchQuery('');
+                searchInputRef.current?.focus();
+              }}
+              className="h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center whitespace-nowrap"
             >
-              <FaCalendar className="mr-1.5" />
-              Years
-              {filterYears.length > 0 && (
-                <span className="ml-1.5 bg-blue-600 text-white text-xs px-1.5 rounded-full">
-                  {filterYears.length}
-                </span>
-              )}
+              Clear
             </button>
 
-            {/* Year Selection Dropdown */}
-            {showYearDropdown && (
-              <div className="absolute z-50 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg py-1 w-48 max-h-64 overflow-y-auto">
-                <div className="px-3 py-2 text-xs text-gray-400">
-                  Hold ⌘/Ctrl or Shift to select multiple
+            <div className="relative" ref={yearButtonRef}>
+              <button
+                onClick={() => setShowYearDropdown(!showYearDropdown)}
+                className="h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center whitespace-nowrap"
+              >
+                <FaCalendar className="mr-1 text-xs" />
+                {filterYears.length === 0
+                  ? 'All Years'
+                  : filterYears.length === 1
+                  ? filterYears[0]
+                  : `${filterYears.length} Years`}
+              </button>
+              {/* Year dropdown remains unchanged */}
+              {showYearDropdown && (
+                <div className="absolute z-50 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg py-1 w-48 max-h-64 overflow-y-auto">
+                  <div className="px-3 py-2 text-xs text-gray-400">
+                    Hold ⌘/Ctrl or Shift to select multiple
+                  </div>
+                  {filterOptions.years.map(year => (
+                    <button
+                      key={year}
+                      onClick={(e) => handleYearClick(year, e)}
+                      className={`w-full px-3 py-1.5 text-sm text-left transition-colors ${
+                        filterYears.includes(year)
+                          ? 'bg-blue-600 text-white'
+                          : 'text-white hover:bg-gray-700'
+                      }`}
+                    >
+                      {year}
+                    </button>
+                  ))}
                 </div>
-                {filterOptions.years.map(year => (
-                  <button
-                    key={year}
-                    onClick={(e) => handleYearClick(year, e)}
-                    className={`w-full px-3 py-1.5 text-sm text-left transition-colors ${
-                      filterYears.includes(year)
-                        ? 'bg-blue-600 text-white'
-                        : 'text-white hover:bg-gray-700'
-                    }`}
-                  >
-                    {year}
-                  </button>
-                ))}
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Categories Single-select Dropdown */}
-          <div className="relative">
-            <select
-              value={filterCategories[0] || ''}
-              onChange={(e) => {
-                setFilterCategories(e.target.value ? [e.target.value] : []);
-                setPage(1);
-              }}
-              className="h-8 px-3 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
-            >
-              <option value="">All Categories</option>
-              {filterOptions.tags.map(tag => (
-                <option key={tag} value={tag}>{tag}</option>
-              ))}
-            </select>
-            <FaChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* Status Filter Buttons - Smaller Size */}
+          {/* Row 2: Status Buttons */}
           <div className="flex bg-gray-800 rounded-lg p-0.5 space-x-0.5">
             <button
               onClick={(e) => handleStatusFilterChange('all', true, e)}
-              className={`px-2 py-1 text-xs font-medium rounded transition-colors flex items-center ${
+              className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
                 !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
-              <FaInbox className="mr-1" />
+              <FaInbox className="mr-1 text-xs" />
               All
             </button>
             <button
               onClick={(e) => handleStatusFilterChange('collected', !statusFilters.collected, e)}
-              className={`px-2 py-1 text-xs font-medium rounded transition-colors flex items-center ${
+              className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
                 statusFilters.collected
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
-              <FaCheck className={`mr-1 ${statusFilters.collected ? 'opacity-100' : 'opacity-50'}`} />
-              Collected
+              <FaCheck className="mr-1 text-xs" />
+              Owned
             </button>
             <button
               onClick={(e) => handleStatusFilterChange('uncollected', !statusFilters.uncollected, e)}
-              className={`px-2 py-1 text-xs font-medium rounded transition-colors flex items-center ${
+              className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
                 statusFilters.uncollected
                   ? 'bg-yellow-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
-              <FaTimes className={`mr-1 ${statusFilters.uncollected ? 'opacity-100' : 'opacity-50'}`} />
-              Missing
+              <FaTimes className="mr-1 text-xs" />
+              Uncollected
             </button>
             <button
               onClick={(e) => handleStatusFilterChange('wishlist', !statusFilters.wishlist, e)}
-              className={`px-2 py-1 text-xs font-medium rounded transition-colors flex items-center ${
+              className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
                 statusFilters.wishlist
                   ? 'bg-blue-400 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
               title="Hold ⌘/Ctrl or Shift to select multiple statuses"
             >
-              <FaHeart className={`mr-1 ${statusFilters.wishlist ? 'opacity-100' : 'opacity-50'}`} />
+              <FaHeart className="mr-1 text-xs" />
               Wishlist
             </button>
           </div>
@@ -558,6 +555,64 @@ export default function PinCatalog() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
+        {/* Sort Controls */}
+        <div className="flex justify-end mb-4">
+          <div className="relative">
+            <button
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <FaSort className="mr-1.5 text-xs" />
+              Sort: {getSortLabel()}
+            </button>
+            
+            {showSortMenu && (
+              <div className="absolute right-0 mt-1 w-40 bg-gray-800 rounded-lg shadow-lg py-1 z-50">
+                <button
+                  onClick={() => handleSort('updatedAt')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'updatedAt' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Recently Updated
+                </button>
+                <button
+                  onClick={() => handleSort('releaseDate')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'releaseDate' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Release Date
+                </button>
+                <button
+                  onClick={() => handleSort('pinName')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'pinName' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Pin Name
+                </button>
+                <button
+                  onClick={() => handleSort('series')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'series' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Series
+                </button>
+                <button
+                  onClick={() => handleSort('origin')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'origin' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Origin
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Pin Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">
           {pins.map((pin) => (
