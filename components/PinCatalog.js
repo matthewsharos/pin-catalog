@@ -70,6 +70,9 @@ export default function PinCatalog() {
   const [error, setError] = useState(null);
   const yearButtonRef = useRef(null);
   const sortButtonRef = useRef(null);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showOriginDropdown, setShowOriginDropdown] = useState(false);
+  const [showSeriesDropdown, setShowSeriesDropdown] = useState(false);
 
   const searchInputRef = useRef(null);
   const contentRef = useRef(null);
@@ -364,6 +367,11 @@ export default function PinCatalog() {
       params.append('isLimitedEdition', filterIsLimitedEdition);
       params.append('isMystery', filterIsMystery);
 
+      // Add status filters
+      if (statusFilters.collected) params.append('isCollected', 'true');
+      if (statusFilters.uncollected) params.append('isUncollected', 'true');
+      if (statusFilters.wishlist) params.append('isWishlist', 'true');
+
       const response = await axios.get(`/api/pins/options?${params.toString()}`);
       return response.data;
     } catch (error) {
@@ -401,6 +409,8 @@ export default function PinCatalog() {
           setFilterCategories([]);
         } else if (value === 'all') {
           setFilterCategories(availableCategories);
+        } else if (Array.isArray(value)) {
+          setFilterCategories(value);
         } else {
           setFilterCategories(prev => 
             prev.includes(value) ? prev.filter(c => c !== value) : [...prev, value]
@@ -413,6 +423,8 @@ export default function PinCatalog() {
           setFilterOrigins([]);
         } else if (value === 'all') {
           setFilterOrigins(availableOrigins);
+        } else if (Array.isArray(value)) {
+          setFilterOrigins(value);
         } else {
           setFilterOrigins(prev => 
             prev.includes(value) ? prev.filter(o => o !== value) : [...prev, value]
@@ -425,6 +437,8 @@ export default function PinCatalog() {
           setFilterSeries([]);
         } else if (value === 'all') {
           setFilterSeries(availableSeries);
+        } else if (Array.isArray(value)) {
+          setFilterSeries(value);
         } else {
           setFilterSeries(prev => 
             prev.includes(value) ? prev.filter(s => s !== value) : [...prev, value]
@@ -543,6 +557,12 @@ export default function PinCatalog() {
       }
       if (sortButtonRef.current && !sortButtonRef.current.contains(event.target)) {
         setShowSortMenu(false);
+      }
+      // Close filter dropdowns
+      if (!event.target.closest('.filter-dropdown')) {
+        setShowCategoryDropdown(false);
+        setShowOriginDropdown(false);
+        setShowSeriesDropdown(false);
       }
     };
 
@@ -1051,61 +1071,142 @@ export default function PinCatalog() {
             </div>
 
             <div className="p-4 space-y-4">
-              {/* Categories */}
-              <div>
+              {/* Categories Dropdown */}
+              <div className="relative filter-dropdown">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Category
                 </label>
-                <select
-                  value={filterCategories[0] || ''}
-                  onChange={(e) => handleFilterChange('category', e.target.value || null)}
-                  className="w-full bg-gray-700 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
+                <button
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-between"
                 >
-                  <option value="">All Categories</option>
-                  {availableCategories.map((tag) => (
-                    <option key={tag} value={tag}>
-                      {tag}
-                    </option>
-                  ))}
-                </select>
+                  <span>
+                    {filterCategories[0] || 'All Categories'}
+                  </span>
+                  <FaChevronDown className={`transition-transform ${showCategoryDropdown ? 'transform rotate-180' : ''}`} />
+                </button>
+                {showCategoryDropdown && (
+                  <div className="absolute left-0 right-0 mt-2 bg-gray-800 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          handleFilterChange('category', null);
+                          setShowCategoryDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700"
+                      >
+                        All Categories
+                      </button>
+                      <div className="border-t border-gray-700 my-1"></div>
+                      {availableCategories.map((category) => (
+                        <button
+                          key={category}
+                          onClick={() => {
+                            handleFilterChange('category', [category]);
+                            setShowCategoryDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-700 ${
+                            filterCategories[0] === category ? 'text-blue-400' : 'text-white'
+                          }`}
+                        >
+                          {category}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Origins */}
-              <div>
+              {/* Origins Dropdown */}
+              <div className="relative filter-dropdown">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Origin
                 </label>
-                <select
-                  value={filterOrigins[0] || ''}
-                  onChange={(e) => handleFilterChange('origin', e.target.value || null)}
-                  className="w-full bg-gray-700 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
+                <button
+                  onClick={() => setShowOriginDropdown(!showOriginDropdown)}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-between"
                 >
-                  <option value="">All Origins</option>
-                  {availableOrigins.map((origin) => (
-                    <option key={origin} value={origin}>
-                      {origin}
-                    </option>
-                  ))}
-                </select>
+                  <span>
+                    {filterOrigins[0] || 'All Origins'}
+                  </span>
+                  <FaChevronDown className={`transition-transform ${showOriginDropdown ? 'transform rotate-180' : ''}`} />
+                </button>
+                {showOriginDropdown && (
+                  <div className="absolute left-0 right-0 mt-2 bg-gray-800 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          handleFilterChange('origin', null);
+                          setShowOriginDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700"
+                      >
+                        All Origins
+                      </button>
+                      <div className="border-t border-gray-700 my-1"></div>
+                      {availableOrigins.map((origin) => (
+                        <button
+                          key={origin}
+                          onClick={() => {
+                            handleFilterChange('origin', [origin]);
+                            setShowOriginDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-700 ${
+                            filterOrigins[0] === origin ? 'text-blue-400' : 'text-white'
+                          }`}
+                        >
+                          {origin}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Series */}
-              <div>
+              {/* Series Dropdown */}
+              <div className="relative filter-dropdown">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Series
                 </label>
-                <select
-                  value={filterSeries[0] || ''}
-                  onChange={(e) => handleFilterChange('series', e.target.value || null)}
-                  className="w-full bg-gray-700 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
+                <button
+                  onClick={() => setShowSeriesDropdown(!showSeriesDropdown)}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-between"
                 >
-                  <option value="">All Series</option>
-                  {availableSeries.map((series) => (
-                    <option key={series} value={series}>
-                      {series}
-                    </option>
-                  ))}
-                </select>
+                  <span>
+                    {filterSeries[0] || 'All Series'}
+                  </span>
+                  <FaChevronDown className={`transition-transform ${showSeriesDropdown ? 'transform rotate-180' : ''}`} />
+                </button>
+                {showSeriesDropdown && (
+                  <div className="absolute left-0 right-0 mt-2 bg-gray-800 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          handleFilterChange('series', null);
+                          setShowSeriesDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700"
+                      >
+                        All Series
+                      </button>
+                      <div className="border-t border-gray-700 my-1"></div>
+                      {availableSeries.map((series) => (
+                        <button
+                          key={series}
+                          onClick={() => {
+                            handleFilterChange('series', [series]);
+                            setShowSeriesDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-700 ${
+                            filterSeries[0] === series ? 'text-blue-400' : 'text-white'
+                          }`}
+                        >
+                          {series}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Limited Edition & Mystery */}
