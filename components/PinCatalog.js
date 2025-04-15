@@ -120,10 +120,11 @@ export default function PinCatalog() {
       if (filterLimitedEdition) queryParams.set('limitedEdition', 'true');
       if (filterMystery) queryParams.set('mystery', 'true');
 
-      // Status filters
-      if (statusFilters.collected) queryParams.set('status', 'collected');
-      if (statusFilters.uncollected) queryParams.set('status', 'uncollected');
-      if (statusFilters.wishlist) queryParams.set('status', 'wishlist');
+      // Status filters - find the active status
+      const activeStatus = Object.entries(statusFilters).find(([_, isActive]) => isActive);
+      if (activeStatus) {
+        queryParams.set('status', activeStatus[0]); // Use the status name (collected, uncollected, wishlist)
+      }
 
       // Sort and pagination
       queryParams.set('sortField', sortField);
@@ -377,26 +378,13 @@ export default function PinCatalog() {
     setPage(1); // Reset to first page when filters change
   };
 
-  const handleStatusFilterChange = (status, value, e) => {
-    e.preventDefault(); // Prevent text selection
-    
-    let newFilters = { ...statusFilters };
-    
-    if (e.shiftKey || e.metaKey || e.ctrlKey) {
-      // Multi-select with modifier key
-      newFilters[status] = value;
-    } else {
-      // Single select without modifier
-      newFilters = {
-        collected: false,
-        uncollected: false,
-        wishlist: false
-      };
-      newFilters[status] = value;
-    }
-    
-    setStatusFilters(newFilters);
-    setPage(1); // Reset to first page when filters change
+  const handleStatusFilter = (status) => {
+    setStatusFilters(prev => ({
+      collected: status === 'collected',
+      uncollected: status === 'uncollected',
+      wishlist: status === 'wishlist'
+    }));
+    setPage(1);
   };
 
   const handleYearClick = (year, e) => {
@@ -542,7 +530,7 @@ export default function PinCatalog() {
           {/* Row 2: Status Buttons */}
           <div className="inline-flex bg-gray-800 rounded-lg p-0.5 space-x-0.5">
             <button
-              onClick={(e) => handleStatusFilterChange('all', true, e)}
+              onClick={() => handleStatusFilter('all')}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
                 !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
                   ? 'bg-blue-600 text-white'
@@ -553,7 +541,7 @@ export default function PinCatalog() {
               All
             </button>
             <button
-              onClick={(e) => handleStatusFilterChange('collected', !statusFilters.collected, e)}
+              onClick={() => handleStatusFilter('collected')}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
                 statusFilters.collected
                   ? 'bg-green-600 text-white'
@@ -564,7 +552,7 @@ export default function PinCatalog() {
               Owned
             </button>
             <button
-              onClick={(e) => handleStatusFilterChange('uncollected', !statusFilters.uncollected, e)}
+              onClick={() => handleStatusFilter('uncollected')}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
                 statusFilters.uncollected
                   ? 'bg-yellow-600 text-white'
@@ -575,7 +563,7 @@ export default function PinCatalog() {
               Uncollected
             </button>
             <button
-              onClick={(e) => handleStatusFilterChange('wishlist', !statusFilters.wishlist, e)}
+              onClick={() => handleStatusFilter('wishlist')}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
                 statusFilters.wishlist
                   ? 'bg-blue-400 text-white'
