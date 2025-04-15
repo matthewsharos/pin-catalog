@@ -40,8 +40,8 @@ export default function PinCatalog() {
   const [filterCategories, setFilterCategories] = useState([]);
   const [filterOrigins, setFilterOrigins] = useState([]);
   const [filterSeries, setFilterSeries] = useState([]);
-  const [filterLimitedEdition, setFilterLimitedEdition] = useState(false);
-  const [filterMystery, setFilterMystery] = useState(false);
+  const [filterIsLimitedEdition, setFilterIsLimitedEdition] = useState(false);
+  const [filterIsMystery, setFilterIsMystery] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterOptions, setFilterOptions] = useState({
     years: [],
@@ -111,8 +111,8 @@ export default function PinCatalog() {
       }
 
       // Limited Edition & Mystery filters
-      if (filterLimitedEdition) queryParams.set('isLimitedEdition', 'true');
-      if (filterMystery) queryParams.set('isMystery', 'true');
+      if (filterIsLimitedEdition) queryParams.set('isLimitedEdition', 'true');
+      if (filterIsMystery) queryParams.set('isMystery', 'true');
 
       // Status filters
       if (filterStatus === 'collected') {
@@ -163,8 +163,8 @@ export default function PinCatalog() {
     filterCategories,
     filterOrigins,
     filterSeries,
-    filterLimitedEdition,
-    filterMystery,
+    filterIsLimitedEdition,
+    filterIsMystery,
     filterStatus,
     initialLoad
   ]);
@@ -349,8 +349,8 @@ export default function PinCatalog() {
     setFilterCategories([]);
     setFilterOrigins([]);
     setFilterSeries([]);
-    setFilterLimitedEdition(false);
-    setFilterMystery(false);
+    setFilterIsLimitedEdition(false);
+    setFilterIsMystery(false);
     setFilterStatus('');
     setPage(1);
     // Restore focus to search input after clearing
@@ -997,8 +997,8 @@ export default function PinCatalog() {
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={filterLimitedEdition}
-                    onChange={(e) => setFilterLimitedEdition(e.target.checked)}
+                    checked={filterIsLimitedEdition}
+                    onChange={(e) => setFilterIsLimitedEdition(e.target.checked)}
                     className="rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500"
                   />
                   <span className="ml-2 text-sm text-gray-300">Limited Edition</span>
@@ -1007,8 +1007,8 @@ export default function PinCatalog() {
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={filterMystery}
-                    onChange={(e) => setFilterMystery(e.target.checked)}
+                    checked={filterIsMystery}
+                    onChange={(e) => setFilterIsMystery(e.target.checked)}
                     className="rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500"
                   />
                   <span className="ml-2 text-sm text-gray-300">Mystery</span>
@@ -1022,8 +1022,8 @@ export default function PinCatalog() {
                   handleCategorySelect(null);
                   handleOriginSelect(null);
                   handleSeriesSelect(null);
-                  setFilterLimitedEdition(false);
-                  setFilterMystery(false);
+                  setFilterIsLimitedEdition(false);
+                  setFilterIsMystery(false);
                   setShowFilterModal(false);
                 }}
                 className="px-4 py-2 text-sm text-gray-300 hover:text-white bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
