@@ -752,421 +752,249 @@ export default function PinCatalog() {
           </div>
         ) : (
           <>
-            {/* Desktop Table View (hidden on mobile) */}
-            <div className="hidden md:block">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-800">
-                  <tr className="bg-gray-800">
-                    <th className="w-8 p-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedPins.length > 0 && selectedPins.length === pins.length}
+            {pins.length > 0 ? (
+              <div>
+                {/* Select All Checkbox */}
+                <div className="p-4 border-b border-gray-700 flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedPins.length > 0 && selectedPins.length === pins.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedPins(pins.map(pin => pin.id));
+                      } else {
+                        setSelectedPins([]);
+                      }
+                    }}
+                    className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500 mr-2"
+                  />
+                  <span className="text-gray-300 text-sm">
+                    {selectedPins.length === 0 
+                      ? "Select All" 
+                      : selectedPins.length === pins.length 
+                        ? "Deselect All" 
+                        : `${selectedPins.length} selected`}
+                  </span>
+                  
+                  {/* Sort Controls */}
+                  <div className="ml-auto flex items-center space-x-3">
+                    <div className="flex items-center text-sm text-gray-400">
+                      <span className="mr-2">Sort by:</span>
+                      <select 
+                        value={`${sortField}-${sortOrder}`}
                         onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedPins(pins.map(pin => pin.id));
-                          } else {
-                            setSelectedPins([]);
-                          }
+                          const [field, order] = e.target.value.split('-');
+                          setSortField(field);
+                          setSortOrder(order);
                         }}
-                        className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                      />
-                    </th>
-                    <th className="p-2">
-                      <button
-                        className="flex items-center space-x-1 text-left text-sm font-semibold text-gray-300 hover:text-white"
-                        onClick={() => handleSort('pinId')}
+                        className="bg-gray-700 border-gray-600 rounded text-white text-sm p-1"
                       >
-                        <span>Pin ID</span>
-                        {sortField === 'pinId' && (
-                          <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </button>
-                    </th>
-                    <th className="p-2">
-                      <span className="text-left text-sm font-semibold text-gray-300">Image</span>
-                    </th>
-                    <th className="p-2">
-                      <button
-                        className="flex items-center space-x-1 text-left text-sm font-semibold text-gray-300 hover:text-white"
-                        onClick={() => handleSort('pinName')}
-                      >
-                        <span>Name</span>
-                        {sortField === 'pinName' && (
-                          <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </button>
-                    </th>
-                    <th className="p-2">
-                      <button
-                        className="flex items-center space-x-1 text-left text-sm font-semibold text-gray-300 hover:text-white"
-                        onClick={() => handleSort('series')}
-                      >
-                        <span>Series</span>
-                        {sortField === 'series' && (
-                          <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </button>
-                    </th>
-                    <th className="p-2">
-                      <button
-                        className="flex items-center space-x-1 text-left text-sm font-semibold text-gray-300 hover:text-white"
-                        onClick={() => handleSort('releaseDate')}
-                      >
-                        <span>Release Date</span>
-                        {sortField === 'releaseDate' && (
-                          <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </button>
-                    </th>
-                    <th className="p-2 text-left text-gray-300 cursor-pointer">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="transition-opacity duration-300">
-                  {pins.length > 0 ? (
-                    pins.map((pin) => (
-                      <tr 
-                        key={pin.id} 
-                        className={`hover:bg-gray-700 transition-colors ${
-                          pin.isCollected ? 'bg-green-900 bg-opacity-20' : ''
-                        }`}
-                      >
-                        <td className="p-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedPins.includes(pin.id)}
-                            onChange={() => handleCheckboxChange(pin.id)}
-                            className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                          />
-                        </td>
-                        <td className="p-2 text-gray-300">
-                          <div 
-                            className="flex items-center space-x-2 cursor-pointer hover:text-white"
-                            onClick={() => handleCheckboxChange(pin.id)}
-                          >
-                            <span className="text-sm">{pin.pinId || '-'}</span>
-                            {pin.pinpopUrl && (
-                              <a
-                                href={pin.pinpopUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-pink-400 hover:text-pink-300"
-                                title="View on Pin&Pop"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <FaCandyCane />
-                              </a>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2 text-gray-300">
-                          {pin.imageUrl ? (
-                            <button
-                              onClick={() => handleEditPin(pin.id)}
-                              className="wiggle-on-hover hover:opacity-75 transition-opacity"
-                            >
-                              <img
-                                src={pin.imageUrl}
-                                alt={pin.pinName}
-                                className="w-16 h-16 object-cover rounded-lg border border-gray-700"
-                              />
-                            </button>
-                          ) : (
-                            <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center">
-                              <FaImages className="text-gray-500" />
-                            </div>
-                          )}
-                        </td>
-                        <td 
-                          className="p-2 text-gray-300 cursor-pointer hover:text-white"
-                          onClick={() => handleEditPin(pin.id)}
-                        >
-                          <span className="text-sm" title={pin.pinName}>{truncateText(pin.pinName)}</span>
-                        </td>
-                        <td className="p-2 text-gray-300">
-                          <span className="text-sm" title={pin.series}>{truncateText(cleanText(pin.series))}</span>
-                        </td>
-                        <td className="p-2 text-gray-300">
-                          <span className="text-sm">
-                            {pin.releaseDate ? new Date(pin.releaseDate).toLocaleDateString() : '-'}
-                          </span>
-                        </td>
-                        <td className="p-2 text-center">
-                          <div className="flex justify-center">
-                            {pin.isDeleted ? (
-                              pin.isWishlist ? (
-                                // WISHLIST pins - show collected and uncollected buttons
-                                <div className="flex space-x-1">
-                                  <button
-                                    onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
-                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
-                                    title="Mark as Collected"
-                                  >
-                                    <FaCheck className="text-sm" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
-                                    title="Mark as Uncollected"
-                                  >
-                                    <FaTimes className="text-sm" />
-                                  </button>
-                                </div>
-                              ) : (
-                                // This case shouldn't happen with the new status system, but handle it just in case
-                                <div className="flex space-x-1">
-                                  <button
-                                    onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
-                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
-                                    title="Mark as Collected"
-                                  >
-                                    <FaCheck className="text-sm" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
-                                    title="Uncategorize"
-                                  >
-                                    <FaQuestionCircle className="text-sm" />
-                                  </button>
-                                </div>
-                              )
-                            ) : (
-                              pin.isCollected ? (
-                                // COLLECTED pins - show uncollected and wishlist buttons
-                                <div className="flex space-x-1">
-                                  <button
-                                    onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
-                                    title="Mark as Uncollected"
-                                  >
-                                    <FaTimes className="text-sm" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
-                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
-                                    title="Add to Wishlist"
-                                  >
-                                    <span className="text-xs">🙏</span>
-                                  </button>
-                                </div>
-                              ) : (
-                                // UNCATEGORIZED pins - show collected, uncollected, and wishlist buttons
-                                <div className="flex space-x-1">
-                                  <button
-                                    onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
-                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
-                                    title="Mark as Collected"
-                                  >
-                                    <FaCheck className="text-sm" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
-                                    title="Mark as Uncollected"
-                                  >
-                                    <FaTimes className="text-sm" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
-                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
-                                    title="Add to Wishlist"
-                                  >
-                                    <span className="text-xs">🙏</span>
-                                  </button>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8" className="text-center py-8">
-                        <div className="flex flex-col items-center justify-center text-gray-400">
-                          <p className="text-lg mb-2">No pins found</p>
-                          <p className="text-sm mb-4">
-                            Try adjusting your search or filters
-                          </p>
-                          <button
-                            onClick={clearAllFilters}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                          >
-                            Clear All Filters
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card View (visible only on mobile) */}
-            <div className="md:hidden">
-              {pins.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4 p-4">
+                        <option value="updatedAt-desc">Recently Updated</option>
+                        <option value="releaseDate-desc">Newest First</option>
+                        <option value="releaseDate-asc">Oldest First</option>
+                        <option value="pinName-asc">Name (A-Z)</option>
+                        <option value="pinName-desc">Name (Z-A)</option>
+                        <option value="series-asc">Series (A-Z)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Pin Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">
                   {pins.map((pin) => (
                     <div 
                       key={pin.id} 
-                      className={`bg-gray-800 rounded-lg p-3 shadow ${
-                        pin.isCollected && !pin.isDeleted ? 'border-l-4 border-green-500' : ''
-                      } ${pin.isDeleted ? 'border-l-4 border-red-500' : ''}`}
+                      className={`bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg ${
+                        selectedPins.includes(pin.id) ? 'ring-2 ring-blue-500' : ''
+                      } ${
+                        pin.isCollected && !pin.isDeleted ? 'border-t-2 border-green-500' : ''
+                      } ${
+                        pin.isDeleted && pin.isWishlist ? 'border-t-2 border-blue-400' : ''
+                      } ${
+                        pin.isDeleted && !pin.isWishlist ? 'border-t-2 border-yellow-500' : ''
+                      }`}
                     >
-                      <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0">
-                          <input
-                            type="checkbox"
-                            checked={selectedPins.includes(pin.id)}
-                            onChange={() => handleCheckboxChange(pin.id)}
-                            className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500 mb-2"
+                      {/* Card Header - Checkbox */}
+                      <div className="absolute top-2 left-2 z-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedPins.includes(pin.id)}
+                          onChange={() => handleCheckboxChange(pin.id)}
+                          className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                      
+                      {/* Pin Image */}
+                      <div 
+                        className="relative aspect-square bg-gray-900 cursor-pointer overflow-hidden"
+                        onClick={() => handleEditPin(pin.id)}
+                      >
+                        {pin.imageUrl ? (
+                          <img
+                            src={pin.imageUrl}
+                            alt={pin.pinName}
+                            className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
                           />
-                          {pin.imageUrl ? (
-                            <button
-                              onClick={() => handleEditPin(pin.id)}
-                              className="wiggle-on-hover hover:opacity-75 transition-opacity block"
-                            >
-                              <img
-                                src={pin.imageUrl}
-                                alt={pin.pinName}
-                                className="w-20 h-20 object-cover rounded-lg border border-gray-700"
-                              />
-                            </button>
-                          ) : (
-                            <div className="w-20 h-20 bg-gray-700 rounded-lg flex items-center justify-center">
-                              <FaImages className="text-gray-500" />
-                            </div>
-                          )}
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <FaImages className="text-gray-600 text-4xl" />
+                          </div>
+                        )}
+                        
+                        {/* Pin ID Badge */}
+                        {pin.pinId && (
+                          <div className="absolute top-2 right-2 bg-gray-900 bg-opacity-70 text-xs text-gray-300 px-1.5 py-0.5 rounded">
+                            {pin.pinId}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Card Content */}
+                      <div className="p-3">
+                        {/* Pin Name */}
+                        <h3 
+                          className="text-white font-medium text-sm mb-1 line-clamp-2 hover:text-blue-300 cursor-pointer"
+                          onClick={() => handleEditPin(pin.id)}
+                          title={pin.pinName}
+                        >
+                          {pin.pinName || "Unnamed Pin"}
+                        </h3>
+                        
+                        {/* Series • Release Date */}
+                        <div className="text-gray-400 text-xs mb-2 line-clamp-1" title={`${pin.series || 'No Series'} • ${pin.releaseDate ? new Date(pin.releaseDate).toLocaleDateString() : 'No Date'}`}>
+                          {cleanText(pin.series) || 'No Series'} • {pin.releaseDate ? new Date(pin.releaseDate).toLocaleDateString() : 'No Date'}
                         </div>
                         
-                        <div className="flex-1 min-w-0">
-                          <div 
-                            className="text-white font-medium mb-1 cursor-pointer"
-                            onClick={() => handleEditPin(pin.id)}
-                          >
-                            {pin.pinName}
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-sm">
-                            <div className="text-gray-400">ID:</div>
-                            <div className="text-gray-300">{pin.pinId || '-'}</div>
-                            
-                            <div className="text-gray-400">Series:</div>
-                            <div className="text-gray-300">{cleanText(pin.series) || '-'}</div>
-                            
-                            <div className="text-gray-400">Release:</div>
-                            <div className="text-gray-300">
-                              {pin.releaseDate ? new Date(pin.releaseDate).toLocaleDateString() : '-'}
-                            </div>
-                          </div>
+                        {/* Action Buttons */}
+                        <div className="flex justify-center space-x-1 pt-1 border-t border-gray-700">
+                          {pin.isDeleted ? (
+                            pin.isWishlist ? (
+                              // WISHLIST pins - show collected and uncollected buttons
+                              <>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
+                                  title="Mark as Collected"
+                                >
+                                  <FaCheck className="text-sm" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
+                                  title="Mark as Uncollected"
+                                >
+                                  <FaTimes className="text-sm" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
+                                  title="Uncategorize"
+                                >
+                                  <FaQuestionCircle className="text-sm" />
+                                </button>
+                              </>
+                            ) : (
+                              // UNCOLLECTED pins - show collected and uncategorize buttons
+                              <>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
+                                  title="Mark as Collected"
+                                >
+                                  <FaCheck className="text-sm" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                                  title="Add to Wishlist"
+                                >
+                                  <span className="text-xs">🙏</span>
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
+                                  title="Uncategorize"
+                                >
+                                  <FaQuestionCircle className="text-sm" />
+                                </button>
+                              </>
+                            )
+                          ) : (
+                            pin.isCollected ? (
+                              // COLLECTED pins - show uncollected and wishlist buttons
+                              <>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
+                                  title="Mark as Uncollected"
+                                >
+                                  <FaTimes className="text-sm" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                                  title="Add to Wishlist"
+                                >
+                                  <span className="text-xs">🙏</span>
+                                </button>
+                                <button
+                                  onClick={() => handleEditPin(pin.id)}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-purple-600 hover:text-white"
+                                  title="Edit Pin"
+                                >
+                                  <FaEdit className="text-sm" />
+                                </button>
+                              </>
+                            ) : (
+                              // UNCATEGORIZED pins - show collected, uncollected, and wishlist buttons
+                              <>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
+                                  title="Mark as Collected"
+                                >
+                                  <FaCheck className="text-sm" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
+                                  title="Mark as Uncollected"
+                                >
+                                  <FaTimes className="text-sm" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                                  className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                                  title="Add to Wishlist"
+                                >
+                                  <span className="text-xs">🙏</span>
+                                </button>
+                              </>
+                            )
+                          )}
                         </div>
-                      </div>
-                      <div className="flex justify-center">
-                        {pin.isDeleted ? (
-                          pin.isWishlist ? (
-                            // WISHLIST pins - show collected and uncollected buttons
-                            <div className="flex space-x-1">
-                              <button
-                                onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
-                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
-                                title="Mark as Collected"
-                              >
-                                <FaCheck className="text-sm" />
-                              </button>
-                              <button
-                                onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
-                                title="Mark as Uncollected"
-                              >
-                                <FaTimes className="text-sm" />
-                              </button>
-                            </div>
-                          ) : (
-                            // This case shouldn't happen with the new status system, but handle it just in case
-                            <div className="flex space-x-1">
-                              <button
-                                onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
-                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
-                                title="Mark as Collected"
-                              >
-                                <FaCheck className="text-sm" />
-                              </button>
-                              <button
-                                onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
-                                title="Uncategorize"
-                              >
-                                <FaQuestionCircle className="text-sm" />
-                              </button>
-                            </div>
-                          )
-                        ) : (
-                          pin.isCollected ? (
-                            // COLLECTED pins - show uncollected and wishlist buttons
-                            <div className="flex space-x-1">
-                              <button
-                                onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
-                                title="Mark as Uncollected"
-                              >
-                                <FaTimes className="text-sm" />
-                              </button>
-                              <button
-                                onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
-                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
-                                title="Add to Wishlist"
-                              >
-                                <span className="text-xs">🙏</span>
-                              </button>
-                            </div>
-                          ) : (
-                            // UNCATEGORIZED pins - show collected, uncollected, and wishlist buttons
-                            <div className="flex space-x-1">
-                              <button
-                                onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
-                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
-                                title="Mark as Collected"
-                              >
-                                <FaCheck className="text-sm" />
-                              </button>
-                              <button
-                                onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
-                                title="Mark as Uncollected"
-                              >
-                                <FaTimes className="text-sm" />
-                              </button>
-                              <button
-                                onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
-                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
-                                title="Add to Wishlist"
-                              >
-                                <span className="text-xs">🙏</span>
-                              </button>
-                            </div>
-                          )
-                        )}
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="flex flex-col items-center justify-center text-gray-400">
-                    <p className="text-lg mb-2">No pins found</p>
-                    <p className="text-sm mb-4">
-                      Try adjusting your search or filters
-                    </p>
-                    <button
-                      onClick={clearAllFilters}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Clear All Filters
-                    </button>
-                  </div>
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="flex flex-col items-center justify-center text-gray-400">
+                  <p className="text-lg mb-2">No pins found</p>
+                  <p className="text-sm mb-4">
+                    Try adjusting your search or filters
+                  </p>
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
       </div>
