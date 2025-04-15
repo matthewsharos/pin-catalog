@@ -472,17 +472,23 @@ export default function PinCatalog() {
   // Handle single select changes
   const handleCategorySelect = (category) => {
     setFilterCategories(category ? [category] : []);
-    // Don't reset other filters - they will update dynamically
+    // Reset other filters when category changes
+    setFilterOrigins([]);
+    setFilterSeries([]);
   };
 
   const handleOriginSelect = (origin) => {
     setFilterOrigins(origin ? [origin] : []);
-    // Don't reset other filters - they will update dynamically
+    // Reset other filters when origin changes
+    setFilterCategories([]);
+    setFilterSeries([]);
   };
 
   const handleSeriesSelect = (series) => {
     setFilterSeries(series ? [series] : []);
-    // Don't reset other filters - they will update dynamically
+    // Reset other filters when series changes
+    setFilterCategories([]);
+    setFilterOrigins([]);
   };
 
   return (
