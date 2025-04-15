@@ -640,59 +640,133 @@ export default function PinCatalog() {
       </div>
 
       {/* Filters Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-        <div className="w-full">
-          <label className="block text-sm font-medium text-gray-400 mb-1">Years</label>
-          <select
-            multiple
-            value={filterYears}
-            onChange={(e) => handleFilterChange(setFilterYears, Array.from(e.target.selectedOptions, option => option.value))}
-            className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent max-w-xs"
-            size="4"
-          >
-            {filterOptions.years.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-          {filterYears.length > 0 && (
-            <div className="mt-1 flex items-center">
-              <span className="text-xs text-gray-400">{filterYears.length} selected</span>
+      <div className="flex flex-wrap gap-2 mb-6">
+        <div className="relative inline-block">
+          <div className="flex items-center">
+            <div className="relative">
+              <select
+                className="appearance-none pl-3 pr-8 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value && !filterYears.includes(value)) {
+                    setFilterYears([...filterYears, value]);
+                  }
+                  e.target.value = ""; // Reset select after selection
+                }}
+                value=""
+              >
+                <option value="" disabled>Select Years...</option>
+                {filterOptions.years
+                  .filter(year => !filterYears.includes(year))
+                  .map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
+              </div>
+            </div>
+            {filterYears.length > 0 && (
               <button 
                 onClick={() => setFilterYears([])} 
                 className="ml-2 text-xs text-red-400 hover:text-red-300"
+                title="Clear all years"
               >
-                Clear
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
+            )}
+          </div>
+          {filterYears.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1 max-w-xs">
+              {filterYears.map(year => (
+                <span 
+                  key={year} 
+                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                >
+                  {year}
+                  <button
+                    type="button"
+                    className="flex-shrink-0 ml-1 h-4 w-4 rounded-full inline-flex items-center justify-center text-blue-400 hover:bg-blue-200 hover:text-blue-500 focus:outline-none focus:bg-blue-500 focus:text-white"
+                    onClick={() => setFilterYears(filterYears.filter(y => y !== year))}
+                  >
+                    <span className="sr-only">Remove {year}</span>
+                    <svg className="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
+                      <path strokeLinecap="round" strokeWidth="1.5" d="M1 1l6 6m0-6L1 7" />
+                    </svg>
+                  </button>
+                </span>
+              ))}
             </div>
           )}
         </div>
 
-        <div className="w-full">
-          <label className="block text-sm font-medium text-gray-400 mb-1">Categories</label>
-          <select
-            multiple
-            value={filterCategories}
-            onChange={(e) => handleFilterChange(setFilterCategories, Array.from(e.target.selectedOptions, option => option.value))}
-            className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent max-w-xs"
-            size="4"
-          >
-            {filterOptions.series.map((tag) => (
-              <option key={tag} value={tag}>
-                {tag}
-              </option>
-            ))}
-          </select>
-          {filterCategories.length > 0 && (
-            <div className="mt-1 flex items-center">
-              <span className="text-xs text-gray-400">{filterCategories.length} selected</span>
+        <div className="relative inline-block">
+          <div className="flex items-center">
+            <div className="relative">
+              <select
+                className="appearance-none pl-3 pr-8 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value && !filterCategories.includes(value)) {
+                    setFilterCategories([...filterCategories, value]);
+                  }
+                  e.target.value = ""; // Reset select after selection
+                }}
+                value=""
+              >
+                <option value="" disabled>Select Categories...</option>
+                {filterOptions.series
+                  .filter(category => !filterCategories.includes(category))
+                  .map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
+              </div>
+            </div>
+            {filterCategories.length > 0 && (
               <button 
                 onClick={() => setFilterCategories([])} 
                 className="ml-2 text-xs text-red-400 hover:text-red-300"
+                title="Clear all categories"
               >
-                Clear
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
+            )}
+          </div>
+          {filterCategories.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1 max-w-xs">
+              {filterCategories.map(category => (
+                <span 
+                  key={category} 
+                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+                >
+                  {category}
+                  <button
+                    type="button"
+                    className="flex-shrink-0 ml-1 h-4 w-4 rounded-full inline-flex items-center justify-center text-purple-400 hover:bg-purple-200 hover:text-purple-500 focus:outline-none focus:bg-purple-500 focus:text-white"
+                    onClick={() => setFilterCategories(filterCategories.filter(c => c !== category))}
+                  >
+                    <span className="sr-only">Remove {category}</span>
+                    <svg className="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
+                      <path strokeLinecap="round" strokeWidth="1.5" d="M1 1l6 6m0-6L1 7" />
+                    </svg>
+                  </button>
+                </span>
+              ))}
             </div>
           )}
         </div>
