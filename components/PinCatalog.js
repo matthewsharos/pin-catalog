@@ -473,7 +473,7 @@ export default function PinCatalog() {
             <div className="flex items-center space-x-2">
               <Link
                 href="/tags"
-                className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                className="hidden sm:flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 title="Manage Tags"
               >
                 <FaTags />
