@@ -75,80 +75,54 @@ export async function GET(req, { params }) {
 // Handle PUT request to update a pin
 export async function PUT(req, { params }) {
   try {
-    const data = await req.json();
     const id = parseInt(params.id);
+    const data = await req.json();
     
-    if (isNaN(id)) {
-      console.error('Invalid pin ID:', params.id);
-      return NextResponse.json({ error: 'Invalid pin ID' }, { status: 400 });
-    }
-
-    // First check if pin exists
-    const existingPin = await prisma.pin.findUnique({
-      where: { id }
-    });
-
-    if (!existingPin) {
-      console.error('Pin not found for update:', id);
-      return NextResponse.json({ error: 'Pin not found' }, { status: 404 });
-    }
-
-    console.log('Received data for update:', {
-      id,
-      pinName: data.pinName,
-      userImagesCount: data.userImages?.length || 0,
-      commentsCount: data.comments?.length || 0
-    });
-
-    // Validate tags if they exist in the request
-    if (data.tags && Array.isArray(data.tags) && data.tags.length > 0) {
-      // Get all existing tags from the database
-      const allTags = await prisma.pin.findMany({
-        select: {
-          tags: true
-        }
-      });
+    // Extract imageDataUrl if present
+    const { imageDataUrl, ...pinData } = data;
+    
+    // Process data URL if present
+    let imageUrl = pinData.imageUrl;
+    
+    if (imageDataUrl) {
+      // Extract content type and base64 data
+      const matches = imageDataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       
-      // Create a set of all unique tags
-      const existingTagsSet = new Set();
-      allTags.forEach(pin => {
-        if (pin.tags && Array.isArray(pin.tags)) {
-          pin.tags.forEach(tag => existingTagsSet.add(tag));
-        }
-      });
-      
-      // Filter out tags that don't exist
-      const validTags = data.tags.filter(tag => existingTagsSet.has(tag));
-      
-      // Log any invalid tags that were removed
-      const invalidTags = data.tags.filter(tag => !existingTagsSet.has(tag));
-      if (invalidTags.length > 0) {
-        console.log(`Removed ${invalidTags.length} invalid tags:`, invalidTags);
+      if (matches && matches.length === 3) {
+        const contentType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Generate unique filename
+        const timestamp = Date.now();
+        const extension = contentType.split('/')[1] || 'jpg';
+        const filename = `${timestamp}_${id}.${extension}`;
+        
+        // Store in database
+        const userPhoto = await prisma.userPhoto.create({
+          data: {
+            filename: filename,
+            contentType: contentType,
+            data: buffer,
+            pin: { connect: { id } }
+          }
+        });
+        
+        // Create a URL for the image
+        imageUrl = `/api/images/${userPhoto.id}`;
       }
-      
-      // Update the data object with only valid tags
-      data.tags = validTags;
     }
-
-    // Update pin data in the database (without relations)
+    
+    // Update pin with new data
     const updatedPin = await prisma.pin.update({
       where: { id },
       data: {
-        pinName: data.pinName,
-        series: data.series,
-        origin: data.origin,
-        edition: data.edition,
-        releaseDate: data.releaseDate ? new Date(data.releaseDate) : null,
-        isCollected: data.isCollected,
-        isMystery: data.isMystery,
-        isLimitedEdition: data.isLimitedEdition,
-        isDeleted: data.isDeleted,
-        isWishlist: data.isWishlist,
-        updatedAt: new Date(), // Always update timestamp on any change
-        tags: data.tags || existingPin.tags // Use validated tags or keep existing ones
+        ...pinData,
+        imageUrl: imageUrl || pinData.imageUrl,
+        updatedAt: new Date()
       }
     });
-
+    
     // Save user photos and comments to a JSON file
     try {
       const userDataDir = path.join(process.cwd(), 'public', 'data');
@@ -159,11 +133,11 @@ export async function PUT(req, { params }) {
       
       // Prepare user data
       const userData = {
-        userPhotos: Array.isArray(data.userImages) 
-          ? data.userImages.map(url => ({ url }))
+        userPhotos: Array.isArray(pinData.userImages) 
+          ? pinData.userImages.map(url => ({ url }))
           : [],
-        comments: Array.isArray(data.comments)
-          ? data.comments
+        comments: Array.isArray(pinData.comments)
+          ? pinData.comments
           : []
       };
       

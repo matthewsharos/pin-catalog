@@ -5,7 +5,6 @@ import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLef
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import SmokeEffect from './SmokeEffect';
-import { uploadImage } from '../lib/api';
 import axios from 'axios';
 
 export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onStatusChange, onEditTags }) {
@@ -68,27 +67,23 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
         throw new Error('Invalid file type. Only JPEG, PNG and WebP images are allowed.');
       }
 
-      // Upload image with pin ID if available
-      const pinId = pin?.id || null;
-      const response = await uploadImage(file, pinId);
+      // Create a data URL from the file
+      const reader = new FileReader();
       
-      if (response.data?.url) {
-        setFormData(prev => ({ ...prev, userImage: response.data.url }));
-        toast.success('Image uploaded successfully', { id: loadingToast });
-      } else {
-        throw new Error('No URL returned from upload');
-      }
+      // Create a promise to handle the FileReader async operation
+      const dataUrl = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+      
+      // Set the data URL as the image source
+      setFormData(prev => ({ ...prev, userImage: dataUrl }));
+      toast.success('Image uploaded successfully', { id: loadingToast });
+      
     } catch (error) {
-      console.error('Error uploading image:', error);
-      
-      // Get the error message from the response if available
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to upload image';
-      toast.error(errorMessage, { id: loadingToast });
-      
-      // Log additional details for debugging
-      if (error.response) {
-        console.log('Error response:', error.response);
-      }
+      console.error('Error processing image:', error);
+      toast.error(error.message || 'Failed to process image', { id: loadingToast });
     }
   };
 
@@ -117,28 +112,45 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
     toast.success('Comment deleted');
   };
 
+  const handleSave = async () => {
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading('Saving pin...');
+      
+      // Create a copy of the form data
+      const updatedPin = { ...formData };
+      
+      // Convert release date to ISO string if it exists
+      if (updatedPin.releaseDate) {
+        updatedPin.releaseDate = new Date(updatedPin.releaseDate).toISOString();
+      }
+      
+      // Add the pin ID
+      updatedPin.id = pin.id;
+      
+      // If we have a data URL for the image, we need to handle it differently
+      if (updatedPin.userImage && updatedPin.userImage.startsWith('data:')) {
+        // The image is a data URL, so we'll include it directly
+        updatedPin.imageDataUrl = updatedPin.userImage;
+        delete updatedPin.userImage;
+      }
+      
+      // Call the onSave callback
+      await onSave(updatedPin);
+      
+      // Close the toast
+      toast.success('Pin saved successfully', { id: loadingToast });
+      
+    } catch (error) {
+      console.error('Error saving pin:', error);
+      toast.error('Failed to save pin');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const updatedPin = {
-        ...pin,
-        pinName: formData.pinName,
-        series: formData.series,
-        origin: formData.origin,
-        releaseDate: formData.releaseDate || null,
-        status: formData.status,
-        comments,
-        isLimitedEdition: formData.isLimitedEdition
-      };
-      
-      console.log('Saving pin:', updatedPin);
-      
-      await onSave(updatedPin);
-      onClose();
-    } catch (error) {
-      console.error('Error updating pin:', error);
-      toast.error('Failed to update pin');
-    }
+    await handleSave();
+    onClose();
   };
 
   const handleStatusChange = async (newStatus) => {
