@@ -525,7 +525,7 @@ export default function PinCatalog() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
             <div className="flex items-center">
-              <img src="/pin-icon.png" alt="Pin Icon" className="w-8 h-8 mr-2" />
+              <img src="/icon.png" alt="Pin Icon" className="w-8 h-8 mr-2" />
               <h1 className="text-2xl font-bold text-white">
                 Sharos Pin Catalog
               </h1>
