@@ -5,6 +5,10 @@ if (!process.env.BLOB_READ_WRITE_TOKEN) {
   throw new Error('BLOB_READ_WRITE_TOKEN is not set');
 }
 
+// Define allowed methods
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+
 export async function POST(req) {
   try {
     const data = await req.formData();

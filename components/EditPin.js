@@ -72,8 +72,11 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
       
       const response = await axios.post('/api/upload', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-        }
+          'Accept': 'application/json',
+          'Content-Type': 'multipart/form-data'
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
       });
       
       if (response.data?.url) {
