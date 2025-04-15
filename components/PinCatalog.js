@@ -300,8 +300,25 @@ export default function PinCatalog() {
     setPage(1); // Reset to first page when filters change
   };
 
-  const handleStatusFilterChange = (field, value) => {
-    setStatusFilters(prev => ({ ...prev, [field]: value }));
+  const handleStatusFilterChange = (status, value, e) => {
+    e.preventDefault(); // Prevent text selection
+    
+    let newFilters = { ...statusFilters };
+    
+    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      // Multi-select with modifier key
+      newFilters[status] = value;
+    } else {
+      // Single select without modifier
+      newFilters = {
+        collected: false,
+        uncollected: false,
+        wishlist: false
+      };
+      newFilters[status] = value;
+    }
+    
+    setStatusFilters(newFilters);
     setPage(1); // Reset to first page when filters change
   };
 
@@ -491,13 +508,7 @@ export default function PinCatalog() {
           {/* Status Filter Buttons - Smaller Size */}
           <div className="flex bg-gray-800 rounded-lg p-0.5 space-x-0.5">
             <button
-              onClick={() => {
-                setStatusFilters({
-                  collected: false,
-                  uncollected: false,
-                  wishlist: false
-                });
-              }}
+              onClick={(e) => handleStatusFilterChange('all', true, e)}
               className={`px-2 py-1 text-xs font-medium rounded transition-colors flex items-center ${
                 !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
                   ? 'bg-blue-600 text-white'
@@ -508,7 +519,7 @@ export default function PinCatalog() {
               All
             </button>
             <button
-              onClick={() => handleStatusFilterChange('collected', !statusFilters.collected)}
+              onClick={(e) => handleStatusFilterChange('collected', !statusFilters.collected, e)}
               className={`px-2 py-1 text-xs font-medium rounded transition-colors flex items-center ${
                 statusFilters.collected
                   ? 'bg-green-600 text-white'
@@ -519,7 +530,7 @@ export default function PinCatalog() {
               Collected
             </button>
             <button
-              onClick={() => handleStatusFilterChange('uncollected', !statusFilters.uncollected)}
+              onClick={(e) => handleStatusFilterChange('uncollected', !statusFilters.uncollected, e)}
               className={`px-2 py-1 text-xs font-medium rounded transition-colors flex items-center ${
                 statusFilters.uncollected
                   ? 'bg-yellow-600 text-white'
@@ -530,12 +541,13 @@ export default function PinCatalog() {
               Missing
             </button>
             <button
-              onClick={() => handleStatusFilterChange('wishlist', !statusFilters.wishlist)}
+              onClick={(e) => handleStatusFilterChange('wishlist', !statusFilters.wishlist, e)}
               className={`px-2 py-1 text-xs font-medium rounded transition-colors flex items-center ${
                 statusFilters.wishlist
                   ? 'bg-blue-400 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
+              title="Hold ⌘/Ctrl or Shift to select multiple statuses"
             >
               <FaHeart className={`mr-1 ${statusFilters.wishlist ? 'opacity-100' : 'opacity-50'}`} />
               Wishlist
@@ -604,7 +616,7 @@ export default function PinCatalog() {
                 <div className="flex justify-center space-x-1 pt-1 border-t border-gray-700">
                   {pin.isDeleted ? (
                     pin.isWishlist ? (
-                      // WISHLIST pins - show collected and uncollected buttons
+                      // WISHLIST pins - show collected and uncollected buttons only
                       <>
                         <button
                           onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
@@ -620,16 +632,9 @@ export default function PinCatalog() {
                         >
                           <FaTimes className="text-sm" />
                         </button>
-                        <button
-                          onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                          className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
-                          title="Uncategorize"
-                        >
-                          <FaQuestionCircle className="text-sm" />
-                        </button>
                       </>
                     ) : (
-                      // UNCOLLECTED pins - show collected and uncategorize buttons
+                      // UNCOLLECTED (Missing) pins - show collected and wishlist buttons only
                       <>
                         <button
                           onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
@@ -644,13 +649,6 @@ export default function PinCatalog() {
                           title="Add to Wishlist"
                         >
                           <span className="text-xs">🙏</span>
-                        </button>
-                        <button
-                          onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                          className="p-1.5 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
-                          title="Uncategorize"
-                        >
-                          <FaQuestionCircle className="text-sm" />
                         </button>
                       </>
                     )
@@ -674,7 +672,7 @@ export default function PinCatalog() {
                         </button>
                       </>
                     ) : (
-                      // UNCATEGORIZED pins - show collected, uncollected, and wishlist buttons
+                      // UNCATEGORIZED pins - show all buttons
                       <>
                         <button
                           onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
