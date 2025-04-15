@@ -492,7 +492,7 @@ export default function PinCatalog() {
 
         {/* Search and Filter Section */}
         <div className="px-2 pb-3">
-          {/* Row 1: Search, Clear, Year */}
+          {/* Row 1: Search */}
           <div className="flex items-center space-x-2 mb-2">
             <div className="relative flex-grow">
               <input
@@ -504,56 +504,6 @@ export default function PinCatalog() {
                 ref={searchInputRef}
               />
               <FaSearch className="absolute left-2.5 top-2 text-gray-400 text-xs" />
-            </div>
-            
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                searchInputRef.current?.focus();
-              }}
-              className="h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center whitespace-nowrap"
-            >
-              Clear
-            </button>
-
-            <div className="relative" ref={yearButtonRef}>
-              <button
-                onClick={() => setShowYearDropdown(!showYearDropdown)}
-                className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                <span>Year{filterYears.length > 0 ? ` (${filterYears.length})` : ''}</span>
-                <FaChevronDown className={`transform transition-transform ${showYearDropdown ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Year Dropdown */}
-              {showYearDropdown && (
-                <div className="absolute z-50 mt-2 py-2 w-48 bg-gray-800 rounded-lg shadow-xl">
-                  <div className="max-h-60 overflow-y-auto">
-                    {filterOptions.years.map(year => (
-                      <label
-                        key={year}
-                        className="flex items-center px-4 py-2 hover:bg-gray-700 cursor-pointer group"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={filterYears.includes(year)}
-                          onChange={() => {
-                            if (filterYears.includes(year)) {
-                              setFilterYears(prev => prev.filter(y => y !== year));
-                            } else {
-                              setFilterYears(prev => [...prev, year]);
-                            }
-                          }}
-                          className="form-checkbox h-4 w-4 text-purple-500 rounded border-gray-600 bg-gray-700 focus:ring-purple-500"
-                        />
-                        <span className="ml-3 text-sm text-gray-300 group-hover:text-white">
-                          {year}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -610,120 +560,103 @@ export default function PinCatalog() {
 
       {/* Main Content */}
       <div className="px-4 py-6">
-        {/* Sort Controls */}
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-4 mb-4">
-          {/* Search Input */}
-          <div className="flex-1">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search pins..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 pl-9 pr-4 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            </div>
+        {/* Sort and Filter Controls */}
+        <div className="flex justify-end mb-4 space-x-2">
+          {/* Year Filter Button */}
+          <div className="relative" ref={yearButtonRef}>
+            <button
+              onClick={() => setShowYearDropdown(!showYearDropdown)}
+              className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <span>Year{filterYears.length > 0 ? ` (${filterYears.length})` : ''}</span>
+              <FaChevronDown className={`transform transition-transform ${showYearDropdown ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Year Dropdown */}
+            {showYearDropdown && (
+              <div className="absolute right-0 z-50 mt-2 py-2 w-48 bg-gray-800 rounded-lg shadow-xl">
+                <div className="max-h-60 overflow-y-auto">
+                  {filterOptions.years.map(year => (
+                    <label
+                      key={year}
+                      className="flex items-center px-4 py-2 hover:bg-gray-700 cursor-pointer group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={filterYears.includes(year)}
+                        onChange={() => {
+                          if (filterYears.includes(year)) {
+                            setFilterYears(prev => prev.filter(y => y !== year));
+                          } else {
+                            setFilterYears(prev => [...prev, year]);
+                          }
+                        }}
+                        className="form-checkbox h-4 w-4 text-purple-500 rounded border-gray-600 bg-gray-700 focus:ring-purple-500"
+                      />
+                      <span className="ml-3 text-sm text-gray-300 group-hover:text-white">
+                        {year}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Filter Controls */}
-          <div className="flex items-center justify-between sm:justify-end space-x-2">
-            {/* Year Filter Button */}
-            <div className="relative" ref={yearButtonRef}>
-              <button
-                onClick={() => setShowYearDropdown(!showYearDropdown)}
-                className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                <span>Year{filterYears.length > 0 ? ` (${filterYears.length})` : ''}</span>
-                <FaChevronDown className={`transform transition-transform ${showYearDropdown ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Year Dropdown */}
-              {showYearDropdown && (
-                <div className="absolute right-0 z-50 mt-2 py-2 w-48 bg-gray-800 rounded-lg shadow-xl">
-                  <div className="max-h-60 overflow-y-auto">
-                    {filterOptions.years.map(year => (
-                      <label
-                        key={year}
-                        className="flex items-center px-4 py-2 hover:bg-gray-700 cursor-pointer group"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={filterYears.includes(year)}
-                          onChange={() => {
-                            if (filterYears.includes(year)) {
-                              setFilterYears(prev => prev.filter(y => y !== year));
-                            } else {
-                              setFilterYears(prev => [...prev, year]);
-                            }
-                          }}
-                          className="form-checkbox h-4 w-4 text-purple-500 rounded border-gray-600 bg-gray-700 focus:ring-purple-500"
-                        />
-                        <span className="ml-3 text-sm text-gray-300 group-hover:text-white">
-                          {year}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sort Menu */}
-            <div className="relative" ref={sortButtonRef}>
-              <button
-                onClick={() => setShowSortMenu(!showSortMenu)}
-                className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                <FaSort className="mr-1.5 text-xs" />
-                Sort: {getSortLabel()}
-              </button>
-              
-              {showSortMenu && (
-                <div className="absolute right-0 mt-1 w-40 bg-gray-800 rounded-lg shadow-lg py-1 z-50">
-                  <button
-                    onClick={() => handleSort('updatedAt')}
-                    className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
-                      sortField === 'updatedAt' ? 'text-blue-400' : 'text-white'
-                    }`}
-                  >
-                    Recently Updated
-                  </button>
-                  <button
-                    onClick={() => handleSort('releaseDate')}
-                    className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
-                      sortField === 'releaseDate' ? 'text-blue-400' : 'text-white'
-                    }`}
-                  >
-                    Release Date
-                  </button>
-                  <button
-                    onClick={() => handleSort('pinName')}
-                    className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
-                      sortField === 'pinName' ? 'text-blue-400' : 'text-white'
-                    }`}
-                  >
-                    Pin Name
-                  </button>
-                  <button
-                    onClick={() => handleSort('series')}
-                    className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
-                      sortField === 'series' ? 'text-blue-400' : 'text-white'
-                    }`}
-                  >
-                    Series
-                  </button>
-                  <button
-                    onClick={() => handleSort('origin')}
-                    className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
-                      sortField === 'origin' ? 'text-blue-400' : 'text-white'
-                    }`}
-                  >
-                    Origin
-                  </button>
-                </div>
-              )}
-            </div>
+          {/* Sort Menu */}
+          <div className="relative" ref={sortButtonRef}>
+            <button
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <FaSort className="mr-1.5 text-xs" />
+              Sort: {getSortLabel()}
+            </button>
+            
+            {showSortMenu && (
+              <div className="absolute right-0 mt-1 w-40 bg-gray-800 rounded-lg shadow-lg py-1 z-50">
+                <button
+                  onClick={() => handleSort('updatedAt')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'updatedAt' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Recently Updated
+                </button>
+                <button
+                  onClick={() => handleSort('releaseDate')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'releaseDate' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Release Date
+                </button>
+                <button
+                  onClick={() => handleSort('pinName')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'pinName' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Pin Name
+                </button>
+                <button
+                  onClick={() => handleSort('series')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'series' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Series
+                </button>
+                <button
+                  onClick={() => handleSort('origin')}
+                  className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${
+                    sortField === 'origin' ? 'text-blue-400' : 'text-white'
+                  }`}
+                >
+                  Origin
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
