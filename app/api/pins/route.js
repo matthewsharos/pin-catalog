@@ -100,7 +100,8 @@ export async function GET(req) {
       if (origins.length > 0) {
         where.AND.push({
           origin: {
-            in: origins
+            contains: origins[0],
+            mode: 'insensitive'
           }
         });
       }
