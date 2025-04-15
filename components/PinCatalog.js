@@ -453,55 +453,42 @@ export default function PinCatalog() {
     }
   };
 
-  const handleRestorePins = async (pinIds) => {
-    if (!Array.isArray(pinIds) || pinIds.length === 0) {
-      toast.error('No pins selected to restore');
+  const handleBulkAction = async (action) => {
+    if (selectedPins.length === 0) {
+      toast.error('No pins selected');
       return;
     }
 
     try {
       setLoading(true);
-      
-      // Filter out pins that are already in the wishlist
-      const pinsToRestore = pinIds.filter(id => {
-        const pin = pins.find(p => p.id === id);
-        return pin && !pin.isWishlist;
-      });
-      
-      if (pinsToRestore.length === 0) {
-        toast.info('All selected pins are already in the wishlist');
-        setLoading(false);
-        return;
+      let updates = {};
+
+      switch (action) {
+        case 'collected':
+          updates = { isCollected: true, isDeleted: false, isWishlist: false };
+          break;
+        case 'uncollected':
+          updates = { isCollected: false, isDeleted: true, isWishlist: false };
+          break;
+        case 'wishlist':
+          updates = { isCollected: false, isDeleted: true, isWishlist: true };
+          break;
+        case 'uncategorize':
+          updates = { isCollected: false, isDeleted: false, isWishlist: false };
+          break;
       }
 
       const response = await api.post('/api/pins/bulk-update', {
-        pinIds: pinsToRestore,
-        updates: {
-          isDeleted: false
-        }
+        pinIds: selectedPins,
+        updates
       });
 
-      toast.success(`Restored ${pinsToRestore.length} ${pinsToRestore.length === 1 ? 'pin' : 'pins'}`);
-      
-      // Clear selection if the restored pins were selected
-      setSelectedPins(prev => prev.filter(id => !pinsToRestore.includes(id)));
-      
-      // Refresh the pins list
+      toast.success(`Updated ${selectedPins.length} pins`);
+      setSelectedPins([]);
       fetchPins();
     } catch (error) {
-      console.error('Error restoring pins:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          method: error.config?.method
-        }
-      });
-      toast.error('Failed to restore pins');
+      console.error('Error performing bulk action:', error);
+      toast.error('Failed to update pins');
     } finally {
       setLoading(false);
     }
@@ -714,14 +701,6 @@ export default function PinCatalog() {
               >
                 <FaTrash className="mr-1" /> Delete
               </button>
-              {statusFilters.wishlist && (
-                <button
-                  onClick={() => handleRestorePins(selectedPins)}
-                  className="px-2 py-1 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center"
-                >
-                  <FaCheck className="mr-1" /> Restore
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -876,19 +855,8 @@ export default function PinCatalog() {
                           <div className="flex justify-center">
                             {pin.isDeleted ? (
                               pin.isWishlist ? (
-                                <span className="text-blue-400" title="In Wishlist">🙏</span>
-                              ) : (
-                                <button
-                                  onClick={() => handleRestorePins([pin.id])}
-                                  className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
-                                >
-                                  <FaCheck className="mr-1" /> Restore
-                                </button>
-                              )
-                            ) : (
-                              <div className="flex space-x-1">
-                                {/* Only show relevant buttons based on current status */}
-                                {!pin.isCollected && (
+                                // WISHLIST pins - show collected and uncollected buttons
+                                <div className="flex space-x-1">
                                   <button
                                     onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
                                     className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
@@ -896,9 +864,6 @@ export default function PinCatalog() {
                                   >
                                     <FaCheck className="text-sm" />
                                   </button>
-                                )}
-                                
-                                {!pin.isDeleted && !pin.isWishlist && (
                                   <button
                                     onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
                                     className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
@@ -906,9 +871,37 @@ export default function PinCatalog() {
                                   >
                                     <FaTimes className="text-sm" />
                                   </button>
-                                )}
-                                
-                                {!pin.isWishlist && (
+                                </div>
+                              ) : (
+                                // This case shouldn't happen with the new status system, but handle it just in case
+                                <div className="flex space-x-1">
+                                  <button
+                                    onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
+                                    title="Mark as Collected"
+                                  >
+                                    <FaCheck className="text-sm" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
+                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
+                                    title="Uncategorize"
+                                  >
+                                    <FaQuestionCircle className="text-sm" />
+                                  </button>
+                                </div>
+                              )
+                            ) : (
+                              pin.isCollected ? (
+                                // COLLECTED pins - show uncollected and wishlist buttons
+                                <div className="flex space-x-1">
+                                  <button
+                                    onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
+                                    title="Mark as Uncollected"
+                                  >
+                                    <FaTimes className="text-sm" />
+                                  </button>
                                   <button
                                     onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
                                     className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
@@ -916,17 +909,33 @@ export default function PinCatalog() {
                                   >
                                     <span className="text-xs">🙏</span>
                                   </button>
-                                )}
-                                
-                                {/* Always show uncategorize button */}
-                                <button
-                                  onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                                  className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
-                                  title="Uncategorize"
-                                >
-                                  <FaQuestionCircle className="text-sm" />
-                                </button>
-                              </div>
+                                </div>
+                              ) : (
+                                // UNCATEGORIZED pins - show collected, uncollected, and wishlist buttons
+                                <div className="flex space-x-1">
+                                  <button
+                                    onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
+                                    title="Mark as Collected"
+                                  >
+                                    <FaCheck className="text-sm" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
+                                    title="Mark as Uncollected"
+                                  >
+                                    <FaTimes className="text-sm" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                                    title="Add to Wishlist"
+                                  >
+                                    <span className="text-xs">🙏</span>
+                                  </button>
+                                </div>
+                              )
                             )}
                           </div>
                         </td>
@@ -1016,19 +1025,8 @@ export default function PinCatalog() {
                       <div className="flex justify-center">
                         {pin.isDeleted ? (
                           pin.isWishlist ? (
-                            <span className="text-blue-400" title="In Wishlist">🙏</span>
-                          ) : (
-                            <button
-                              onClick={() => handleRestorePins([pin.id])}
-                              className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
-                            >
-                              <FaCheck className="mr-1" /> Restore
-                            </button>
-                          )
-                        ) : (
-                          <div className="flex space-x-1">
-                            {/* Only show relevant buttons based on current status */}
-                            {!pin.isCollected && (
+                            // WISHLIST pins - show collected and uncollected buttons
+                            <div className="flex space-x-1">
                               <button
                                 onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
                                 className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
@@ -1036,9 +1034,6 @@ export default function PinCatalog() {
                               >
                                 <FaCheck className="text-sm" />
                               </button>
-                            )}
-                            
-                            {!pin.isDeleted && !pin.isWishlist && (
                               <button
                                 onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
                                 className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
@@ -1046,9 +1041,37 @@ export default function PinCatalog() {
                               >
                                 <FaTimes className="text-sm" />
                               </button>
-                            )}
-                            
-                            {!pin.isWishlist && (
+                            </div>
+                          ) : (
+                            // This case shouldn't happen with the new status system, but handle it just in case
+                            <div className="flex space-x-1">
+                              <button
+                                onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
+                                title="Mark as Collected"
+                              >
+                                <FaCheck className="text-sm" />
+                              </button>
+                              <button
+                                onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
+                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
+                                title="Uncategorize"
+                              >
+                                <FaQuestionCircle className="text-sm" />
+                              </button>
+                            </div>
+                          )
+                        ) : (
+                          pin.isCollected ? (
+                            // COLLECTED pins - show uncollected and wishlist buttons
+                            <div className="flex space-x-1">
+                              <button
+                                onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
+                                title="Mark as Uncollected"
+                              >
+                                <FaTimes className="text-sm" />
+                              </button>
                               <button
                                 onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
                                 className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
@@ -1056,17 +1079,33 @@ export default function PinCatalog() {
                               >
                                 <span className="text-xs">🙏</span>
                               </button>
-                            )}
-                            
-                            {/* Always show uncategorize button */}
-                            <button
-                              onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
-                              title="Uncategorize"
-                            >
-                              <FaQuestionCircle className="text-sm" />
-                            </button>
-                          </div>
+                            </div>
+                          ) : (
+                            // UNCATEGORIZED pins - show collected, uncollected, and wishlist buttons
+                            <div className="flex space-x-1">
+                              <button
+                                onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
+                                title="Mark as Collected"
+                              >
+                                <FaCheck className="text-sm" />
+                              </button>
+                              <button
+                                onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
+                                title="Mark as Uncollected"
+                              >
+                                <FaTimes className="text-sm" />
+                              </button>
+                              <button
+                                onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                                title="Add to Wishlist"
+                              >
+                                <span className="text-xs">🙏</span>
+                              </button>
+                            </div>
+                          )
                         )}
                       </div>
                     </div>
