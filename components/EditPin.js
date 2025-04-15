@@ -48,20 +48,47 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      try {
-        const formData = new FormData();
-        formData.append('image', file);
-        const response = await axios.post('/api/upload', formData);
-        
+    if (!file) return;
+
+    // Reset file input
+    e.target.value = '';
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Only JPEG, PNG and WebP images are allowed.');
+      return;
+    }
+
+    // Validate file size (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('File too large. Maximum size is 5MB.');
+      return;
+    }
+
+    // Show loading toast
+    const loadingToast = toast.loading('Uploading image...');
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await axios.post('/api/upload', formData);
+      
+      if (response.data.success) {
         // Update the pin image
         setFormData(prev => ({ ...prev, userImage: response.data.url }));
-        
-        toast.success('Image uploaded successfully');
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        toast.error('Failed to upload image');
+        toast.success('Image uploaded successfully', { id: loadingToast });
+      } else {
+        throw new Error(response.data.error || 'Failed to upload image');
       }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error(
+        error.response?.data?.error || error.message || 'Failed to upload image',
+        { id: loadingToast }
+      );
     }
   };
 
@@ -227,16 +254,19 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
                     className="max-w-xs rounded-lg border border-gray-700 group-hover:opacity-75 transition-opacity"
                   />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="bg-black bg-opacity-50 rounded-lg p-2">
-                      <FaUpload className="text-white text-xl" />
-                    </div>
+                    <label htmlFor="image-upload" className="cursor-pointer">
+                      <div className="bg-black bg-opacity-50 rounded-lg p-2">
+                        <FaUpload className="text-white text-xl" />
+                      </div>
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="image-upload"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
                   </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
                 </label>
 
                 {/* Status Buttons */}
