@@ -276,19 +276,27 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
             )}
 
             {/* Pin ID and Pin&Pop Link in one row */}
-            <div className="flex items-center space-x-2">
-              <span className="text-gray-400">Pin ID:</span>
-              <span className="font-mono">{pin.pinId || '-'}</span>
-              {pin.isLimitedEdition && (
-                <FaCandyCane className="text-pink-500 ml-2" title="Limited Edition" />
-              )}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-gray-300">Pin ID:</span>
+                <span className="text-white">{pin?.pinId}</span>
+                {pin?.pinpopUrl && (
+                  <a
+                    href={pin.pinpopUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-400 hover:text-purple-300 transition-colors"
+                    title="View on Pin&Pop"
+                  >
+                    <FaCandyCane className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
               <button
-                type="button"
-                onClick={() => onEditTags?.(pin)}
-                className="text-gray-400 hover:text-purple-400 transition-colors"
-                title="Edit Tags"
+                onClick={onClose}
+                className="text-gray-400 hover:text-white transition-colors"
               >
-                <FaTags />
+                <FaTimes className="h-5 w-5" />
               </button>
             </div>
           </div>
