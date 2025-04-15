@@ -65,6 +65,7 @@ export default function PinCatalog() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [smokeEffects, setSmokeEffects] = useState([]);
+  const [error, setError] = useState(null);
   const yearButtonRef = useRef(null);
   const sortButtonRef = useRef(null);
 
@@ -75,23 +76,25 @@ export default function PinCatalog() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Debounce search input
+  // Debounced search effect
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setPage(1); // Reset to first page when search changes
-    }, 300); // Wait 300ms after last keystroke before searching
-
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchPins = async () => {
+  const fetchPins = useCallback(async () => {
     try {
-      setLoading(true);
+      // Only show loading indicator on initial load
+      if (initialLoad) {
+        setLoading(true);
+      }
+
       const queryParams = new URLSearchParams();
       
       // Search query
-      if (searchQuery) queryParams.set('search', searchQuery);
+      if (debouncedSearch) queryParams.set('search', debouncedSearch);
       
       // Year filter
       if (filterYears.length > 0) {
@@ -122,22 +125,60 @@ export default function PinCatalog() {
       if (statusFilters.uncollected) queryParams.set('status', 'uncollected');
       if (statusFilters.wishlist) queryParams.set('status', 'wishlist');
 
-      // Sort
+      // Sort and pagination
       queryParams.set('sortField', sortField);
       queryParams.set('sortOrder', sortOrder);
-      queryParams.set('page', page);
+      queryParams.set('page', page.toString());
 
       const response = await api.get(`/api/pins?${queryParams.toString()}`);
-      setPins(response.data.pins);
-      setTotal(response.data.total);
-      setLoading(false);
+      const data = response.data;
+
+      // Update pins without triggering loading state
+      setPins(data.pins || []);
+      setTotal(data.total || 0);
+      
+      // Update filter options based on current filters
+      setFilterOptions({
+        years: data.filterOptions?.years || [],
+        series: data.filterOptions?.series || [],
+        origins: data.filterOptions?.origins || [],
+        tags: data.filterOptions?.tags || [],
+      });
+      
+      // After first successful load, set initialLoad to false
+      if (initialLoad) {
+        setInitialLoad(false);
+      }
     } catch (error) {
       console.error('Error fetching pins:', error);
-      toast.error('Failed to load pins');
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      setError('Failed to load pins');
+      // Even on error, we should stop showing the loading state
+      setInitialLoad(false);
+    } finally {
       setLoading(false);
     }
-  };
+  }, [
+    page,
+    debouncedSearch,
+    sortField,
+    sortOrder,
+    filterYears,
+    filterCategories,
+    filterOrigins,
+    filterSeries,
+    filterLimitedEdition,
+    filterMystery,
+    statusFilters,
+    initialLoad
+  ]);
 
+  // Fetch pins when filters change
   useEffect(() => {
     fetchPins();
   }, [fetchPins]);
