@@ -57,33 +57,41 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
     const loadingToast = toast.loading('Uploading image...');
 
     try {
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File too large. Maximum size is 5MB.');
+      }
+
+      // Validate file type
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        throw new Error('Invalid file type. Only JPEG, PNG and WebP images are allowed.');
+      }
+
       const formData = new FormData();
       formData.append('image', file);
       
-      const response = await axios.post('/api/upload', formData);
+      const response = await axios.post('/api/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      });
       
-      if (response.data.success) {
-        // Update the pin image
+      if (response.data?.url) {
         setFormData(prev => ({ ...prev, userImage: response.data.url }));
         toast.success('Image uploaded successfully', { id: loadingToast });
       } else {
-        throw new Error(response.data.error || 'Failed to upload image');
+        throw new Error('No URL returned from upload');
       }
     } catch (error) {
       console.error('Error uploading image:', error);
       
       // Get the error message from the response if available
       const errorMessage = error.response?.data?.error || error.message || 'Failed to upload image';
-      
-      // Show error toast
       toast.error(errorMessage, { id: loadingToast });
       
       // Log additional details for debugging
       if (error.response) {
-        console.log('Error response:', {
-          status: error.response.status,
-          data: error.response.data
-        });
+        console.log('Error response:', error.response);
       }
     }
   };
