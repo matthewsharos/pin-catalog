@@ -589,19 +589,18 @@ export default function PinCatalog() {
         {/* Row 1: Logo, Title, Pin Count, Action Buttons */}
         <div className="px-2 py-1.5">
           <div className="flex items-center justify-between">
-            {/* Logo and Title */}
-            <div className="flex items-center space-x-2">
-              <img
-                src="/icon.png"
-                alt="Pin Icon"
-                className="w-12 h-12 sm:w-16 sm:h-16"
-              />
-              <div className="flex items-center space-x-3">
-                <h1 className={`${dancingScript.className} text-2xl sm:text-3xl font-medium`}>
-                  <span className="hidden sm:inline">Sharos Pin </span>
-                  <span>Catalog</span>
-                </h1>
-                <div className="text-gray-400 text-sm">
+            {/* Header */}
+            <div className="flex items-center">
+              <div className="flex items-center">
+                <button onClick={scrollToTop} className="flex items-center">
+                  <img src="/logo.png" alt="Logo" className="h-8 w-8 mr-3" />
+                  <h1 className={`text-xl text-white ${dancingScript.className}`}>
+                    <span className="hidden sm:inline">Sharos Pin </span>
+                    <span className="sm:hidden">Sharos </span>
+                    <span>Catalog</span>
+                  </h1>
+                </button>
+                <div className="text-gray-400 text-sm ml-3">
                   {total.toLocaleString()} pins
                 </div>
               </div>
@@ -611,7 +610,7 @@ export default function PinCatalog() {
             <div className="flex items-center space-x-2">
               <Link
                 href="/tags"
-                className="hidden sm:flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                className={`hidden sm:flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors ${dancingScript.className}`}
                 title="Manage Tags"
               >
                 <FaTags />
