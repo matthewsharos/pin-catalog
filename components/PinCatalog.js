@@ -593,8 +593,8 @@ export default function PinCatalog() {
             <div className="flex items-center">
               <div className="flex items-center">
                 <button onClick={scrollToTop} className="flex items-center">
-                  <img src="/logo.png" alt="Logo" className="h-8 w-8 mr-3" />
-                  <h1 className={`text-xl text-white ${dancingScript.className}`}>
+                  <img src="/icon.png" alt="Logo" className="w-12 h-12 sm:w-16 sm:h-16" />
+                  <h1 className={`text-2xl sm:text-3xl font-medium text-white ${dancingScript.className}`}>
                     <span className="hidden sm:inline">Sharos Pin </span>
                     <span className="sm:hidden">Sharos </span>
                     <span>Catalog</span>
@@ -610,7 +610,7 @@ export default function PinCatalog() {
             <div className="flex items-center space-x-2">
               <Link
                 href="/tags"
-                className={`hidden sm:flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors ${dancingScript.className}`}
+                className="hidden sm:flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 title="Manage Tags"
               >
                 <FaTags />

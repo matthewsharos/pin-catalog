@@ -5,6 +5,9 @@ import { FaPlus, FaTimes, FaArrowLeft, FaTrash, FaCheck } from 'react-icons/fa';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
+import { Dancing_Script } from 'next/font/google';
+
+const dancingScript = Dancing_Script({ subsets: ['latin'] });
 
 export default function TagsPage() {
   const [tags, setTags] = useState([]);
@@ -99,7 +102,7 @@ export default function TagsPage() {
         <Link href="/" className="text-gray-400 hover:text-white">
           <FaArrowLeft size={20} />
         </Link>
-        <h1 className="text-3xl text-white" style={{ fontFamily: 'var(--font-pacifico)', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+        <h1 className={`text-3xl text-white ${dancingScript.className}`} style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
           Tag Management
         </h1>
       </div>
