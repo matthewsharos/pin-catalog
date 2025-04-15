@@ -9,6 +9,18 @@ if (!process.env.BLOB_READ_WRITE_TOKEN) {
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
+// Helper function to add CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(req) {
   try {
     const data = await req.formData();
@@ -17,7 +29,7 @@ export async function POST(req) {
     if (!file) {
       return NextResponse.json(
         { error: 'No image provided' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -30,13 +42,13 @@ export async function POST(req) {
     return NextResponse.json({ 
       url,
       success: true
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Upload error:', error);
 
     return NextResponse.json(
       { error: error.message },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
