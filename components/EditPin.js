@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLeft, FaTags } from 'react-icons/fa';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import SmokeEffect from './SmokeEffect';
+import { uploadImage } from '../lib/api';
+import axios from 'axios';
 
 export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onStatusChange, onEditTags }) {
   const [formData, setFormData] = useState({
@@ -67,17 +68,7 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
         throw new Error('Invalid file type. Only JPEG, PNG and WebP images are allowed.');
       }
 
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const response = await axios.post('/api/upload', formData, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'multipart/form-data'
-        },
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity
-      });
+      const response = await uploadImage(file);
       
       if (response.data?.url) {
         setFormData(prev => ({ ...prev, userImage: response.data.url }));
@@ -206,7 +197,18 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
         };
       }
 
-      await axios.post('/api/pins/bulk-update', {
+      // Create axios instance with base URL
+      const axiosInstance = axios.create({
+        baseURL: process.env.NEXT_PUBLIC_API_URL || '',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
+      });
+      
+      await axiosInstance.post('/api/pins/bulk-update', {
         pinIds: [pin.id],
         updates: updates
       });
