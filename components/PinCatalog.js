@@ -439,6 +439,19 @@ export default function PinCatalog() {
     );
   }
 
+  // Handle single select changes
+  const handleCategorySelect = (category) => {
+    setFilterCategories(category ? [category] : []);
+  };
+
+  const handleOriginSelect = (origin) => {
+    setFilterOrigins(origin ? [origin] : []);
+  };
+
+  const handleSeriesSelect = (series) => {
+    setFilterSeries(series ? [series] : []);
+  };
+
   return (
     <div className={`min-h-screen bg-gray-800 text-white ${dancingScript.variable}`}>
       {/* Sticky Header Navigation */}
@@ -925,57 +938,39 @@ export default function PinCatalog() {
               {/* Categories */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Categories
+                  Category
                 </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {filterOptions.tags.map(category => (
-                    <label key={category} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={filterCategories.includes(category)}
-                        onChange={() => {
-                          setFilterCategories(prev => {
-                            if (prev.includes(category)) {
-                              return prev.filter(c => c !== category);
-                            } else {
-                              return [...prev, category];
-                            }
-                          });
-                        }}
-                        className="form-checkbox"
-                      />
-                      <span className="ml-2 text-sm text-gray-300">{category}</span>
-                    </label>
+                <select
+                  value={filterCategories[0] || ''}
+                  onChange={(e) => handleCategorySelect(e.target.value || null)}
+                  className="w-full bg-gray-700 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Categories</option>
+                  {filterOptions.tags.map((tag) => (
+                    <option key={tag} value={tag}>
+                      {tag}
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
 
               {/* Origins */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Origins
+                  Origin
                 </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {filterOptions.origins.map(origin => (
-                    <label key={origin} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={filterOrigins.includes(origin)}
-                        onChange={() => {
-                          setFilterOrigins(prev => {
-                            if (prev.includes(origin)) {
-                              return prev.filter(o => o !== origin);
-                            } else {
-                              return [...prev, origin];
-                            }
-                          });
-                        }}
-                        className="form-checkbox"
-                      />
-                      <span className="ml-2 text-sm text-gray-300">{origin}</span>
-                    </label>
+                <select
+                  value={filterOrigins[0] || ''}
+                  onChange={(e) => handleOriginSelect(e.target.value || null)}
+                  className="w-full bg-gray-700 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Origins</option>
+                  {filterOptions.origins.map((origin) => (
+                    <option key={origin} value={origin}>
+                      {origin}
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
 
               {/* Series */}
@@ -983,27 +978,18 @@ export default function PinCatalog() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Series
                 </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {filterOptions.series.map(series => (
-                    <label key={series} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={filterSeries.includes(series)}
-                        onChange={() => {
-                          setFilterSeries(prev => {
-                            if (prev.includes(series)) {
-                              return prev.filter(s => s !== series);
-                            } else {
-                              return [...prev, series];
-                            }
-                          });
-                        }}
-                        className="form-checkbox"
-                      />
-                      <span className="ml-2 text-sm text-gray-300">{series}</span>
-                    </label>
+                <select
+                  value={filterSeries[0] || ''}
+                  onChange={(e) => handleSeriesSelect(e.target.value || null)}
+                  className="w-full bg-gray-700 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Series</option>
+                  {filterOptions.series.map((series) => (
+                    <option key={series} value={series}>
+                      {series}
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
 
               {/* Limited Edition & Mystery */}
@@ -1013,7 +999,7 @@ export default function PinCatalog() {
                     type="checkbox"
                     checked={filterLimitedEdition}
                     onChange={(e) => setFilterLimitedEdition(e.target.checked)}
-                    className="form-checkbox"
+                    className="rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500"
                   />
                   <span className="ml-2 text-sm text-gray-300">Limited Edition</span>
                 </label>
@@ -1023,7 +1009,7 @@ export default function PinCatalog() {
                     type="checkbox"
                     checked={filterMystery}
                     onChange={(e) => setFilterMystery(e.target.checked)}
-                    className="form-checkbox"
+                    className="rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500"
                   />
                   <span className="ml-2 text-sm text-gray-300">Mystery</span>
                 </label>
@@ -1033,13 +1019,14 @@ export default function PinCatalog() {
             <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-800">
               <button
                 onClick={() => {
-                  setFilterCategories([]);
-                  setFilterOrigins([]);
-                  setFilterSeries([]);
+                  handleCategorySelect(null);
+                  handleOriginSelect(null);
+                  handleSeriesSelect(null);
                   setFilterLimitedEdition(false);
                   setFilterMystery(false);
+                  setShowFilterModal(false);
                 }}
-                className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm text-gray-300 hover:text-white bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
               >
                 Reset
               </button>
