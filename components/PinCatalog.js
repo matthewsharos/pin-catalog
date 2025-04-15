@@ -53,6 +53,9 @@ export default function PinCatalog() {
     origins: [],
     tags: [],
   });
+  const [availableCategories, setAvailableCategories] = useState([]);
+  const [availableOrigins, setAvailableOrigins] = useState([]);
+  const [availableSeries, setAvailableSeries] = useState([]);
   const [editingPin, setEditingPin] = useState(null);
   const [showAddPinModal, setShowAddPinModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -341,7 +344,102 @@ export default function PinCatalog() {
     return text.length > length ? `${text.substring(0, length)}...` : text;
   };
 
-  // Clear all filters function
+  // Function to get available options based on current filters
+  const getAvailableOptions = async (excludeFilter) => {
+    try {
+      const params = new URLSearchParams();
+      
+      // Add current filter selections except the one we're getting options for
+      if (excludeFilter !== 'category' && filterCategories.length > 0) {
+        params.append('categories', filterCategories.join(','));
+      }
+      if (excludeFilter !== 'origin' && filterOrigins.length > 0) {
+        params.append('origins', filterOrigins.join(','));
+      }
+      if (excludeFilter !== 'series' && filterSeries.length > 0) {
+        params.append('series', filterSeries.join(','));
+      }
+      
+      // Add other filter states
+      params.append('isLimitedEdition', filterIsLimitedEdition);
+      params.append('isMystery', filterIsMystery);
+
+      const response = await axios.get(`/api/pins/options?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching options:', error);
+      return null;
+    }
+  };
+
+  // Update available options when filters change
+  const updateAvailableOptions = async () => {
+    const categoryOptions = await getAvailableOptions('category');
+    const originOptions = await getAvailableOptions('origin');
+    const seriesOptions = await getAvailableOptions('series');
+
+    if (categoryOptions) setAvailableCategories(categoryOptions.categories || []);
+    if (originOptions) setAvailableOrigins(originOptions.origins || []);
+    if (seriesOptions) setAvailableSeries(seriesOptions.series || []);
+  };
+
+  // Initialize available options
+  useEffect(() => {
+    updateAvailableOptions();
+  }, []);
+
+  // Update available options when any filter changes
+  useEffect(() => {
+    updateAvailableOptions();
+  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery]);
+
+  // Handle filter selections
+  const handleFilterChange = async (filterType, value) => {
+    switch (filterType) {
+      case 'category':
+        if (value === null) {
+          setFilterCategories([]);
+        } else if (value === 'all') {
+          setFilterCategories(availableCategories);
+        } else {
+          setFilterCategories(prev => 
+            prev.includes(value) ? prev.filter(c => c !== value) : [...prev, value]
+          );
+        }
+        break;
+
+      case 'origin':
+        if (value === null) {
+          setFilterOrigins([]);
+        } else if (value === 'all') {
+          setFilterOrigins(availableOrigins);
+        } else {
+          setFilterOrigins(prev => 
+            prev.includes(value) ? prev.filter(o => o !== value) : [...prev, value]
+          );
+        }
+        break;
+
+      case 'series':
+        if (value === null) {
+          setFilterSeries([]);
+        } else if (value === 'all') {
+          setFilterSeries(availableSeries);
+        } else {
+          setFilterSeries(prev => 
+            prev.includes(value) ? prev.filter(s => s !== value) : [...prev, value]
+          );
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    // Reset page when filters change
+    setPage(1);
+  };
+
   const handleClearFilters = () => {
     setSearchQuery('');
     setFilterYears([]);
@@ -360,11 +458,6 @@ export default function PinCatalog() {
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
-  };
-
-  const handleFilterChange = (setter, value) => {
-    setter(value);
-    setPage(1); // Reset to first page when filters change
   };
 
   const handleStatusClick = (status, e) => {
@@ -468,37 +561,6 @@ export default function PinCatalog() {
       </div>
     );
   }
-
-  // Handle single select changes
-  const handleCategorySelect = (category) => {
-    setFilterCategories(category ? [category] : []);
-    // Reset other filters when category changes
-    setFilterOrigins([]);
-    setFilterSeries([]);
-  };
-
-  const handleOriginSelect = (origin) => {
-    setFilterOrigins(origin ? [origin] : []);
-    // Reset other filters when origin changes
-    setFilterCategories([]);
-    setFilterSeries([]);
-  };
-
-  const handleSeriesSelect = (series) => {
-    setFilterSeries(series ? [series] : []);
-    // Reset other filters when series changes
-    setFilterCategories([]);
-    setFilterOrigins([]);
-  };
-
-  // Reset all filters without closing modal
-  const handleResetFilters = () => {
-    handleCategorySelect(null);
-    handleOriginSelect(null);
-    handleSeriesSelect(null);
-    setFilterIsLimitedEdition(false);
-    setFilterIsMystery(false);
-  };
 
   return (
     <div className={`min-h-screen bg-gray-800 text-white ${dancingScript.variable}`}>
@@ -891,7 +953,7 @@ export default function PinCatalog() {
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
-              className="px-2 py-0.5 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+              className="px-2 py-0.5 bg-gray-700 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
             >
               Previous
             </button>
@@ -901,7 +963,7 @@ export default function PinCatalog() {
             <button
               onClick={() => setPage(Math.min(Math.ceil(total / 100), page + 1))}
               disabled={page >= Math.ceil(total / 100)}
-              className="px-2 py-0.5 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+              className="px-2 py-0.5 bg-gray-700 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
             >
               Next
             </button>
@@ -996,11 +1058,11 @@ export default function PinCatalog() {
                 </label>
                 <select
                   value={filterCategories[0] || ''}
-                  onChange={(e) => handleCategorySelect(e.target.value || null)}
+                  onChange={(e) => handleFilterChange('category', e.target.value || null)}
                   className="w-full bg-gray-700 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Categories</option>
-                  {filterOptions.tags.map((tag) => (
+                  {availableCategories.map((tag) => (
                     <option key={tag} value={tag}>
                       {tag}
                     </option>
@@ -1015,11 +1077,11 @@ export default function PinCatalog() {
                 </label>
                 <select
                   value={filterOrigins[0] || ''}
-                  onChange={(e) => handleOriginSelect(e.target.value || null)}
+                  onChange={(e) => handleFilterChange('origin', e.target.value || null)}
                   className="w-full bg-gray-700 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Origins</option>
-                  {filterOptions.origins.map((origin) => (
+                  {availableOrigins.map((origin) => (
                     <option key={origin} value={origin}>
                       {origin}
                     </option>
@@ -1034,11 +1096,11 @@ export default function PinCatalog() {
                 </label>
                 <select
                   value={filterSeries[0] || ''}
-                  onChange={(e) => handleSeriesSelect(e.target.value || null)}
+                  onChange={(e) => handleFilterChange('series', e.target.value || null)}
                   className="w-full bg-gray-700 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Series</option>
-                  {filterOptions.series.map((series) => (
+                  {availableSeries.map((series) => (
                     <option key={series} value={series}>
                       {series}
                     </option>
@@ -1072,7 +1134,13 @@ export default function PinCatalog() {
 
             <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-800">
               <button
-                onClick={handleResetFilters}
+                onClick={() => {
+                  handleFilterChange('category', null);
+                  handleFilterChange('origin', null);
+                  handleFilterChange('series', null);
+                  setFilterIsLimitedEdition(false);
+                  setFilterIsMystery(false);
+                }}
                 className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
                 Reset Filters
