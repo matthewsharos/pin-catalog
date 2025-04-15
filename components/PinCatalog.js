@@ -896,30 +896,41 @@ export default function PinCatalog() {
                               )
                             ) : (
                               <div className="flex space-x-1">
-                                <button
-                                  onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
-                                  className={`p-1 rounded-full ${pin.isCollected ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white'}`}
-                                  title={pin.isCollected ? "Collected" : "Mark as Collected"}
-                                >
-                                  <FaCheck className="text-sm" />
-                                </button>
-                                <button
-                                  onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                                  className={`p-1 rounded-full ${pin.isDeleted && !pin.isWishlist ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
-                                  title="Mark as Uncollected"
-                                >
-                                  <FaTimes className="text-sm" />
-                                </button>
-                                <button
-                                  onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
-                                  className={`p-1 rounded-full ${pin.isWishlist ? 'bg-blue-400 text-white' : 'bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white'}`}
-                                  title="Add to Wishlist"
-                                >
-                                  <span className="text-xs">🙏</span>
-                                </button>
+                                {/* Only show relevant buttons based on current status */}
+                                {!pin.isCollected && (
+                                  <button
+                                    onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
+                                    title="Mark as Collected"
+                                  >
+                                    <FaCheck className="text-sm" />
+                                  </button>
+                                )}
+                                
+                                {!pin.isDeleted && !pin.isWishlist && (
+                                  <button
+                                    onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
+                                    title="Mark as Uncollected"
+                                  >
+                                    <FaTimes className="text-sm" />
+                                  </button>
+                                )}
+                                
+                                {!pin.isWishlist && (
+                                  <button
+                                    onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                                    className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                                    title="Add to Wishlist"
+                                  >
+                                    <span className="text-xs">🙏</span>
+                                  </button>
+                                )}
+                                
+                                {/* Always show uncategorize button */}
                                 <button
                                   onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                                  className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted && !pin.isWishlist ? 'bg-gray-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'}`}
+                                  className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
                                   title="Uncategorize"
                                 >
                                   <FaQuestionCircle className="text-sm" />
@@ -1025,30 +1036,41 @@ export default function PinCatalog() {
                           )
                         ) : (
                           <div className="flex space-x-1">
-                            <button
-                              onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
-                              className={`p-1 rounded-full ${pin.isCollected ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white'}`}
-                              title={pin.isCollected ? "Collected" : "Mark as Collected"}
-                            >
-                              <FaCheck className="text-sm" />
-                            </button>
-                            <button
-                              onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                              className={`p-1 rounded-full ${pin.isDeleted && !pin.isWishlist ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
-                              title="Mark as Uncollected"
-                            >
-                              <FaTimes className="text-sm" />
-                            </button>
-                            <button
-                              onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
-                              className={`p-1 rounded-full ${pin.isWishlist ? 'bg-blue-400 text-white' : 'bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white'}`}
-                              title="Add to Wishlist"
-                            >
-                              <span className="text-xs">🙏</span>
-                            </button>
+                            {/* Only show relevant buttons based on current status */}
+                            {!pin.isCollected && (
+                              <button
+                                onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white"
+                                title="Mark as Collected"
+                              >
+                                <FaCheck className="text-sm" />
+                              </button>
+                            )}
+                            
+                            {!pin.isDeleted && !pin.isWishlist && (
+                              <button
+                                onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white"
+                                title="Mark as Uncollected"
+                              >
+                                <FaTimes className="text-sm" />
+                              </button>
+                            )}
+                            
+                            {!pin.isWishlist && (
+                              <button
+                                onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                                className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                                title="Add to Wishlist"
+                              >
+                                <span className="text-xs">🙏</span>
+                              </button>
+                            )}
+                            
+                            {/* Always show uncategorize button */}
                             <button
                               onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                              className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted && !pin.isWishlist ? 'bg-gray-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'}`}
+                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
                               title="Uncategorize"
                             >
                               <FaQuestionCircle className="text-sm" />
