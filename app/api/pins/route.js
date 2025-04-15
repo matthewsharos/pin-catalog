@@ -15,7 +15,7 @@ export async function GET(req) {
     const year = searchParams.get('year') || '';
     const category = searchParams.get('category') || '';
     const origin = searchParams.get('origin') || '';
-    const seriesFilter = searchParams.get('series') || '';
+    const selectedSeries = searchParams.get('series') || '';
     const collected = searchParams.get('collected') || '';
     const wishlist = searchParams.get('wishlist') || '';
     const uncollected = searchParams.get('uncollected') || '';
@@ -107,8 +107,8 @@ export async function GET(req) {
     }
 
     // Filter by series
-    if (seriesFilter) {
-      const seriesList = seriesFilter.split(',').filter(s => s);
+    if (selectedSeries) {
+      const seriesList = selectedSeries.split(',').filter(s => s);
       if (seriesList.length > 0) {
         where.AND.push({
           series: {
@@ -228,13 +228,13 @@ export async function GET(req) {
     }).then(results => results.map(r => r.year));
     
     // Get series based on other filters
-    const seriesFilter = { ...baseFilter };
-    delete seriesFilter.series; // Remove series filter
+    const availableSeriesFilter = { ...baseFilter };
+    delete availableSeriesFilter.series; // Remove series filter
     
     const series = await prisma.pin.groupBy({
       by: ['series'],
       where: {
-        ...seriesFilter,
+        ...availableSeriesFilter,
         series: { not: null }
       },
       orderBy: {
