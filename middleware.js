@@ -9,13 +9,23 @@ export function middleware(request) {
 
   // Only apply CORS headers to API routes
   if (pathname.startsWith('/api')) {
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      const response = new NextResponse(null, { status: 204 });
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      response.headers.set('Access-Control-Max-Age', '86400'); // 24 hours
+      return response;
+    }
+
     // Create a new response or use the original
     const response = NextResponse.next();
     
     // Add CORS headers
     response.headers.set('Access-Control-Allow-Origin', '*');
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     
     return response;
   }
@@ -26,5 +36,7 @@ export function middleware(request) {
 
 // Configure the middleware to run only on API routes
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    '/api/:path*',
+  ],
 };
