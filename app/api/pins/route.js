@@ -32,7 +32,8 @@ export async function GET(req) {
       }
       
       if (uncollected === 'true') {
-        where.OR.push({ isCollected: false, isDeleted: false, isWishlist: false });
+        // Uncollected pins are explicitly marked as uncollected (isDeleted=true but not wishlist)
+        where.OR.push({ isCollected: false, isDeleted: true, isWishlist: false });
       }
       
       if (wishlist === 'true') {
