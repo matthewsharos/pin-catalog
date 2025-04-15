@@ -328,7 +328,7 @@ export default function PinCatalog() {
     return text.length > length ? `${text.substring(0, length)}...` : text;
   };
 
-  // Clear all filters and reset search
+  // Clear all filters function
   const clearAllFilters = () => {
     setSearchQuery('');
     setDebouncedSearch('');
@@ -506,17 +506,12 @@ export default function PinCatalog() {
               <FaSearch className="absolute left-2.5 top-2 text-gray-400 text-xs" />
             </div>
             
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  searchInputRef.current?.focus();
-                }}
-                className="h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center whitespace-nowrap"
-              >
-                Clear
-              </button>
-            )}
+            <button
+              onClick={clearAllFilters}
+              className="h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center whitespace-nowrap"
+            >
+              Clear All
+            </button>
           </div>
 
           {/* Row 2: Status Buttons */}
