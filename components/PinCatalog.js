@@ -368,11 +368,11 @@ export default function PinCatalog() {
       params.append('isMystery', filterIsMystery);
 
       // Add status filters
-      if (statusFilters.collected) params.append('isCollected', 'true');
-      if (statusFilters.uncollected) params.append('isUncollected', 'true');
-      if (statusFilters.wishlist) params.append('isWishlist', 'true');
+      if (statusFilters.collected) params.append('collected', 'true');
+      if (statusFilters.uncollected) params.append('uncollected', 'true');
+      if (statusFilters.wishlist) params.append('wishlist', 'true');
 
-      const response = await axios.get(`/api/pins/options?${params.toString()}`);
+      const response = await api.get(`/api/pins/options?${params.toString()}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching options:', error);
@@ -396,10 +396,10 @@ export default function PinCatalog() {
     updateAvailableOptions();
   }, []);
 
-  // Update available options when any filter changes
+  // Update available options when any filter changes including status filters
   useEffect(() => {
     updateAvailableOptions();
-  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery]);
+  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, statusFilters.collected, statusFilters.uncollected, statusFilters.wishlist]);
 
   // Handle filter selections
   const handleFilterChange = async (filterType, value) => {

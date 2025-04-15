@@ -11,6 +11,11 @@ export async function GET(req) {
     const series = searchParams.get('series')?.split(',').filter(Boolean) || [];
     const isLimitedEdition = searchParams.get('isLimitedEdition') === 'true';
     const isMystery = searchParams.get('isMystery') === 'true';
+    
+    // Get status filters
+    const collected = searchParams.get('collected') === 'true';
+    const uncollected = searchParams.get('uncollected') === 'true'; 
+    const wishlist = searchParams.get('wishlist') === 'true';
 
     // Base query conditions
     const baseWhere = {
@@ -33,6 +38,39 @@ export async function GET(req) {
     if (isMystery) {
       baseWhere.AND.push({ isMystery: true });
     }
+    
+    // Apply status filters
+    if (collected || uncollected || wishlist) {
+      const statusConditions = [];
+      
+      if (collected) {
+        statusConditions.push({ 
+          isCollected: true,
+          isDeleted: false
+        });
+      }
+      
+      if (uncollected) {
+        statusConditions.push({ 
+          isCollected: false,
+          isDeleted: true,
+          isWishlist: false
+        });
+      }
+      
+      if (wishlist) {
+        statusConditions.push({ 
+          isCollected: false,
+          isDeleted: true,
+          isWishlist: true
+        });
+      }
+      
+      // Add OR condition for status filters
+      if (statusConditions.length > 0) {
+        baseWhere.AND.push({ OR: statusConditions });
+      }
+    }
 
     // Get all available options based on current filters
     const [availableCategories, availableOrigins, availableSeries] = await Promise.all([
@@ -52,7 +90,7 @@ export async function GET(req) {
         },
         select: { origin: true },
         distinct: ['origin'],
-      }).then(pins => [...new Set(pins.map(pin => pin.origin))].sort()),
+      }).then(pins => [...new Set(pins.map(pin => pin.origin))].filter(Boolean).sort()),
 
       prisma.pin.findMany({
         where: {
