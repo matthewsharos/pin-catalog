@@ -16,21 +16,42 @@ export async function GET(req) {
     const category = searchParams.get('category') || '';
     const origin = searchParams.get('origin') || '';
     const collected = searchParams.get('collected') || '';
-    const showDeleted = searchParams.get('showDeleted') === 'true';
+    const wishlist = searchParams.get('wishlist') || '';
+    const uncollected = searchParams.get('uncollected') || '';
     
     // Build the where clause for filtering
-    const where = {
-      isDeleted: showDeleted || false
-    };
+    const where = {};
+    
+    // Status filters
+    if (collected === 'true' || wishlist === 'true' || uncollected === 'true') {
+      // If any status filter is active, build an OR condition
+      where.OR = [];
+      
+      if (collected === 'true') {
+        where.OR.push({ isCollected: true, isDeleted: false });
+      }
+      
+      if (uncollected === 'true') {
+        where.OR.push({ isCollected: false, isDeleted: false });
+      }
+      
+      if (wishlist === 'true') {
+        where.OR.push({ isDeleted: true, isWishlist: true });
+      }
+    } else {
+      // Default behavior - show non-deleted pins
+      where.isDeleted = false;
+    }
     
     // Search functionality
     if (search) {
-      where.OR = [
+      where.OR = where.OR || [];
+      where.OR.push(
         { pinName: { contains: search, mode: 'insensitive' } },
         { pinId: { contains: search, mode: 'insensitive' } },
         { series: { contains: search, mode: 'insensitive' } },
         { origin: { contains: search, mode: 'insensitive' } },
-      ];
+      );
     }
     
     // Filter by year
@@ -51,13 +72,6 @@ export async function GET(req) {
         contains: origin,
         mode: 'insensitive'
       };
-    }
-    
-    // Filter by collected status
-    if (collected === 'true') {
-      where.isCollected = true;
-    } else if (collected === 'false') {
-      where.isCollected = false;
     }
     
     // Handle sorting with nulls last for dates

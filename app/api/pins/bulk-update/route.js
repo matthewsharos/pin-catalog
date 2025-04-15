@@ -75,6 +75,12 @@ export async function POST(req) {
         // Handle isCollected update
         if (updates.isCollected !== undefined) {
           updateData.isCollected = updates.isCollected;
+          
+          // If marking as collected, ensure it's not in wishlist or deleted
+          if (updates.isCollected === true) {
+            updateData.isDeleted = false;
+            updateData.isWishlist = false;
+          }
         }
         
         // Handle isLimitedEdition update
@@ -90,6 +96,17 @@ export async function POST(req) {
         // Handle isDeleted update
         if (updates.isDeleted !== undefined) {
           updateData.isDeleted = updates.isDeleted;
+        }
+        
+        // Handle isWishlist update
+        if (updates.isWishlist !== undefined) {
+          updateData.isWishlist = updates.isWishlist;
+          
+          // If adding to wishlist, mark as deleted
+          if (updates.isWishlist === true) {
+            updateData.isDeleted = true;
+            updateData.isCollected = false;
+          }
         }
         
         // Update the pin

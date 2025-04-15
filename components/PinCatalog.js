@@ -35,7 +35,11 @@ export default function PinCatalog() {
   const [filterYear, setFilterYear] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterOrigin, setFilterOrigin] = useState('');
-  const [filterCollected, setFilterCollected] = useState('');
+  const [statusFilters, setStatusFilters] = useState({
+    collected: false,
+    uncollected: false,
+    wishlist: false
+  });
   const [filterOptions, setFilterOptions] = useState({
     years: [],
     series: [],
@@ -45,7 +49,6 @@ export default function PinCatalog() {
   const [editingPin, setEditingPin] = useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showAddPinModal, setShowAddPinModal] = useState(false);
-  const [showDeleted, setShowDeleted] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
   const [selectedTag, setSelectedTag] = useState('');
@@ -84,8 +87,9 @@ export default function PinCatalog() {
         year: filterYear,
         category: filterCategory,
         origin: filterOrigin,
-        collected: filterCollected,
-        showDeleted: showDeleted.toString(),
+        collected: statusFilters.collected ? 'true' : '',
+        wishlist: statusFilters.wishlist ? 'true' : '',
+        uncollected: statusFilters.uncollected ? 'true' : '',
       });
 
       // Debug logging
@@ -132,7 +136,7 @@ export default function PinCatalog() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, sortField, sortOrder, filterYear, filterCategory, filterOrigin, filterCollected, showDeleted, initialLoad]);
+  }, [page, debouncedSearch, sortField, sortOrder, filterYear, filterCategory, filterOrigin, statusFilters, initialLoad]);
 
   useEffect(() => {
     fetchPins();
@@ -307,7 +311,11 @@ export default function PinCatalog() {
     setFilterYear('');
     setFilterCategory('');
     setFilterOrigin('');
-    setFilterCollected('');
+    setStatusFilters({
+      collected: false,
+      uncollected: false,
+      wishlist: false
+    });
     setPage(1);
     // Restore focus to search input after clearing
     if (searchInputRef.current) {
@@ -320,8 +328,9 @@ export default function PinCatalog() {
     setPage(1); // Reset to first page when filters change
   };
 
-  const toggleShowDeleted = () => {
-    setShowDeleted(prev => !prev);
+  const handleStatusFilterChange = (field, value) => {
+    setStatusFilters(prev => ({ ...prev, [field]: value }));
+    setPage(1); // Reset to first page when filters change
   };
 
   const handleApplyTags = async () => {
@@ -453,6 +462,50 @@ export default function PinCatalog() {
     }
   };
 
+  const handleUpdatePinStatus = async (pinIds, status) => {
+    if (!Array.isArray(pinIds)) {
+      pinIds = [pinIds]; // Convert single ID to array
+    }
+    
+    if (pinIds.length === 0) {
+      toast.error('No pins selected');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await api.post('/api/pins/bulk-update', {
+        pinIds: pinIds,
+        updates: {
+          isCollected: status === 'collected',
+          isDeleted: status === 'uncollected' ? false : status === 'wishlist' ? true : undefined,
+          isWishlist: status === 'wishlist'
+        }
+      });
+
+      toast.success(`Updated ${pinIds.length} ${pinIds.length === 1 ? 'pin' : 'pins'}`);
+      // Clear selection after successful update
+      setSelectedPins([]);
+      fetchPins();
+    } catch (error) {
+      console.error('Error updating pin status:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method
+        }
+      });
+      toast.error('Failed to update pin status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Only show full-page loading on initial app load
   if (initialLoad && loading) {
     return (
@@ -466,7 +519,7 @@ export default function PinCatalog() {
   }
 
   const getCollectedLabel = () => {
-    return showDeleted ? 'Wishlist' : 'Collected';
+    return statusFilters.wishlist ? 'Wishlist' : 'Collected';
   };
 
   return (
@@ -510,14 +563,6 @@ export default function PinCatalog() {
                 Manage Tags
               </Link>
               <button
-                onClick={toggleShowDeleted}
-                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                  showDeleted ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-700 hover:bg-gray-600'
-                } text-white`}
-              >
-                {showDeleted ? 'Hide Deleted' : 'View Deleted'}
-              </button>
-              <button
                 onClick={() => setShowAddPinModal(true)}
                 className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
@@ -552,24 +597,66 @@ export default function PinCatalog() {
               Clear Search
             </button>
             
+            {/* Status Filter Buttons */}
             <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={filterCollected === 'true'}
-                onChange={(e) => handleFilterChange(setFilterCollected, e.target.checked ? 'true' : '')}
-                className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                id="collected-checkbox"
-              />
-              <label htmlFor="collected-checkbox" className="text-white whitespace-nowrap">
-                {showDeleted ? 'Wishlist Only' : 'Collected Only'}
-              </label>
+              <div className="flex bg-gray-800 rounded-lg p-1 space-x-1">
+                <button
+                  onClick={() => {
+                    setStatusFilters({
+                      collected: false,
+                      uncollected: false,
+                      wishlist: false
+                    });
+                  }}
+                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                    !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => handleStatusFilterChange('collected', !statusFilters.collected)}
+                  className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
+                    statusFilters.collected
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  <FaCheck className={`mr-1 ${statusFilters.collected ? 'opacity-100' : 'opacity-50'}`} />
+                  Collected
+                </button>
+                <button
+                  onClick={() => handleStatusFilterChange('uncollected', !statusFilters.uncollected)}
+                  className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
+                    statusFilters.uncollected
+                      ? 'bg-yellow-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  <FaTimes className={`mr-1 ${statusFilters.uncollected ? 'opacity-100' : 'opacity-50'}`} />
+                  Uncollected
+                </button>
+                <button
+                  onClick={() => handleStatusFilterChange('wishlist', !statusFilters.wishlist)}
+                  className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center ${
+                    statusFilters.wishlist
+                      ? 'bg-blue-400 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  <span className={`mr-1 ${statusFilters.wishlist ? 'opacity-100' : 'opacity-50'}`}>🙏</span>
+                  Wishlist
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Filters Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <select
           value={filterYear}
           onChange={(e) => handleFilterChange(setFilterYear, e.target.value)}
@@ -589,22 +676,9 @@ export default function PinCatalog() {
           className="p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">All Categories</option>
-          {filterOptions.tags.map((tag) => (
+          {filterOptions.series.map((tag) => (
             <option key={tag} value={tag}>
               {tag}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={filterOrigin}
-          onChange={(e) => handleFilterChange(setFilterOrigin, e.target.value)}
-          className="p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">All Origins</option>
-          {filterOptions.origins.map((origin) => (
-            <option key={origin} value={origin}>
-              {origin}
             </option>
           ))}
         </select>
@@ -612,63 +686,45 @@ export default function PinCatalog() {
 
       {/* Bulk Actions */}
       {selectedPins.length > 0 && (
-        <div className="mb-6 bg-gray-800 p-3 rounded-lg">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-3 flex-wrap">
-            <div className="text-white text-sm">
-              <span className="font-semibold">{selectedPins.length}</span> selected
+        <div className="mb-4 p-4 bg-gray-800 rounded-lg shadow-md">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div className="mb-2 md:mb-0">
+              <span className="text-white">{selectedPins.length} pins selected</span>
             </div>
-            
-            <div className="flex-1 flex flex-wrap items-center gap-2">
-              <select
-                value={selectedTag}
-                onChange={(e) => setSelectedTag(e.target.value)}
-                className="p-1 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select Tag</option>
-                {filterOptions.tags.map((tag) => (
-                  <option key={tag} value={tag}>
-                    {tag}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={handleApplyTags}
-                disabled={!selectedTag}
-                className={`px-2 py-1 text-sm rounded-lg transition-colors ${
-                  !selectedTag ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-                } text-white flex items-center`}
-              >
-                <FaTags className="mr-1" /> Tag
-              </button>
-            </div>
-            
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => handleBulkCollectedUpdate(true)}
+                onClick={() => handleUpdatePinStatus(selectedPins, 'collected')}
                 className="px-2 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
               >
-                <FaCheck className="mr-1" /> {showDeleted ? 'Add to Wishlist' : 'Collected'}
+                <FaCheck className="mr-1" /> Collected
               </button>
               
               <button
-                onClick={() => handleBulkCollectedUpdate(false)}
+                onClick={() => handleUpdatePinStatus(selectedPins, 'uncollected')}
                 className="px-2 py-1 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center"
               >
-                <FaTimes className="mr-1" /> {showDeleted ? 'Remove from Wishlist' : 'Not Collected'}
+                <FaTimes className="mr-1" /> Uncollected
               </button>
               
               <button
-                onClick={() => setShowDeleteConfirmation(true)}
+                onClick={() => handleUpdatePinStatus(selectedPins, 'wishlist')}
+                className="px-2 py-1 text-sm bg-blue-400 text-white rounded-lg hover:bg-blue-500 transition-colors flex items-center"
+              >
+                <span className="mr-1">🙏</span> Wishlist
+              </button>
+              
+              <button
+                onClick={() => handleDeleteSelected()}
                 className="px-2 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
               >
                 <FaTrash className="mr-1" /> Delete
               </button>
-              {showDeleted && (
+              {statusFilters.wishlist && (
                 <button
                   onClick={() => handleRestorePins(selectedPins)}
                   className="px-2 py-1 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center"
                 >
-                  <FaQuestionCircle className="mr-1" /> Restore
+                  <FaCheck className="mr-1" /> Restore
                 </button>
               )}
             </div>
@@ -741,17 +797,6 @@ export default function PinCatalog() {
                     <th className="p-2">
                       <button
                         className="flex items-center space-x-1 text-left text-sm font-semibold text-gray-300 hover:text-white"
-                        onClick={() => handleSort('origin')}
-                      >
-                        <span>Origin</span>
-                        {sortField === 'origin' && (
-                          <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </button>
-                    </th>
-                    <th className="p-2">
-                      <button
-                        className="flex items-center space-x-1 text-left text-sm font-semibold text-gray-300 hover:text-white"
                         onClick={() => handleSort('releaseDate')}
                       >
                         <span>Release Date</span>
@@ -759,9 +804,6 @@ export default function PinCatalog() {
                           <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
                         )}
                       </button>
-                    </th>
-                    <th className="p-2">
-                      <span className="text-left text-sm font-semibold text-gray-300">Tags</span>
                     </th>
                     <th className="p-2 text-left text-gray-300 cursor-pointer" onClick={() => handleSort('isCollected')}>
                       {getCollectedLabel()}
@@ -838,34 +880,9 @@ export default function PinCatalog() {
                           <span className="text-sm" title={pin.series}>{truncateText(cleanText(pin.series))}</span>
                         </td>
                         <td className="p-2 text-gray-300">
-                          <span className="text-sm">{cleanText(pin.origin)}</span>
-                        </td>
-                        <td className="p-2 text-gray-300">
                           <span className="text-sm">
                             {pin.releaseDate ? new Date(pin.releaseDate).toLocaleDateString() : '-'}
                           </span>
-                        </td>
-                        <td className="p-2 text-gray-300">
-                          <div 
-                            className="flex flex-wrap gap-1 cursor-pointer hover:opacity-80"
-                            onClick={() => handleEditTags(pin)}
-                          >
-                            {pin.tags && pin.tags.length > 0 ? (
-                              pin.tags.slice(0, 3).map((tag, index) => (
-                                <span 
-                                  key={index} 
-                                  className="inline-block px-2 py-1 text-xs bg-purple-900 rounded-full"
-                                >
-                                  {tag}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-gray-500 text-xs">No tags</span>
-                            )}
-                            {pin.tags && pin.tags.length > 3 && (
-                              <span className="text-gray-400 text-xs">+{pin.tags.length - 3} more</span>
-                            )}
-                          </div>
                         </td>
                         <td className="p-2 text-center">
                           <div className="flex justify-center">
@@ -893,7 +910,7 @@ export default function PinCatalog() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="9" className="text-center py-8">
+                      <td colSpan="8" className="text-center py-8">
                         <div className="flex flex-col items-center justify-center text-gray-400">
                           <p className="text-lg mb-2">No pins found</p>
                           <p className="text-sm mb-4">
@@ -972,12 +989,10 @@ export default function PinCatalog() {
                           </div>
                         </div>
                       </div>
-                      {pin.isDeleted && (
-                        <div className="flex justify-center mt-2">
-                          {pin.isWishlist ? (
-                            <span className="text-blue-400 flex items-center" title="In Wishlist">
-                              <span className="mr-1">🙏</span> In Wishlist
-                            </span>
+                      <div className="flex justify-center">
+                        {pin.isDeleted ? (
+                          pin.isWishlist ? (
+                            <span className="text-blue-400" title="In Wishlist">🙏</span>
                           ) : (
                             <button
                               onClick={() => handleRestorePins([pin.id])}
@@ -985,9 +1000,33 @@ export default function PinCatalog() {
                             >
                               <FaCheck className="mr-1" /> Restore
                             </button>
-                          )}
-                        </div>
-                      )}
+                          )
+                        ) : (
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                              className={`p-1 rounded-full ${pin.isCollected ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white'}`}
+                              title={pin.isCollected ? "Collected" : "Mark as Collected"}
+                            >
+                              <FaCheck className="text-sm" />
+                            </button>
+                            <button
+                              onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                              className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
+                              title="Mark as Uncollected"
+                            >
+                              <FaTimes className="text-sm" />
+                            </button>
+                            <button
+                              onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                              title="Add to Wishlist"
+                            >
+                              <span className="text-xs">🙏</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
