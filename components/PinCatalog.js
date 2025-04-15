@@ -519,34 +519,39 @@ export default function PinCatalog() {
             <div className="relative" ref={yearButtonRef}>
               <button
                 onClick={() => setShowYearDropdown(!showYearDropdown)}
-                className="h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center whitespace-nowrap"
+                className="flex items-center space-x-1 h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
               >
-                <FaCalendar className="mr-1 text-xs" />
-                {filterYears.length === 0
-                  ? 'All Years'
-                  : filterYears.length === 1
-                  ? filterYears[0]
-                  : `${filterYears.length} Years`}
+                <span>Year{filterYears.length > 0 ? ` (${filterYears.length})` : ''}</span>
+                <FaChevronDown className={`transform transition-transform ${showYearDropdown ? 'rotate-180' : ''}`} />
               </button>
-              {/* Year dropdown remains unchanged */}
+
+              {/* Year Dropdown */}
               {showYearDropdown && (
-                <div className="absolute z-50 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg py-1 w-48 max-h-64 overflow-y-auto">
-                  <div className="px-3 py-2 text-xs text-gray-400">
-                    Hold ⌘/Ctrl or Shift to select multiple
+                <div className="absolute z-50 mt-2 py-2 w-48 bg-gray-800 rounded-lg shadow-xl">
+                  <div className="max-h-60 overflow-y-auto">
+                    {filterOptions.years.map(year => (
+                      <label
+                        key={year}
+                        className="flex items-center px-4 py-2 hover:bg-gray-700 cursor-pointer group"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filterYears.includes(year)}
+                          onChange={() => {
+                            if (filterYears.includes(year)) {
+                              setFilterYears(prev => prev.filter(y => y !== year));
+                            } else {
+                              setFilterYears(prev => [...prev, year]);
+                            }
+                          }}
+                          className="form-checkbox h-4 w-4 text-purple-500 rounded border-gray-600 bg-gray-700 focus:ring-purple-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-300 group-hover:text-white">
+                          {year}
+                        </span>
+                      </label>
+                    ))}
                   </div>
-                  {filterOptions.years.map(year => (
-                    <button
-                      key={year}
-                      onClick={(e) => handleYearClick(year, e)}
-                      className={`w-full px-3 py-1.5 text-sm text-left transition-colors ${
-                        filterYears.includes(year)
-                          ? 'bg-blue-600 text-white'
-                          : 'text-white hover:bg-gray-700'
-                      }`}
-                    >
-                      {year}
-                    </button>
-                  ))}
                 </div>
               )}
             </div>

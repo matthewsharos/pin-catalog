@@ -46,3 +46,8 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #374151 #111827;
 }
+
+/* Add custom checkbox styles */
+.form-checkbox {
+  @apply rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-gray-800;
+}
