@@ -42,7 +42,11 @@ export default function PinCatalog() {
   const [filterSeries, setFilterSeries] = useState([]);
   const [filterIsLimitedEdition, setFilterIsLimitedEdition] = useState(false);
   const [filterIsMystery, setFilterIsMystery] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('');
+  const [statusFilters, setStatusFilters] = useState({
+    collected: false,
+    uncollected: false,
+    wishlist: false
+  });
   const [filterOptions, setFilterOptions] = useState({
     years: [],
     series: [],
@@ -114,14 +118,10 @@ export default function PinCatalog() {
       if (filterIsLimitedEdition) queryParams.set('isLimitedEdition', 'true');
       if (filterIsMystery) queryParams.set('isMystery', 'true');
 
-      // Status filters
-      if (filterStatus === 'collected') {
-        queryParams.set('collected', 'true');
-      } else if (filterStatus === 'uncollected') {
-        queryParams.set('uncollected', 'true');
-      } else if (filterStatus === 'wishlist') {
-        queryParams.set('wishlist', 'true');
-      }
+      // Status filters - now supports multiple
+      if (statusFilters.collected) queryParams.set('collected', 'true');
+      if (statusFilters.uncollected) queryParams.set('uncollected', 'true');
+      if (statusFilters.wishlist) queryParams.set('wishlist', 'true');
 
       // Sort and pagination
       queryParams.set('sortField', sortField);
@@ -165,7 +165,7 @@ export default function PinCatalog() {
     filterSeries,
     filterIsLimitedEdition,
     filterIsMystery,
-    filterStatus,
+    statusFilters,
     initialLoad
   ]);
 
@@ -342,16 +342,19 @@ export default function PinCatalog() {
   };
 
   // Clear all filters function
-  const clearAllFilters = () => {
+  const handleClearFilters = () => {
     setSearchQuery('');
-    setDebouncedSearch('');
     setFilterYears([]);
     setFilterCategories([]);
     setFilterOrigins([]);
     setFilterSeries([]);
     setFilterIsLimitedEdition(false);
     setFilterIsMystery(false);
-    setFilterStatus('');
+    setStatusFilters({
+      collected: false,
+      uncollected: false,
+      wishlist: false
+    });
     setPage(1);
     // Restore focus to search input after clearing
     if (searchInputRef.current) {
@@ -364,9 +367,36 @@ export default function PinCatalog() {
     setPage(1); // Reset to first page when filters change
   };
 
-  const handleStatusFilter = (status) => {
-    setFilterStatus(status === 'all' ? '' : status);
-    setPage(1);
+  const handleStatusClick = (status, e) => {
+    e.preventDefault(); // Prevent text selection
+    
+    setStatusFilters(prev => {
+      if (status === 'all') {
+        // Clear all filters
+        return {
+          collected: false,
+          uncollected: false,
+          wishlist: false
+        };
+      }
+      
+      if (e.metaKey || e.ctrlKey) {
+        // Command/Ctrl click - toggle this status only
+        return {
+          ...prev,
+          [status]: !prev[status]
+        };
+      } else {
+        // Normal click - set only this status
+        return {
+          collected: status === 'collected' && !prev.collected,
+          uncollected: status === 'uncollected' && !prev.uncollected,
+          wishlist: status === 'wishlist' && !prev.wishlist
+        };
+      }
+    });
+    
+    setPage(1); // Reset to first page when filters change
   };
 
   const handleYearClick = (year, e) => {
@@ -504,18 +534,24 @@ export default function PinCatalog() {
           <div className="flex items-center space-x-2 mb-2">
             <div className="relative flex-grow">
               <input
+                ref={searchInputRef}
                 type="text"
-                placeholder="Search pins..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  // Allow Command+A to select all
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+                    e.target.select();
+                  }
+                }}
+                placeholder="Search pins..."
                 className="w-full h-7 pl-8 pr-3 text-xs bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                ref={searchInputRef}
               />
               <FaSearch className="absolute left-2.5 top-2 text-gray-400 text-xs" />
             </div>
             
             <button
-              onClick={clearAllFilters}
+              onClick={handleClearFilters}
               className="h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center whitespace-nowrap"
             >
               Clear All
@@ -525,9 +561,9 @@ export default function PinCatalog() {
           {/* Row 2: Status Buttons */}
           <div className="inline-flex bg-gray-800 rounded-lg p-0.5 space-x-0.5">
             <button
-              onClick={() => handleStatusFilter('all')}
+              onClick={(e) => handleStatusClick('all', e)}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
-                !filterStatus
+                !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
@@ -536,9 +572,9 @@ export default function PinCatalog() {
               All
             </button>
             <button
-              onClick={() => handleStatusFilter('collected')}
+              onClick={(e) => handleStatusClick('collected', e)}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
-                filterStatus === 'collected'
+                statusFilters.collected
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
@@ -547,9 +583,9 @@ export default function PinCatalog() {
               Owned
             </button>
             <button
-              onClick={() => handleStatusFilter('uncollected')}
+              onClick={(e) => handleStatusClick('uncollected', e)}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
-                filterStatus === 'uncollected'
+                statusFilters.uncollected
                   ? 'bg-yellow-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
@@ -558,9 +594,9 @@ export default function PinCatalog() {
               Uncollected
             </button>
             <button
-              onClick={() => handleStatusFilter('wishlist')}
+              onClick={(e) => handleStatusClick('wishlist', e)}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
-                filterStatus === 'wishlist'
+                statusFilters.wishlist
                   ? 'bg-blue-400 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
