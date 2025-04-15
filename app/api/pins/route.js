@@ -10,7 +10,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page')) || 1;
     const search = searchParams.get('search') || '';
-    const sortField = searchParams.get('sortField') || 'releaseDate';
+    const sortBy = searchParams.get('sortBy') || 'updatedAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const year = searchParams.get('year') || '';
     const category = searchParams.get('category') || '';
@@ -61,14 +61,28 @@ export async function GET(req) {
     
     // Filter by year
     if (year) {
-      where.year = parseInt(year, 10);
+      const years = year.split(',').filter(y => y);
+      if (years.length > 0) {
+        where.OR = where.OR || [];
+        where.OR.push({
+          year: {
+            in: years.map(y => parseInt(y, 10))
+          }
+        });
+      }
     }
     
     // Filter by category (tag)
     if (category) {
-      where.tags = {
-        hasSome: [category]
-      };
+      const categories = category.split(',').filter(c => c);
+      if (categories.length > 0) {
+        where.OR = where.OR || [];
+        where.OR.push({
+          tags: {
+            hasSome: categories
+          }
+        });
+      }
     }
     
     // Filter by origin
@@ -79,28 +93,50 @@ export async function GET(req) {
       };
     }
     
-    // Handle sorting with nulls last for dates
-    let orderBy = [];
+    // Sorting
+    let orderBy = {};
     
-    if (sortField === 'releaseDate') {
-      // For release date sorting, we need a simpler approach that works with Prisma
-      // First sort by whether the date is null (nulls last)
-      orderBy.push({
-        releaseDate: sortOrder
-      });
-      
-      // Then add secondary sort by name
-      orderBy.push({
-        pinName: 'asc'
-      });
-    } else {
-      // Standard sorting for other fields
-      orderBy.push({ [sortField]: sortOrder });
-      
-      // Add secondary sort by name if not already sorting by name
-      if (sortField !== 'pinName') {
-        orderBy.push({ pinName: 'asc' });
+    if (sortBy) {
+      switch (sortBy) {
+        case 'pinName':
+          orderBy = { pinName: sortOrder || 'asc' };
+          break;
+        case 'releaseDate':
+          orderBy = { releaseDate: sortOrder || 'desc' };
+          break;
+        case 'updatedAt':
+          orderBy = { updatedAt: sortOrder || 'desc' };
+          break;
+        case 'series':
+          orderBy = { series: sortOrder || 'asc' };
+          break;
+        case 'origin':
+          orderBy = { origin: sortOrder || 'asc' };
+          break;
+        case 'isCollected':
+          orderBy = { isCollected: sortOrder || 'desc' };
+          break;
+        default:
+          // Default sorting priority:
+          // 1. updatedAt latest first
+          // 2. release date newest first
+          // 3. name alphabetical
+          orderBy = [
+            { updatedAt: 'desc' },
+            { releaseDate: 'desc' },
+            { pinName: 'asc' }
+          ];
       }
+    } else {
+      // Default sorting priority:
+      // 1. updatedAt latest first
+      // 2. release date newest first
+      // 3. name alphabetical
+      orderBy = [
+        { updatedAt: 'desc' },
+        { releaseDate: 'desc' },
+        { pinName: 'asc' }
+      ];
     }
     
     // Get total count for pagination
@@ -321,6 +357,7 @@ export async function PUT(req) {
         edition: updateData.edition,
         isLimitedEdition: updateData.isLimitedEdition,
         isCollected: updateData.isCollected,
+        updatedAt: new Date(), // Always update timestamp on any change
       },
     });
 

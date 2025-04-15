@@ -142,6 +142,9 @@ export async function PUT(req, { params }) {
         isCollected: data.isCollected,
         isMystery: data.isMystery,
         isLimitedEdition: data.isLimitedEdition,
+        isDeleted: data.isDeleted,
+        isWishlist: data.isWishlist,
+        updatedAt: new Date(), // Always update timestamp on any change
         tags: data.tags || existingPin.tags // Use validated tags or keep existing ones
       }
     });

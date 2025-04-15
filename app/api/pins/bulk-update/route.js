@@ -75,6 +75,7 @@ export async function POST(req) {
         // Handle isCollected update
         if (updates.isCollected !== undefined) {
           updateData.isCollected = updates.isCollected;
+          updateData.updatedAt = new Date();
           
           // If marking as collected, ensure it's not in wishlist or deleted
           if (updates.isCollected === true) {
@@ -86,21 +87,25 @@ export async function POST(req) {
         // Handle isLimitedEdition update
         if (updates.isLimitedEdition !== undefined) {
           updateData.isLimitedEdition = updates.isLimitedEdition;
+          updateData.updatedAt = new Date();
         }
         
         // Handle isMystery update
         if (updates.isMystery !== undefined) {
           updateData.isMystery = updates.isMystery;
+          updateData.updatedAt = new Date();
         }
         
         // Handle isDeleted update
         if (updates.isDeleted !== undefined) {
           updateData.isDeleted = updates.isDeleted;
+          updateData.updatedAt = new Date();
         }
         
         // Handle isWishlist update
         if (updates.isWishlist !== undefined) {
           updateData.isWishlist = updates.isWishlist;
+          updateData.updatedAt = new Date();
           
           // If adding to wishlist, mark as deleted
           if (updates.isWishlist === true) {

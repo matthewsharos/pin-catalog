@@ -18,7 +18,8 @@ export async function POST(req) {
         }
       },
       data: {
-        isCollected: true
+        isCollected: true,
+        updatedAt: new Date() // Update timestamp
       }
     });
 

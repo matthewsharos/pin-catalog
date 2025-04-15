@@ -28,11 +28,11 @@ export default function PinCatalog() {
   const [initialLoad, setInitialLoad] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [sortField, setSortField] = useState('releaseDate');
+  const [sortField, setSortField] = useState('updatedAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedPins, setSelectedPins] = useState([]);
-  const [filterYear, setFilterYear] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
+  const [filterYears, setFilterYears] = useState([]);
+  const [filterCategories, setFilterCategories] = useState([]);
   const [filterOrigin, setFilterOrigin] = useState('');
   const [statusFilters, setStatusFilters] = useState({
     collected: false,
@@ -80,10 +80,10 @@ export default function PinCatalog() {
       const params = new URLSearchParams({
         page: page.toString(),
         search: debouncedSearch,
-        sortField,
+        sortBy: sortField,
         sortOrder,
-        year: filterYear,
-        category: filterCategory,
+        year: filterYears.join(','),
+        category: filterCategories.join(','),
         origin: filterOrigin,
         collected: statusFilters.collected ? 'true' : '',
         wishlist: statusFilters.wishlist ? 'true' : '',
@@ -134,7 +134,7 @@ export default function PinCatalog() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, sortField, sortOrder, filterYear, filterCategory, filterOrigin, statusFilters, initialLoad]);
+  }, [page, debouncedSearch, sortField, sortOrder, filterYears, filterCategories, filterOrigin, statusFilters, initialLoad]);
 
   useEffect(() => {
     fetchPins();
@@ -205,7 +205,7 @@ export default function PinCatalog() {
       } else if (status === 'uncollected') {
         updates = {
           isCollected: false,
-          isDeleted: false,
+          isDeleted: true,
           isWishlist: false
         };
       } else if (status === 'wishlist') {
@@ -353,8 +353,8 @@ export default function PinCatalog() {
   const clearAllFilters = () => {
     setSearchInput('');
     setDebouncedSearch('');
-    setFilterYear('');
-    setFilterCategory('');
+    setFilterYears([]);
+    setFilterCategories([]);
     setFilterOrigin('');
     setStatusFilters({
       collected: false,
@@ -468,7 +468,7 @@ export default function PinCatalog() {
           updates = { isCollected: true, isDeleted: false, isWishlist: false };
           break;
         case 'uncollected':
-          updates = { isCollected: false, isDeleted: false, isWishlist: false };
+          updates = { isCollected: false, isDeleted: true, isWishlist: false };
           break;
         case 'wishlist':
           updates = { isCollected: false, isDeleted: true, isWishlist: true };
@@ -640,32 +640,62 @@ export default function PinCatalog() {
       </div>
 
       {/* Filters Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <select
-          value={filterYear}
-          onChange={(e) => handleFilterChange(setFilterYear, e.target.value)}
-          className="p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">All Years</option>
-          {filterOptions.years.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </select>
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+        <div className="w-full">
+          <label className="block text-sm font-medium text-gray-400 mb-1">Years</label>
+          <select
+            multiple
+            value={filterYears}
+            onChange={(e) => handleFilterChange(setFilterYears, Array.from(e.target.selectedOptions, option => option.value))}
+            className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent max-w-xs"
+            size="4"
+          >
+            {filterOptions.years.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          {filterYears.length > 0 && (
+            <div className="mt-1 flex items-center">
+              <span className="text-xs text-gray-400">{filterYears.length} selected</span>
+              <button 
+                onClick={() => setFilterYears([])} 
+                className="ml-2 text-xs text-red-400 hover:text-red-300"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
 
-        <select
-          value={filterCategory}
-          onChange={(e) => handleFilterChange(setFilterCategory, e.target.value)}
-          className="p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">All Categories</option>
-          {filterOptions.series.map((tag) => (
-            <option key={tag} value={tag}>
-              {tag}
-            </option>
-          ))}
-        </select>
+        <div className="w-full">
+          <label className="block text-sm font-medium text-gray-400 mb-1">Categories</label>
+          <select
+            multiple
+            value={filterCategories}
+            onChange={(e) => handleFilterChange(setFilterCategories, Array.from(e.target.selectedOptions, option => option.value))}
+            className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent max-w-xs"
+            size="4"
+          >
+            {filterOptions.series.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
+            ))}
+          </select>
+          {filterCategories.length > 0 && (
+            <div className="mt-1 flex items-center">
+              <span className="text-xs text-gray-400">{filterCategories.length} selected</span>
+              <button 
+                onClick={() => setFilterCategories([])} 
+                className="ml-2 text-xs text-red-400 hover:text-red-300"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bulk Actions */}
