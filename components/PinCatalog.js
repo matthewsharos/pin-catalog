@@ -528,8 +528,14 @@ export default function PinCatalog() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
             <div className="flex items-center">
-              <img src="/icon.png" alt="Pin Icon" className="w-8 h-8 mr-2" />
-              <h1 className="text-2xl font-bold text-white">
+              <img src="/icon.png" alt="Pin Icon" className="w-16 h-16 mr-3" />
+              <h1 
+                className="text-3xl font-bold text-white"
+                style={{ 
+                  fontFamily: 'var(--font-pacifico)',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
+                }}
+              >
                 Sharos Pin Catalog
               </h1>
             </div>
