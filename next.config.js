@@ -6,6 +6,10 @@ const nextConfig = {
       ? `https://${process.env.VERCEL_URL}` 
       : 'http://localhost:3000'
   },
+  swcMinify: true,
+  compiler: {
+    styledComponents: true,
+  },
   images: {
     domains: ['pinpics.com', 'cdn.pinpics.com', 'pin-pics.s3.amazonaws.com'],
     remotePatterns: [
