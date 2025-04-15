@@ -15,6 +15,7 @@ export async function GET(req) {
     const year = searchParams.get('year') || '';
     const category = searchParams.get('category') || '';
     const origin = searchParams.get('origin') || '';
+    const seriesFilter = searchParams.get('series') || '';
     const collected = searchParams.get('collected') || '';
     const wishlist = searchParams.get('wishlist') || '';
     const uncollected = searchParams.get('uncollected') || '';
@@ -95,12 +96,26 @@ export async function GET(req) {
     
     // Filter by origin
     if (origin) {
-      where.AND.push({
-        origin: {
-          contains: origin,
-          mode: 'insensitive'
-        }
-      });
+      const origins = origin.split(',').filter(o => o);
+      if (origins.length > 0) {
+        where.AND.push({
+          origin: {
+            in: origins
+          }
+        });
+      }
+    }
+
+    // Filter by series
+    if (seriesFilter) {
+      const seriesList = seriesFilter.split(',').filter(s => s);
+      if (seriesList.length > 0) {
+        where.AND.push({
+          series: {
+            in: seriesList
+          }
+        });
+      }
     }
     
     // Limited Edition filter
