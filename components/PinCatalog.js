@@ -500,11 +500,23 @@ export default function PinCatalog() {
                 placeholder="Search pins..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 h-7 bg-gray-800 text-white text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full h-7 pl-8 pr-3 text-xs bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 ref={searchInputRef}
               />
               <FaSearch className="absolute left-2.5 top-2 text-gray-400 text-xs" />
             </div>
+            
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  searchInputRef.current?.focus();
+                }}
+                className="h-7 px-2 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center whitespace-nowrap"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
           {/* Row 2: Status Buttons */}
