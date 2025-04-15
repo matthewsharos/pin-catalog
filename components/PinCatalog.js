@@ -407,17 +407,30 @@ export default function PinCatalog() {
 
     try {
       setLoading(true);
+      
+      // Filter out pins that are already in the wishlist
+      const pinsToRestore = pinIds.filter(id => {
+        const pin = pins.find(p => p.id === id);
+        return pin && !pin.isWishlist;
+      });
+      
+      if (pinsToRestore.length === 0) {
+        toast.info('All selected pins are already in the wishlist');
+        setLoading(false);
+        return;
+      }
+
       const response = await api.post('/api/pins/bulk-update', {
-        pinIds: pinIds,
+        pinIds: pinsToRestore,
         updates: {
           isDeleted: false
         }
       });
 
-      toast.success(`Restored ${pinIds.length} ${pinIds.length === 1 ? 'pin' : 'pins'}`);
+      toast.success(`Restored ${pinsToRestore.length} ${pinsToRestore.length === 1 ? 'pin' : 'pins'}`);
       
       // Clear selection if the restored pins were selected
-      setSelectedPins(prev => prev.filter(id => !pinIds.includes(id)));
+      setSelectedPins(prev => prev.filter(id => !pinsToRestore.includes(id)));
       
       // Refresh the pins list
       fetchPins();
@@ -857,12 +870,16 @@ export default function PinCatalog() {
                         <td className="p-2 text-center">
                           <div className="flex justify-center">
                             {pin.isDeleted ? (
-                              <button
-                                onClick={() => handleRestorePins([pin.id])}
-                                className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
-                              >
-                                <FaCheck className="mr-1" /> Restore
-                              </button>
+                              pin.isWishlist ? (
+                                <span className="text-blue-400" title="In Wishlist">🙏</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleRestorePins([pin.id])}
+                                  className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
+                                >
+                                  <FaCheck className="mr-1" /> Restore
+                                </button>
+                              )
                             ) : (
                               pin.isCollected ? (
                                 <FaCheck className="text-green-500" title="Collected" />
@@ -957,12 +974,18 @@ export default function PinCatalog() {
                       </div>
                       {pin.isDeleted && (
                         <div className="flex justify-center mt-2">
-                          <button
-                            onClick={() => handleRestorePins([pin.id])}
-                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
-                          >
-                            <FaCheck className="mr-1" /> Restore
-                          </button>
+                          {pin.isWishlist ? (
+                            <span className="text-blue-400 flex items-center" title="In Wishlist">
+                              <span className="mr-1">🙏</span> In Wishlist
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleRestorePins([pin.id])}
+                              className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
+                            >
+                              <FaCheck className="mr-1" /> Restore
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
