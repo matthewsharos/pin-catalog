@@ -905,21 +905,21 @@ export default function PinCatalog() {
                                 </button>
                                 <button
                                   onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                                  className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
+                                  className={`p-1 rounded-full ${pin.isDeleted && !pin.isWishlist ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
                                   title="Mark as Uncollected"
                                 >
                                   <FaTimes className="text-sm" />
                                 </button>
                                 <button
                                   onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
-                                  className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                                  className={`p-1 rounded-full ${pin.isWishlist ? 'bg-blue-400 text-white' : 'bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white'}`}
                                   title="Add to Wishlist"
                                 >
                                   <span className="text-xs">🙏</span>
                                 </button>
                                 <button
                                   onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                                  className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
+                                  className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted && !pin.isWishlist ? 'bg-gray-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'}`}
                                   title="Uncategorize"
                                 >
                                   <FaQuestionCircle className="text-sm" />
@@ -1034,21 +1034,21 @@ export default function PinCatalog() {
                             </button>
                             <button
                               onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                              className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
+                              className={`p-1 rounded-full ${pin.isDeleted && !pin.isWishlist ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
                               title="Mark as Uncollected"
                             >
                               <FaTimes className="text-sm" />
                             </button>
                             <button
                               onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
-                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                              className={`p-1 rounded-full ${pin.isWishlist ? 'bg-blue-400 text-white' : 'bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white'}`}
                               title="Add to Wishlist"
                             >
                               <span className="text-xs">🙏</span>
                             </button>
                             <button
                               onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
+                              className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted && !pin.isWishlist ? 'bg-gray-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'}`}
                               title="Uncategorize"
                             >
                               <FaQuestionCircle className="text-sm" />
