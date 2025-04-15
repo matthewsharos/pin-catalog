@@ -276,27 +276,27 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
             )}
 
             {/* Pin ID and Pin&Pop Link in one row */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-gray-300">Pin ID:</span>
-                <span className="text-white">{pin?.pinId}</span>
-                {pin?.pinpopUrl && (
-                  <a
-                    href={pin.pinpopUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-purple-400 hover:text-purple-300 transition-colors"
-                    title="View on Pin&Pop"
-                  >
-                    <FaCandyCane className="h-4 w-4" />
-                  </a>
-                )}
-              </div>
+            <div className="flex items-center space-x-2 mb-4">
+              <span className="text-sm font-medium text-gray-300">Pin ID:</span>
+              <span className="text-white">{pin?.pinId}</span>
+              {pin?.pinpopUrl && (
+                <a
+                  href={pin.pinpopUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400 hover:text-purple-300 transition-colors"
+                  title="View on Pin&Pop"
+                >
+                  <FaCandyCane className="h-4 w-4" />
+                </a>
+              )}
               <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-white transition-colors"
+                type="button"
+                onClick={() => onEditTags?.(pin)}
+                className="text-gray-400 hover:text-purple-400 transition-colors"
+                title="Edit Tags"
               >
-                <FaTimes className="h-5 w-5" />
+                <FaTags className="h-4 w-4" />
               </button>
             </div>
           </div>

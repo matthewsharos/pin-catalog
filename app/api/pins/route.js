@@ -210,12 +210,19 @@ export async function GET(req) {
     });
     
     // Get filter options based on current filters
-    // Create a base filter that includes all current filters except the one we're getting options for
-    const baseFilter = { ...where };
+    // Create base filters that exclude their own filter type
+    const categoryBaseFilter = { ...where };
+    delete categoryBaseFilter.AND?.find(f => f.tags);
+
+    const originBaseFilter = { ...where };
+    delete originBaseFilter.AND?.find(f => f.origin);
+
+    const seriesBaseFilter = { ...where };
+    delete seriesBaseFilter.AND?.find(f => f.series);
     
     // Get years without applying other filters if no category is selected
-    const yearsFilter = category ? { ...baseFilter } : {};
-    delete yearsFilter.year; // Remove year filter to get all available years
+    const yearsFilter = category ? { ...where } : {};
+    delete yearsFilter.AND?.find(f => f.year);
     
     const years = await prisma.pin.groupBy({
       by: ['year'],
@@ -229,13 +236,10 @@ export async function GET(req) {
     }).then(results => results.map(r => r.year));
     
     // Get series based on other filters
-    const availableSeriesFilter = { ...baseFilter };
-    delete availableSeriesFilter.series; // Remove series filter
-    
     const series = await prisma.pin.groupBy({
       by: ['series'],
       where: {
-        ...availableSeriesFilter,
+        ...seriesBaseFilter,
         series: { not: null }
       },
       orderBy: {
@@ -244,13 +248,10 @@ export async function GET(req) {
     }).then(results => results.map(r => r.series));
     
     // Get origins based on other filters
-    const availableOriginsFilter = { ...baseFilter };
-    delete availableOriginsFilter.origin; // Remove origin filter
-    
     const origins = await prisma.pin.groupBy({
       by: ['origin'],
       where: {
-        ...availableOriginsFilter,
+        ...originBaseFilter,
         origin: { not: null }
       },
       orderBy: {
@@ -259,12 +260,9 @@ export async function GET(req) {
     }).then(results => results.map(r => r.origin));
     
     // Get tags based on other filters
-    const tagsFilter = { ...baseFilter };
-    delete tagsFilter.tags; // Remove tags filter
-    
     // For tags, we need a different approach since they're in an array
     const pinsWithTags = await prisma.pin.findMany({
-      where: tagsFilter,
+      where: categoryBaseFilter,
       select: {
         tags: true
       }
