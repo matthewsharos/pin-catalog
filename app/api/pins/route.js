@@ -59,15 +59,25 @@ export async function GET(req) {
     
     // Search functionality
     if (search) {
-      where.AND.push({
-        OR: [
-          { pinName: { contains: search, mode: 'insensitive' } },
-          { pinId: { contains: search, mode: 'insensitive' } },
-          { series: { contains: search, mode: 'insensitive' } },
-          { origin: { contains: search, mode: 'insensitive' } },
-          { tags: { hasSome: [search] } }
-        ]
-      });
+      // Split search into individual terms and filter out empty strings
+      const searchTerms = search.toLowerCase().split(/\s+/).filter(term => term.length > 0);
+      
+      if (searchTerms.length > 0) {
+        // Create conditions for each search term
+        const searchConditions = searchTerms.map(term => ({
+          OR: [
+            { pinName: { contains: term, mode: 'insensitive' } },
+            { pinId: { contains: term, mode: 'insensitive' } },
+            { series: { contains: term, mode: 'insensitive' } },
+            { origin: { contains: term, mode: 'insensitive' } },
+            { tags: { hasSome: [term] } }
+          ]
+        }));
+        
+        // Add all search conditions to the AND array
+        // This ensures all terms must match somewhere in the pin data
+        where.AND.push(...searchConditions);
+      }
     }
     
     // Filter by year
