@@ -468,13 +468,16 @@ export default function PinCatalog() {
           updates = { isCollected: true, isDeleted: false, isWishlist: false };
           break;
         case 'uncollected':
-          updates = { isCollected: false, isDeleted: true, isWishlist: false };
+          updates = { isCollected: false, isDeleted: false, isWishlist: false };
           break;
         case 'wishlist':
           updates = { isCollected: false, isDeleted: true, isWishlist: true };
           break;
         case 'uncategorize':
           updates = { isCollected: false, isDeleted: false, isWishlist: false };
+          break;
+        case 'delete':
+          updates = { isCollected: false, isDeleted: true, isWishlist: false };
           break;
       }
 

@@ -1,0 +1,4 @@
+
+Fix migration completed at 2025-04-15T05:29:40.560Z
+- Updated 3024 pins to proper uncollected status (isDeleted=true, isCollected=false, isWishlist=false)
+    
