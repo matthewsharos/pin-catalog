@@ -243,13 +243,13 @@ export async function GET(req) {
     }).then(results => results.map(r => r.series));
     
     // Get origins based on other filters
-    const originsFilter = { ...baseFilter };
-    delete originsFilter.origin; // Remove origin filter
+    const availableOriginsFilter = { ...baseFilter };
+    delete availableOriginsFilter.origin; // Remove origin filter
     
     const origins = await prisma.pin.groupBy({
       by: ['origin'],
       where: {
-        ...originsFilter,
+        ...availableOriginsFilter,
         origin: { not: null }
       },
       orderBy: {
