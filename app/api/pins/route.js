@@ -18,6 +18,8 @@ export async function GET(req) {
     const collected = searchParams.get('collected') || '';
     const wishlist = searchParams.get('wishlist') || '';
     const uncollected = searchParams.get('uncollected') || '';
+    const limitedEdition = searchParams.get('limitedEdition') || '';
+    const mystery = searchParams.get('mystery') || '';
     
     // Build the where clause for filtering
     const where = {
@@ -99,6 +101,16 @@ export async function GET(req) {
           mode: 'insensitive'
         }
       });
+    }
+    
+    // Limited Edition filter
+    if (limitedEdition === 'true') {
+      where.AND.push({ isLimitedEdition: true });
+    }
+    
+    // Mystery filter
+    if (mystery === 'true') {
+      where.AND.push({ isMystery: true });
     }
     
     // Sorting

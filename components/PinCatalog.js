@@ -111,8 +111,8 @@ export default function PinCatalog() {
       }
 
       // Limited Edition & Mystery filters
-      if (filterLimitedEdition) queryParams.set('limitedEdition', 'true');
-      if (filterMystery) queryParams.set('mystery', 'true');
+      if (filterLimitedEdition) queryParams.set('isLimitedEdition', 'true');
+      if (filterMystery) queryParams.set('isMystery', 'true');
 
       // Status filters
       if (filterStatus === 'collected') {
