@@ -873,12 +873,11 @@ export default function PinCatalog() {
                 </div>
                 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-3 gap-1 pt-1 border-t border-gray-700">
+                <div className={`grid ${pin.isCollected || pin.isDeleted ? 'grid-cols-2' : 'grid-cols-3'} gap-1 pt-1 border-t border-gray-700`}>
                   {pin.isDeleted ? (
                     pin.isWishlist ? (
                       // WISHLIST pins - show uncollected and collected buttons
                       <>
-                        <div></div>
                         <button
                           onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
                           className="px-2 py-1 rounded bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white flex items-center justify-center"
@@ -897,7 +896,6 @@ export default function PinCatalog() {
                     ) : (
                       // UNCOLLECTED pins - show collected and wishlist buttons
                       <>
-                        <div></div>
                         <button
                           onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
                           className="px-2 py-1 rounded bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white flex items-center justify-center"
@@ -917,7 +915,6 @@ export default function PinCatalog() {
                   ) : pin.isCollected ? (
                     // COLLECTED (Owned) pins - show uncollected and wishlist buttons
                     <>
-                      <div></div>
                       <button
                         onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
                         className="px-2 py-1 rounded bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white flex items-center justify-center"
