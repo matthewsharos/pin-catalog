@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.1",
     "@prisma/client": "^5.1.1",
     "@vercel/blob": "^1.0.0",
     "autoprefixer": "^10",

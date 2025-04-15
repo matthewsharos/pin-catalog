@@ -177,9 +177,9 @@ export async function GET(req) {
     // Create a base filter that includes all current filters except the one we're getting options for
     const baseFilter = { ...where };
     
-    // Get years based on other filters
-    const yearsFilter = { ...baseFilter };
-    delete yearsFilter.year; // Remove year filter to get all available years with current filters
+    // Get years without applying other filters if no category is selected
+    const yearsFilter = category ? { ...baseFilter } : {};
+    delete yearsFilter.year; // Remove year filter to get all available years
     
     const years = await prisma.pin.groupBy({
       by: ['year'],
@@ -348,16 +348,8 @@ export async function PUT(req) {
     const pin = await prisma.pin.update({
       where: { id: parseInt(id) },
       data: {
-        pinId: updateData.pinId,
-        pinName: updateData.pinName,
-        imageUrl: updateData.imageUrl,
-        releaseDate: updateData.releaseDate,
-        series: updateData.series,
-        origin: updateData.origin,
-        edition: updateData.edition,
-        isLimitedEdition: updateData.isLimitedEdition,
-        isCollected: updateData.isCollected,
-        updatedAt: new Date(), // Always update timestamp on any change
+        ...updateData, // Include all fields from the update data
+        updatedAt: new Date(), // Always update timestamp
       },
     });
 

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FaSpinner, FaCheck } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-export default function AddPinModal({ onClose, onPinAdded }) {
+export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
   const [pinId, setPinId] = useState('');
   const [loading, setLoading] = useState(false);
   const [successPin, setSuccessPin] = useState(null);
@@ -38,8 +38,11 @@ export default function AddPinModal({ onClose, onPinAdded }) {
 
   const handleClose = () => {
     setSuccessPin(null);
+    setPinId('');
     onClose();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -100,18 +103,18 @@ export default function AddPinModal({ onClose, onPinAdded }) {
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 disabled={loading}
               >
                 Cancel
               </button>
               <button
                 type="submit"
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {loading && <FaSpinner className="animate-spin" />}
-                <span>{loading ? 'Adding Pin...' : 'Add Pin'}</span>
+                <span>Add Pin</span>
               </button>
             </div>
           </form>
