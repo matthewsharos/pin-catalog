@@ -38,6 +38,10 @@ export default function PinCatalog() {
   const [filterYears, setFilterYears] = useState([]);
   const [lastSelectedYear, setLastSelectedYear] = useState(null);
   const [filterCategories, setFilterCategories] = useState([]);
+  const [filterOrigins, setFilterOrigins] = useState([]);
+  const [filterSeries, setFilterSeries] = useState([]);
+  const [filterLimitedEdition, setFilterLimitedEdition] = useState(false);
+  const [filterMystery, setFilterMystery] = useState(false);
   const [filterOrigin, setFilterOrigin] = useState('');
   const [statusFilters, setStatusFilters] = useState({
     collected: false,
@@ -59,6 +63,7 @@ export default function PinCatalog() {
   const [showYearFilterModal, setShowYearFilterModal] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [smokeEffects, setSmokeEffects] = useState([]);
   const yearButtonRef = useRef(null);
   const sortButtonRef = useRef(null);
@@ -80,71 +85,58 @@ export default function PinCatalog() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchPins = useCallback(async () => {
+  const fetchPins = async () => {
     try {
-      // Only show loading indicator on initial load
-      if (initialLoad) {
-        setLoading(true);
+      setLoading(true);
+      const queryParams = new URLSearchParams();
+      
+      // Search query
+      if (searchQuery) queryParams.set('search', searchQuery);
+      
+      // Year filter
+      if (filterYears.length > 0) {
+        queryParams.set('year', filterYears.join(','));
       }
 
-      const params = new URLSearchParams({
-        page: page.toString(),
-        search: debouncedSearch,
-        sortBy: sortField,
-        sortOrder,
-        year: filterYears.join(','),
-        category: filterCategories.join(','),
-        origin: filterOrigin,
-        collected: statusFilters.collected ? 'true' : '',
-        wishlist: statusFilters.wishlist ? 'true' : '',
-        uncollected: statusFilters.uncollected ? 'true' : '',
-      });
-
-      // Debug logging
-      console.log('Fetching pins with URL:', `/api/pins?${params}`);
-      console.log('Current domain:', window.location.origin);
-      console.log('API base URL:', api.defaults.baseURL);
-      
-      const response = await api.get(`/api/pins?${params}`);
-      console.log('API response:', response.status, response.statusText);
-      const data = response.data;
-      
-      // Update pins without triggering loading state
-      setPins(data.pins || []);
-      setTotal(data.total || 0);
-      
-      // Update filter options based on current filters
-      setFilterOptions({
-        years: data.filterOptions?.years || [],
-        series: data.filterOptions?.series || [],
-        origins: data.filterOptions?.origins || [],
-        tags: data.filterOptions?.tags || [],
-      });
-      
-      // After first successful load, set initialLoad to false
-      if (initialLoad) {
-        setInitialLoad(false);
+      // Category filter (tags)
+      if (filterCategories.length > 0) {
+        queryParams.set('tags', filterCategories.join(','));
       }
+
+      // Origin filter
+      if (filterOrigins.length > 0) {
+        queryParams.set('origins', filterOrigins.join(','));
+      }
+
+      // Series filter
+      if (filterSeries.length > 0) {
+        queryParams.set('series', filterSeries.join(','));
+      }
+
+      // Limited Edition & Mystery filters
+      if (filterLimitedEdition) queryParams.set('limitedEdition', 'true');
+      if (filterMystery) queryParams.set('mystery', 'true');
+
+      // Status filters
+      if (statusFilters.collected) queryParams.set('status', 'collected');
+      if (statusFilters.uncollected) queryParams.set('status', 'uncollected');
+      if (statusFilters.wishlist) queryParams.set('status', 'wishlist');
+
+      // Sort
+      queryParams.set('sortField', sortField);
+      queryParams.set('sortOrder', sortOrder);
+      queryParams.set('page', page);
+
+      const response = await api.get(`/api/pins?${queryParams.toString()}`);
+      setPins(response.data.pins);
+      setTotal(response.data.total);
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching pins:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          method: error.config?.method
-        }
-      });
       toast.error('Failed to load pins');
-      // Even on error, we should stop showing the loading state
-      setInitialLoad(false);
-    } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, sortField, sortOrder, filterYears, filterCategories, filterOrigin, statusFilters, initialLoad]);
+  };
 
   useEffect(() => {
     fetchPins();
@@ -185,17 +177,6 @@ export default function PinCatalog() {
       setShowEditModal(true);
     } catch (error) {
       console.error('Error fetching pin details:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          method: error.config?.method
-        }
-      });
       toast.error('Failed to fetch pin details');
     }
   };
@@ -334,7 +315,10 @@ export default function PinCatalog() {
     setDebouncedSearch('');
     setFilterYears([]);
     setFilterCategories([]);
-    setFilterOrigin('');
+    setFilterOrigins([]);
+    setFilterSeries([]);
+    setFilterLimitedEdition(false);
+    setFilterMystery(false);
     setStatusFilters({
       collected: false,
       uncollected: false,
@@ -560,6 +544,13 @@ export default function PinCatalog() {
             >
               <FaHeart className="mr-1 text-xs" />
               Wishlist
+            </button>
+            <button
+              onClick={() => setShowFilterModal(true)}
+              className="h-7 w-7 flex items-center justify-center text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              title="More Filters"
+            >
+              <FaPlus />
             </button>
           </div>
         </div>
@@ -903,6 +894,153 @@ export default function PinCatalog() {
           }}
           onSave={handleTagsUpdated}
         />
+      )}
+
+      {/* Filter Modal */}
+      {showFilterModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+              <h3 className="text-lg font-medium text-white">Filters</h3>
+              <button
+                onClick={() => setShowFilterModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Categories */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Categories
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {filterOptions.tags.map(category => (
+                    <label key={category} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={filterCategories.includes(category)}
+                        onChange={() => {
+                          setFilterCategories(prev => {
+                            if (prev.includes(category)) {
+                              return prev.filter(c => c !== category);
+                            } else {
+                              return [...prev, category];
+                            }
+                          });
+                        }}
+                        className="form-checkbox"
+                      />
+                      <span className="ml-2 text-sm text-gray-300">{category}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Origins */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Origins
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {filterOptions.origins.map(origin => (
+                    <label key={origin} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={filterOrigins.includes(origin)}
+                        onChange={() => {
+                          setFilterOrigins(prev => {
+                            if (prev.includes(origin)) {
+                              return prev.filter(o => o !== origin);
+                            } else {
+                              return [...prev, origin];
+                            }
+                          });
+                        }}
+                        className="form-checkbox"
+                      />
+                      <span className="ml-2 text-sm text-gray-300">{origin}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Series */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Series
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {filterOptions.series.map(series => (
+                    <label key={series} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={filterSeries.includes(series)}
+                        onChange={() => {
+                          setFilterSeries(prev => {
+                            if (prev.includes(series)) {
+                              return prev.filter(s => s !== series);
+                            } else {
+                              return [...prev, series];
+                            }
+                          });
+                        }}
+                        className="form-checkbox"
+                      />
+                      <span className="ml-2 text-sm text-gray-300">{series}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Limited Edition & Mystery */}
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={filterLimitedEdition}
+                    onChange={(e) => setFilterLimitedEdition(e.target.checked)}
+                    className="form-checkbox"
+                  />
+                  <span className="ml-2 text-sm text-gray-300">Limited Edition</span>
+                </label>
+
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={filterMystery}
+                    onChange={(e) => setFilterMystery(e.target.checked)}
+                    className="form-checkbox"
+                  />
+                  <span className="ml-2 text-sm text-gray-300">Mystery</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-800">
+              <button
+                onClick={() => {
+                  setFilterCategories([]);
+                  setFilterOrigins([]);
+                  setFilterSeries([]);
+                  setFilterLimitedEdition(false);
+                  setFilterMystery(false);
+                }}
+                className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors"
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => setShowFilterModal(false)}
+                className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Smoke Effects */}
