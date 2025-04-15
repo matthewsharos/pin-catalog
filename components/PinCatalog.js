@@ -491,6 +491,15 @@ export default function PinCatalog() {
     setFilterOrigins([]);
   };
 
+  // Reset all filters without closing modal
+  const handleResetFilters = () => {
+    handleCategorySelect(null);
+    handleOriginSelect(null);
+    handleSeriesSelect(null);
+    setFilterIsLimitedEdition(false);
+    setFilterIsMystery(false);
+  };
+
   return (
     <div className={`min-h-screen bg-gray-800 text-white ${dancingScript.variable}`}>
       {/* Sticky Header Navigation */}
@@ -1063,23 +1072,16 @@ export default function PinCatalog() {
 
             <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-800">
               <button
-                onClick={() => {
-                  handleCategorySelect(null);
-                  handleOriginSelect(null);
-                  handleSeriesSelect(null);
-                  setFilterIsLimitedEdition(false);
-                  setFilterIsMystery(false);
-                  setShowFilterModal(false);
-                }}
-                className="px-4 py-2 text-sm text-gray-300 hover:text-white bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                onClick={handleResetFilters}
+                className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
-                Reset
+                Reset Filters
               </button>
               <button
                 onClick={() => setShowFilterModal(false)}
-                className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
-                Done
+                Close
               </button>
             </div>
           </div>
