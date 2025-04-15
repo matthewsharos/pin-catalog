@@ -87,6 +87,11 @@ export async function POST(req) {
           updateData.isMystery = updates.isMystery;
         }
         
+        // Handle isDeleted update
+        if (updates.isDeleted !== undefined) {
+          updateData.isDeleted = updates.isDeleted;
+        }
+        
         // Update the pin
         return await prisma.pin.update({
           where: { id: parseInt(id) },

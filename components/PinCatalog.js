@@ -399,6 +399,47 @@ export default function PinCatalog() {
     }
   };
 
+  const handleRestorePins = async (pinIds) => {
+    if (!Array.isArray(pinIds) || pinIds.length === 0) {
+      toast.error('No pins selected to restore');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await api.post('/api/pins/bulk-update', {
+        pinIds: pinIds,
+        updates: {
+          isDeleted: false
+        }
+      });
+
+      toast.success(`Restored ${pinIds.length} ${pinIds.length === 1 ? 'pin' : 'pins'}`);
+      
+      // Clear selection if the restored pins were selected
+      setSelectedPins(prev => prev.filter(id => !pinIds.includes(id)));
+      
+      // Refresh the pins list
+      fetchPins();
+    } catch (error) {
+      console.error('Error restoring pins:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method
+        }
+      });
+      toast.error('Failed to restore pins');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Only show full-page loading on initial app load
   if (initialLoad && loading) {
     return (
@@ -609,6 +650,14 @@ export default function PinCatalog() {
               >
                 <FaTrash className="mr-1" /> Delete
               </button>
+              {showDeleted && (
+                <button
+                  onClick={() => handleRestorePins(selectedPins)}
+                  className="px-2 py-1 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center"
+                >
+                  <FaQuestionCircle className="mr-1" /> Restore
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -816,6 +865,39 @@ export default function PinCatalog() {
                             )}
                           </div>
                         </td>
+                        <td className="p-2 text-center">
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            <button
+                              onClick={() => handleEditPin(pin.id)}
+                              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center"
+                            >
+                              <FaEdit className="mr-1" /> Edit
+                            </button>
+                            {showDeleted ? (
+                              <button
+                                onClick={() => handleRestorePins([pin.id])}
+                                className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
+                              >
+                                <FaCheck className="mr-1" /> Restore
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleToggleCollected(pin.id, !pin.isCollected)}
+                                  className={`px-2 py-1 text-xs ${pin.isCollected ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white rounded transition-colors flex items-center`}
+                                >
+                                  {pin.isCollected ? <FaCheck className="mr-1" /> : <FaTimes className="mr-1" />} {pin.isCollected ? 'Collected' : 'Not Collected'}
+                                </button>
+                                <button
+                                  onClick={() => handleDeletePin(pin.id)}
+                                  className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center"
+                                >
+                                  <FaTrash className="mr-1" /> Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
@@ -898,6 +980,37 @@ export default function PinCatalog() {
                             </div>
                           </div>
                         </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        <button
+                          onClick={() => handleEditPin(pin.id)}
+                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center"
+                        >
+                          <FaEdit className="mr-1" /> Edit
+                        </button>
+                        {showDeleted ? (
+                          <button
+                            onClick={() => handleRestorePins([pin.id])}
+                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center"
+                          >
+                            <FaCheck className="mr-1" /> Restore
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleToggleCollected(pin.id, !pin.isCollected)}
+                              className={`px-2 py-1 text-xs ${pin.isCollected ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white rounded transition-colors flex items-center`}
+                            >
+                              {pin.isCollected ? <FaCheck className="mr-1" /> : <FaTimes className="mr-1" />} {pin.isCollected ? 'Collected' : 'Not Collected'}
+                            </button>
+                            <button
+                              onClick={() => handleDeletePin(pin.id)}
+                              className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center"
+                            >
+                              <FaTrash className="mr-1" /> Delete
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
