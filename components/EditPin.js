@@ -53,20 +53,6 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
     // Reset file input
     e.target.value = '';
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Invalid file type. Only JPEG, PNG and WebP images are allowed.');
-      return;
-    }
-
-    // Validate file size (5MB)
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      toast.error('File too large. Maximum size is 5MB.');
-      return;
-    }
-
     // Show loading toast
     const loadingToast = toast.loading('Uploading image...');
 
@@ -85,10 +71,20 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error(
-        error.response?.data?.error || error.message || 'Failed to upload image',
-        { id: loadingToast }
-      );
+      
+      // Get the error message from the response if available
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to upload image';
+      
+      // Show error toast
+      toast.error(errorMessage, { id: loadingToast });
+      
+      // Log additional details for debugging
+      if (error.response) {
+        console.log('Error response:', {
+          status: error.response.status,
+          data: error.response.data
+        });
+      }
     }
   };
 
