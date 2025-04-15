@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { BlobServiceClient } from '@vercel/blob';
 import path from 'path';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -55,21 +55,37 @@ export async function POST(req) {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
     const filename = `pin-photo-${uniqueSuffix}${path.extname(file.name || '.jpg')}`;
     
+    // Initialize Blob Service Client
+    const blobService = new BlobServiceClient({
+      url: 'https://blob.vercel-storage.com',
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+
+    // Convert File to Buffer for upload
+    const buffer = Buffer.from(await file.arrayBuffer());
+
     // Upload to Vercel Blob Storage
-    const blob = await put(filename, file, {
-      access: 'public',
+    const { url } = await blobService.upload({
+      data: buffer,
       contentType: file.type,
-      maxAge: 31536000, // 1 year cache
-      token: process.env.BLOB_READ_WRITE_TOKEN
+      name: filename,
+      access: 'public',
+      addRandomSuffix: false,
+      cacheControl: 'public, max-age=31536000',
     });
 
     // Return the URL for the uploaded image
     return NextResponse.json({ 
-      url: blob.url,
+      url: url,
       success: true
     });
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
 
     // Check for specific error types
     if (error.name === 'BlobError') {
