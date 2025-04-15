@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLeft, FaTags } from 'react-icons/fa';
+import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLeft, FaTags, FaCheck, FaHeart } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import SmokeEffect from './SmokeEffect';
@@ -161,6 +161,9 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
 
   const handleStatusChange = async (newStatus) => {
     try {
+      // Show loading toast
+      const loadingToast = toast.loading('Updating pin status...');
+      
       // Get button position for smoke effect
       const buttonElement = document.querySelector(`[data-status="${newStatus}"]`);
       const rect = buttonElement?.getBoundingClientRect();
@@ -217,25 +220,23 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
         };
       }
 
-      // Create axios instance with base URL
-      const axiosInstance = axios.create({
-        baseURL: process.env.NEXT_PUBLIC_API_URL || '',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity
-      });
-      
-      await axiosInstance.post('/api/pins/bulk-update', {
+      // Use the imported axios instance
+      await axios.post('/api/pins/bulk-update', {
         pinIds: [pin.id],
         updates: updates
       });
 
-      toast.success('Pin updated');
-      onStatusChange?.(); // Call onStatusChange to refresh pins list
-      onNext?.(); // Move to next pin
+      toast.success('Pin updated', { id: loadingToast });
+      
+      // Call onStatusChange to refresh pins list
+      if (onStatusChange) {
+        onStatusChange();
+      }
+      
+      // Move to next pin if available
+      if (onNext) {
+        onNext();
+      }
     } catch (error) {
       console.error('Error updating pin status:', error);
       toast.error('Failed to update pin status');

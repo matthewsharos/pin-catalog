@@ -998,6 +998,7 @@ export default function PinCatalog() {
           }}
           onSave={handleUpdatePin}
           onStatusChange={() => {
+            // Refresh the pins list after status change
             fetchPins();
           }}
           onEditTags={(pin) => {
