@@ -543,10 +543,6 @@ export default function PinCatalog() {
     );
   }
 
-  const getCollectedLabel = () => {
-    return statusFilters.wishlist ? 'Wishlist' : 'Collected';
-  };
-
   return (
     <div ref={contentRef} className="container mx-auto px-4 py-8">
       <style>{`
@@ -837,14 +833,6 @@ export default function PinCatalog() {
                         )}
                       </button>
                     </th>
-                    <th className="p-2 text-left text-gray-300 cursor-pointer" onClick={() => handleSort('isCollected')}>
-                      {getCollectedLabel()}
-                      {sortField === 'isCollected' && (
-                        <span className="ml-1">
-                          {sortOrder === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </th>
                     <th className="p-2 text-left text-gray-300 cursor-pointer">Actions</th>
                   </tr>
                 </thead>
@@ -931,51 +919,44 @@ export default function PinCatalog() {
                                 </button>
                               )
                             ) : (
-                              pin.isCollected ? (
-                                <FaCheck className="text-green-500" title="Collected" />
-                              ) : (
-                                <FaTimes className="text-yellow-500" title="Not Collected" />
-                              )
+                              <div className="flex space-x-1">
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                                  className={`p-1 rounded-full ${pin.isCollected ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white'}`}
+                                  title={pin.isCollected ? "Collected" : "Mark as Collected"}
+                                >
+                                  <FaCheck className="text-sm" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                                  className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
+                                  title="Mark as Uncollected"
+                                >
+                                  <FaTimes className="text-sm" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                                  className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                                  title="Add to Wishlist"
+                                >
+                                  <span className="text-xs">🙏</span>
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
+                                  className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
+                                  title="Uncategorize"
+                                >
+                                  <FaQuestionCircle className="text-sm" />
+                                </button>
+                              </div>
                             )}
-                          </div>
-                        </td>
-                        <td className="p-2 text-center">
-                          <div className="flex justify-center">
-                            <button
-                              onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
-                              className={`p-1 rounded-full ${pin.isCollected ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white'}`}
-                              title={pin.isCollected ? "Collected" : "Mark as Collected"}
-                            >
-                              <FaCheck className="text-sm" />
-                            </button>
-                            <button
-                              onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
-                              className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
-                              title="Mark as Uncollected"
-                            >
-                              <FaTimes className="text-sm" />
-                            </button>
-                            <button
-                              onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
-                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
-                              title="Add to Wishlist"
-                            >
-                              <span className="text-xs">🙏</span>
-                            </button>
-                            <button
-                              onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
-                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
-                              title="Uncategorize"
-                            >
-                              <FaQuestionCircle className="text-sm" />
-                            </button>
                           </div>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="9" className="text-center py-8">
+                      <td colSpan="8" className="text-center py-8">
                         <div className="flex flex-col items-center justify-center text-gray-400">
                           <p className="text-lg mb-2">No pins found</p>
                           <p className="text-sm mb-4">
