@@ -32,15 +32,19 @@ export async function GET(req) {
       }
       
       if (uncollected === 'true') {
-        where.OR.push({ isCollected: false, isDeleted: false });
+        where.OR.push({ isCollected: false, isDeleted: false, isWishlist: false });
       }
       
       if (wishlist === 'true') {
         where.OR.push({ isDeleted: true, isWishlist: true });
       }
     } else {
-      // Default behavior - show non-deleted pins
-      where.isDeleted = false;
+      // Default behavior - show pins that haven't been categorized yet
+      where.AND = [
+        { isCollected: false },
+        { isDeleted: false },
+        { isWishlist: false }
+      ];
     }
     
     // Search functionality

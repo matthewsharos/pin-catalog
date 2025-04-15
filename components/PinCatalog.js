@@ -474,13 +474,38 @@ export default function PinCatalog() {
 
     try {
       setLoading(true);
+      
+      let updates = {};
+      
+      if (status === 'collected') {
+        updates = {
+          isCollected: true,
+          isDeleted: false,
+          isWishlist: false
+        };
+      } else if (status === 'uncollected') {
+        updates = {
+          isCollected: false,
+          isDeleted: false,
+          isWishlist: false
+        };
+      } else if (status === 'wishlist') {
+        updates = {
+          isCollected: false,
+          isDeleted: true,
+          isWishlist: true
+        };
+      } else if (status === 'uncategorize') {
+        updates = {
+          isCollected: false,
+          isDeleted: false,
+          isWishlist: false
+        };
+      }
+      
       const response = await api.post('/api/pins/bulk-update', {
         pinIds: pinIds,
-        updates: {
-          isCollected: status === 'collected',
-          isDeleted: status === 'uncollected' ? false : status === 'wishlist' ? true : undefined,
-          isWishlist: status === 'wishlist'
-        }
+        updates: updates
       });
 
       toast.success(`Updated ${pinIds.length} ${pinIds.length === 1 ? 'pin' : 'pins'}`);
@@ -614,7 +639,7 @@ export default function PinCatalog() {
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
-                  All
+                  Uncategorized
                 </button>
                 <button
                   onClick={() => handleStatusFilterChange('collected', !statusFilters.collected)}
@@ -711,6 +736,13 @@ export default function PinCatalog() {
                 className="px-2 py-1 text-sm bg-blue-400 text-white rounded-lg hover:bg-blue-500 transition-colors flex items-center"
               >
                 <span className="mr-1">🙏</span> Wishlist
+              </button>
+              
+              <button
+                onClick={() => handleUpdatePinStatus(selectedPins, 'uncategorize')}
+                className="px-2 py-1 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center"
+              >
+                <FaQuestionCircle className="mr-1" /> Uncategorize
               </button>
               
               <button
@@ -813,6 +845,7 @@ export default function PinCatalog() {
                         </span>
                       )}
                     </th>
+                    <th className="p-2 text-left text-gray-300 cursor-pointer">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="transition-opacity duration-300">
@@ -906,11 +939,43 @@ export default function PinCatalog() {
                             )}
                           </div>
                         </td>
+                        <td className="p-2 text-center">
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => handleUpdatePinStatus(pin.id, 'collected')}
+                              className={`p-1 rounded-full ${pin.isCollected ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-green-700 hover:text-white'}`}
+                              title={pin.isCollected ? "Collected" : "Mark as Collected"}
+                            >
+                              <FaCheck className="text-sm" />
+                            </button>
+                            <button
+                              onClick={() => handleUpdatePinStatus(pin.id, 'uncollected')}
+                              className={`p-1 rounded-full ${!pin.isCollected && !pin.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-yellow-700 hover:text-white'}`}
+                              title="Mark as Uncollected"
+                            >
+                              <FaTimes className="text-sm" />
+                            </button>
+                            <button
+                              onClick={() => handleUpdatePinStatus(pin.id, 'wishlist')}
+                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-blue-400 hover:text-white"
+                              title="Add to Wishlist"
+                            >
+                              <span className="text-xs">🙏</span>
+                            </button>
+                            <button
+                              onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
+                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
+                              title="Uncategorize"
+                            >
+                              <FaQuestionCircle className="text-sm" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="8" className="text-center py-8">
+                      <td colSpan="9" className="text-center py-8">
                         <div className="flex flex-col items-center justify-center text-gray-400">
                           <p className="text-lg mb-2">No pins found</p>
                           <p className="text-sm mb-4">
@@ -1023,6 +1088,13 @@ export default function PinCatalog() {
                               title="Add to Wishlist"
                             >
                               <span className="text-xs">🙏</span>
+                            </button>
+                            <button
+                              onClick={() => handleUpdatePinStatus(pin.id, 'uncategorize')}
+                              className="p-1 rounded-full bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white"
+                              title="Uncategorize"
+                            >
+                              <FaQuestionCircle className="text-sm" />
                             </button>
                           </div>
                         )}
