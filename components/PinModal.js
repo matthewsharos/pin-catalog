@@ -157,7 +157,7 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               <img 
                 src={pin.imageUrl || '/placeholder-pin.png'} 
                 alt={pin.pinName} 
-                className="w-full h-auto rounded-lg shadow-lg"
+                className="w-full h-auto max-h-[500px] object-contain rounded-lg shadow-lg"
               />
             </div>
           </div>
