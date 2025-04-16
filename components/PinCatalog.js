@@ -43,6 +43,7 @@ export default function PinCatalog() {
   const [filterIsLimitedEdition, setFilterIsLimitedEdition] = useState(false);
   const [filterIsMystery, setFilterIsMystery] = useState(false);
   const [statusFilters, setStatusFilters] = useState({
+    all: false,
     collected: false,
     uncollected: false,
     wishlist: false
@@ -517,6 +518,7 @@ export default function PinCatalog() {
     setFilterIsLimitedEdition(false);
     setFilterIsMystery(false);
     setStatusFilters({
+      all: false,
       collected: false,
       uncollected: false,
       wishlist: false
@@ -532,25 +534,6 @@ export default function PinCatalog() {
     e.preventDefault(); // Prevent text selection
     
     setStatusFilters(prev => {
-      if (status === 'all') {
-        if (e.metaKey || e.ctrlKey) {
-          // Command/Ctrl click on All - toggle between all filters off and all filters on
-          const allActive = prev.collected && prev.uncollected && prev.wishlist;
-          return {
-            collected: !allActive,
-            uncollected: !allActive,
-            wishlist: !allActive
-          };
-        } else {
-          // Normal click - clear all filters
-          return {
-            collected: false,
-            uncollected: false,
-            wishlist: false
-          };
-        }
-      }
-      
       if (e.metaKey || e.ctrlKey) {
         // Command/Ctrl click - toggle this status only
         return {
@@ -560,6 +543,7 @@ export default function PinCatalog() {
       } else {
         // Normal click - set only this status
         return {
+          all: status === 'all' && !prev.all,
           collected: status === 'collected' && !prev.collected,
           uncollected: status === 'uncollected' && !prev.uncollected,
           wishlist: status === 'wishlist' && !prev.wishlist
@@ -822,7 +806,7 @@ export default function PinCatalog() {
           ctx.fillRect(x + 5, y + 5, imageContainerSize, imageContainerSize);
           ctx.fillStyle = '#4b5563';
           ctx.beginPath();
-          ctx.arc(x + 5 + (imageContainerSize / 2), y + 5 + (imageContainerSize / 2), 20, 0, 2 * Math.PI);
+          ctx.arc(5 + (imageContainerSize / 2), 5 + (imageContainerSize / 2), 20, 0, 2 * Math.PI);
           ctx.fill();
         }
         

@@ -28,7 +28,7 @@ export async function GET(req) {
     };
     
     // Status filters
-    if (collected === 'true' || wishlist === 'true' || uncollected === 'true') {
+    if (collected === 'true' || wishlist === 'true' || uncollected === 'true' || searchParams.get('all') === 'true') {
       // If any status filter is active, build an OR condition for statuses
       const statusConditions = [];
       
@@ -48,6 +48,16 @@ export async function GET(req) {
       
       if (wishlist === 'true') {
         statusConditions.push({ isWishlist: true });
+      }
+
+      if (searchParams.get('all') === 'true') {
+        statusConditions.push({ 
+          AND: [
+            { isCollected: false },
+            { isDeleted: false },
+            { isWishlist: false }
+          ]
+        });
       }
 
       where.AND.push({ OR: statusConditions });
