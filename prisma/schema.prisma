@@ -20,6 +20,7 @@ model Pin {
   isCollected       Boolean   @default(false)
   isMystery         Boolean   @default(false)
   isLimitedEdition  Boolean   @default(false)
+  isUnderReview     Boolean   @default(false)
   rarity            String?
   year              Int?
   pinpopUrl         String?

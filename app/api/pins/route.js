@@ -419,27 +419,35 @@ export async function POST(req) {
 // PUT - Update a pin
 export async function PUT(req) {
   try {
-    const pinData = await req.json();
-    const { id, ...updateData } = pinData;
-
+    const data = await req.json();
+    const { id, ...updates } = data;
+    
     if (!id) {
       return NextResponse.json({ error: 'Pin ID is required' }, { status: 400 });
     }
 
+    // Ensure boolean fields are properly typed
+    if (typeof updates.isCollected !== 'undefined') updates.isCollected = Boolean(updates.isCollected);
+    if (typeof updates.isWishlist !== 'undefined') updates.isWishlist = Boolean(updates.isWishlist);
+    if (typeof updates.isDeleted !== 'undefined') updates.isDeleted = Boolean(updates.isDeleted);
+    if (typeof updates.isUnderReview !== 'undefined') updates.isUnderReview = Boolean(updates.isUnderReview);
+    if (typeof updates.isLimitedEdition !== 'undefined') updates.isLimitedEdition = Boolean(updates.isLimitedEdition);
+    if (typeof updates.isMystery !== 'undefined') updates.isMystery = Boolean(updates.isMystery);
+
     // Handle date conversion for releaseDate
-    if (updateData.releaseDate) {
-      updateData.releaseDate = new Date(updateData.releaseDate);
+    if (updates.releaseDate) {
+      updates.releaseDate = new Date(updates.releaseDate);
     }
 
-    const pin = await prisma.pin.update({
+    const updatedPin = await prisma.pin.update({
       where: { id: parseInt(id) },
       data: {
-        ...updateData, // Include all fields from the update data
-        updatedAt: new Date(), // Always update timestamp
-      },
+        ...updates,
+        updatedAt: new Date()
+      }
     });
 
-    return NextResponse.json(pin);
+    return NextResponse.json(updatedPin);
   } catch (error) {
     console.error('Error updating pin:', error);
     return NextResponse.json({ error: 'Failed to update pin' }, { status: 500 });
