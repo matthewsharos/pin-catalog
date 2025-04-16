@@ -33,16 +33,20 @@ export async function GET(req) {
       const statusConditions = [];
       
       if (collected === 'true') {
-        statusConditions.push({ isCollected: true, isDeleted: false });
+        statusConditions.push({ isCollected: true });
       }
       
       if (uncollected === 'true') {
-        // Uncollected pins are explicitly marked as uncollected (isDeleted=true but not wishlist)
-        statusConditions.push({ isCollected: false, isDeleted: true, isWishlist: false });
+        statusConditions.push({ 
+          AND: [
+            { isCollected: false },
+            { isWishlist: false }
+          ]
+        });
       }
       
       if (wishlist === 'true') {
-        statusConditions.push({ isDeleted: true, isWishlist: true });
+        statusConditions.push({ isWishlist: true });
       }
 
       where.AND.push({ OR: statusConditions });
@@ -51,7 +55,6 @@ export async function GET(req) {
       where.AND.push({
         AND: [
           { isCollected: false },
-          { isDeleted: false },
           { isWishlist: false }
         ]
       });
