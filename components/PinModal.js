@@ -1,28 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { FaCheck, FaTimes, FaHeart, FaStar, FaTag, FaCandyCane, FaTrash, FaCalendarAlt } from 'react-icons/fa';
 
-export default function PinModal({ pin, isOpen, onClose, onUpdate }) {
+export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, currentIndex, onNavigate }) {
   const [formData, setFormData] = useState(pin || {});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [comments, setComments] = useState(pin?.comments || []);
+  const [newComment, setNewComment] = useState('');
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [currentPinIndex, setCurrentPinIndex] = useState(currentIndex || 0);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setFormData(pin || {});
+    setComments(pin?.comments || []);
+  }, [pin]);
+
+  if (!pin) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
+      const updatedPinData = {
+        ...formData,
+        comments
+      };
+      
       const response = await fetch(`/api/pins/${pin.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(updatedPinData),
       });
 
       if (!response.ok) throw new Error('Failed to update pin');
 
       const updatedPin = await response.json();
       onUpdate(updatedPin);
-      onClose();
       toast.success('Pin updated successfully');
     } catch (error) {
       toast.error('Failed to update pin');
@@ -32,103 +46,330 @@ export default function PinModal({ pin, isOpen, onClose, onUpdate }) {
     }
   };
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleDateChange = (e) => {
+    const { value } = e.target;
+    setFormData(prev => ({ ...prev, releaseDate: value }));
+  };
+
+  const handleStatusChange = (status) => {
+    // Reset all status flags first
+    const updatedPin = { 
+      ...pin,
+      isCollected: false,
+      isWishlist: false,
+      isDeleted: false,
+      isUnderReview: false
+    };
+    
+    // Check if the clicked status is already active
+    const isActive = 
+      (status === 'collected' && pin.isCollected) ||
+      (status === 'wishlist' && pin.isWishlist) ||
+      (status === 'uncollected' && pin.isDeleted) ||
+      (status === 'underReview' && pin.isUnderReview);
+    
+    // If the status was not already active, set the appropriate flag
+    if (!isActive) {
+      if (status === 'collected') {
+        updatedPin.isCollected = true;
+      } else if (status === 'wishlist') {
+        updatedPin.isWishlist = true;
+      } else if (status === 'uncollected') {
+        updatedPin.isDeleted = true;
+      } else if (status === 'underReview') {
+        updatedPin.isUnderReview = true;
+      }
+    }
+    
+    // Update the pin in the parent component first
+    onUpdate(updatedPin);
+    
+    // Then navigate to the next pin
+    if (pins && pins.length > 1) {
+      navigatePin('next');
+    }
+  };
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    
+    const comment = {
+      id: Date.now().toString(),
+      text: newComment.trim(),
+      createdAt: new Date().toISOString()
+    };
+    
+    setComments(prev => [...prev, comment]);
+    setNewComment('');
+  };
+
+  const handleDeleteComment = (commentId) => {
+    setComments(prev => prev.filter(comment => comment.id !== commentId));
+  };
+
+  const navigatePin = (direction) => {
+    if (!pins || pins.length <= 1) return;
+    onNavigate(direction, pin);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Edit Pin</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-gray-800">
+          <h2 className="text-2xl font-bold text-white">Edit Pin</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-400 hover:text-white transition-colors"
           >
-            ✕
+            <FaTimes size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Name</label>
-            <input
-              type="text"
-              value={formData.name || ''}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Image URL</label>
-            <input
-              type="url"
-              value={formData.imageUrl || ''}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Year</label>
-            <input
-              type="number"
-              value={formData.year || ''}
-              onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Series</label>
-            <input
-              type="text"
-              value={formData.series || ''}
-              onChange={(e) => setFormData({ ...formData, series: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Origin</label>
-            <input
-              type="text"
-              value={formData.origin || ''}
-              onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Status</label>
-            <select
-              value={formData.status || 'uncollected'}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        <div className="p-4">
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mb-4">
+            <button 
+              onClick={() => navigatePin('prev')}
+              className="bg-gray-800 text-white p-2 rounded-full hover:bg-gray-700"
             >
-              <option value="uncollected">Uncollected</option>
-              <option value="owned">Owned</option>
-              <option value="wishlist">Wishlist</option>
-              <option value="review">Review</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Cancel
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+            <button 
+              onClick={() => navigatePin('next')}
+              className="bg-gray-800 text-white p-2 rounded-full hover:bg-gray-700"
             >
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
-        </form>
+
+          {/* Pin Image */}
+          <div className="flex justify-center mb-4">
+            <div className="relative w-full max-w-md">
+              <img 
+                src={pin.imageUrl || '/placeholder-pin.png'} 
+                alt={pin.pinName} 
+                className="w-full h-auto rounded-lg shadow-lg"
+              />
+            </div>
+          </div>
+
+          {/* Status Action Buttons */}
+          <div className="flex mb-4 mx-auto max-w-md border border-gray-800 rounded-lg overflow-hidden">
+            <button
+              onClick={() => handleStatusChange('collected')}
+              className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                formData.isCollected ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+              title="Mark as Collected"
+            >
+              <div className="flex items-center justify-center">
+                <FaCheck className="mr-0.5" />
+                <span>Owned</span>
+              </div>
+            </button>
+            <button
+              onClick={() => handleStatusChange('uncollected')}
+              className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                formData.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+              title="Mark as Uncollected"
+            >
+              <div className="flex items-center justify-center">
+                <FaTimes className="mr-0.5" />
+                <span>Uncollected</span>
+              </div>
+            </button>
+            <button
+              onClick={() => handleStatusChange('wishlist')}
+              className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                formData.isWishlist ? 'bg-blue-400 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+              title="Add to Wishlist"
+            >
+              <div className="flex items-center justify-center">
+                <FaHeart className="mr-0.5" />
+                <span>Wishlist</span>
+              </div>
+            </button>
+            <button
+              onClick={() => handleStatusChange('underReview')}
+              className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                formData.isUnderReview ? 'bg-amber-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+              title="Mark for Review"
+            >
+              <div className="flex items-center justify-center">
+                <FaStar className="mr-0.5" />
+                <span>Review</span>
+              </div>
+            </button>
+            <button
+              onClick={() => handleStatusChange('all')}
+              className="flex-1 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              title="Clear Status"
+            >
+              <div className="flex items-center justify-center">
+                <span>All</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Pin ID and Action Icons */}
+          <div className="flex items-center mb-6 text-xs">
+            <div className="text-white bg-gray-800 px-3 py-2 rounded-lg mr-2">
+              <span className="font-medium">Pin ID:</span> {pin.pinId || 'No ID'}
+            </div>
+            <a 
+              href={pin.pinPopUrl || '#'} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-gray-800 text-white p-2 rounded-lg hover:bg-gray-700 mr-2"
+              title="View on Pin & Pop"
+            >
+              <FaCandyCane size={18} />
+            </a>
+            <button 
+              onClick={() => setShowTagModal(true)}
+              className="bg-gray-800 text-white p-2 rounded-lg hover:bg-gray-700"
+              title="Manage Tags"
+            >
+              <FaTag size={18} />
+            </button>
+          </div>
+
+          {/* Form Fields */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-white mb-1">Name</label>
+              <input
+                type="text"
+                name="pinName"
+                value={formData.pinName || ''}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-white mb-1">Series</label>
+              <input
+                type="text"
+                name="series"
+                value={formData.series || ''}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-white mb-1">Origin</label>
+              <input
+                type="text"
+                name="origin"
+                value={formData.origin || ''}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-white mb-1">Release Date</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <FaCalendarAlt className="text-gray-400" />
+                </div>
+                <input
+                  type="date"
+                  name="releaseDate"
+                  value={formData.releaseDate || ''}
+                  onChange={handleDateChange}
+                  className="w-full pl-10 px-3 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            
+            {/* Comments Section */}
+            <div>
+              <label className="block text-xs font-medium text-white mb-1">Comments</label>
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-2">
+                {comments.length > 0 ? (
+                  <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
+                    {comments.map(comment => (
+                      <div key={comment.id} className="flex items-start justify-between bg-gray-700 p-2 rounded">
+                        <div className="flex-1">
+                          <p className="text-white text-sm">{comment.text}</p>
+                          <p className="text-gray-400 text-xs mt-1">
+                            {new Date(comment.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="text-gray-400 hover:text-red-500 ml-2"
+                        >
+                          <FaTrash size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm mb-3">No comments yet</p>
+                )}
+                
+                <div className="flex">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    className="flex-1 px-3 py-2 bg-gray-700 text-white border border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddComment}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-800">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 focus:outline-none"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none flex items-center"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -326,6 +326,20 @@ export default function PinCatalog() {
     setPage(1);
   }, []);
 
+  const handlePinNavigation = useCallback((direction, currentPin) => {
+    const currentIndex = pins.findIndex(p => p.id === currentPin.id);
+    if (currentIndex === -1 || pins.length <= 1) return;
+    
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (currentIndex + 1) % pins.length;
+    } else {
+      newIndex = (currentIndex - 1 + pins.length) % pins.length;
+    }
+    
+    setSelectedPin(pins[newIndex]);
+  }, [pins]);
+
   return (
     <div className="min-h-screen bg-gray-800 text-white">
       <HeaderNavigation
@@ -474,6 +488,9 @@ export default function PinCatalog() {
           onClose={() => setSelectedPin(null)}
           onUpdate={handlePinUpdate}
           onDelete={handlePinDelete}
+          pins={pins}
+          currentIndex={pins.findIndex(p => p.id === selectedPin.id)}
+          onNavigate={handlePinNavigation}
         />
       )}
 
