@@ -43,7 +43,7 @@ export default function PinCatalog() {
   const [filterIsLimitedEdition, setFilterIsLimitedEdition] = useState(false);
   const [filterIsMystery, setFilterIsMystery] = useState(false);
   const [statusFilters, setStatusFilters] = useState({
-    all: false,
+    all: true,
     collected: false,
     uncollected: false,
     wishlist: false
@@ -519,7 +519,7 @@ export default function PinCatalog() {
     setFilterIsLimitedEdition(false);
     setFilterIsMystery(false);
     setStatusFilters({
-      all: false,
+      all: true,
       collected: false,
       uncollected: false,
       wishlist: false
