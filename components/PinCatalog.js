@@ -134,10 +134,10 @@ export default function PinCatalog() {
       if (filterIsMystery) queryParams.set('isMystery', 'true');
 
       // Status filters - now supports multiple
-      if (statusFilters.all) queryParams.set('all', 'true');
-      if (statusFilters.collected) queryParams.set('collected', 'true');
-      if (statusFilters.uncollected) queryParams.set('uncollected', 'true');
-      if (statusFilters.wishlist) queryParams.set('wishlist', 'true');
+      queryParams.set('all', statusFilters.all.toString());
+      queryParams.set('collected', statusFilters.collected.toString());
+      queryParams.set('uncollected', statusFilters.uncollected.toString());
+      queryParams.set('wishlist', statusFilters.wishlist.toString());
 
       // Sort and pagination
       queryParams.set('sortBy', sortField);
@@ -412,9 +412,10 @@ export default function PinCatalog() {
       params.append('isMystery', filterIsMystery.toString());
 
       // Add status filters
-      if (statusFilters.collected) params.append('collected', 'true');
-      if (statusFilters.uncollected) params.append('uncollected', 'true');
-      if (statusFilters.wishlist) params.append('wishlist', 'true');
+      params.set('all', statusFilters.all.toString());
+      params.set('collected', statusFilters.collected.toString());
+      params.set('uncollected', statusFilters.uncollected.toString());
+      params.set('wishlist', statusFilters.wishlist.toString());
 
       const response = await api.get(`/api/pins/options?${params.toString()}`);
       return response.data;
@@ -441,9 +442,12 @@ export default function PinCatalog() {
       if (filterSeries.length > 0) params.set('series', filterSeries.join(','));
       if (filterIsLimitedEdition) params.set('isLimitedEdition', 'true');
       if (filterIsMystery) params.set('isMystery', 'true');
-      if (statusFilters.collected) params.set('collected', 'true');
-      if (statusFilters.uncollected) params.set('uncollected', 'true');
-      if (statusFilters.wishlist) params.set('wishlist', 'true');
+
+      // Add status filters
+      params.set('all', statusFilters.all.toString());
+      params.set('collected', statusFilters.collected.toString());
+      params.set('uncollected', statusFilters.uncollected.toString());
+      params.set('wishlist', statusFilters.wishlist.toString());
 
       const response = await api.get(`/api/pins/options?${params.toString()}`);
       setFilterOptions({
@@ -470,7 +474,11 @@ export default function PinCatalog() {
 
   // Update available options when any filter changes except years
   useEffect(() => {
-    updateAvailableOptions();
+    const timeoutId = setTimeout(() => {
+      updateAvailableOptions();
+    }, 300); // Add debounce for search
+
+    return () => clearTimeout(timeoutId);
   }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, statusFilters, searchQuery]);
 
   const handleFilterChange = async (filterType, value) => {

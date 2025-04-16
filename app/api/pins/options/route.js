@@ -14,6 +14,7 @@ export async function GET(req) {
     const searchQuery = searchParams.get('search') || '';
     
     // Get status filters
+    const all = searchParams.get('all') === 'true';
     const collected = searchParams.get('collected') === 'true';
     const uncollected = searchParams.get('uncollected') === 'true'; 
     const wishlist = searchParams.get('wishlist') === 'true';
@@ -53,7 +54,7 @@ export async function GET(req) {
     }
     
     // Apply status filters
-    if (collected || uncollected || wishlist) {
+    if (!all && (collected || uncollected || wishlist)) {
       const statusConditions = [];
       
       if (collected) {
@@ -66,7 +67,7 @@ export async function GET(req) {
       if (uncollected) {
         statusConditions.push({ 
           isCollected: false,
-          isDeleted: true,
+          isDeleted: false,
           isWishlist: false
         });
       }
@@ -74,7 +75,7 @@ export async function GET(req) {
       if (wishlist) {
         statusConditions.push({ 
           isCollected: false,
-          isDeleted: true,
+          isDeleted: false,
           isWishlist: true
         });
       }
@@ -121,10 +122,7 @@ export async function GET(req) {
         }).then(pins => [...new Set(pins.map(pin => pin.series))].filter(Boolean).sort()),
 
         prisma.pin.findMany({
-          where: {
-            ...baseWhere,
-            AND: baseWhere.AND?.filter(condition => !('year' in condition)) || []
-          },
+          where: baseWhere,
           select: { year: true },
           distinct: ['year'],
         }).then(pins => [...new Set(pins.map(pin => pin.year))]
