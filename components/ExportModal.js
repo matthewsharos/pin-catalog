@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
+import { FaSpinner } from 'react-icons/fa';
 
 export default function ExportModal({ isOpen, onClose, pins, filters }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [exportPins, setExportPins] = useState([]);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   console.log("ExportModal rendered", { isOpen, pinsCount: pins?.length });
 
@@ -11,44 +16,127 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
     if (!isOpen) {
       setImageUrl('');
       setIsGenerating(false);
+      setExportPins([]);
     } else {
       console.log("ExportModal opened");
+      loadAllPinsForExport();
     }
   }, [isOpen]);
 
-  // Auto-generate the image when modal opens
-  useEffect(() => {
-    if (isOpen && pins.length > 0 && !imageUrl && !isGenerating) {
-      generateImage();
+  // Load all pins matching the current filters for export
+  const loadAllPinsForExport = async () => {
+    if (!isOpen || !filters) return;
+    
+    setIsLoading(true);
+    setLoadingMessage('Loading all pins matching your filters...');
+    
+    try {
+      // Build query parameters from filters
+      const params = new URLSearchParams();
+      
+      // Add status filters
+      if (filters.statusFilters) {
+        Object.entries(filters.statusFilters).forEach(([key, value]) => {
+          if (value) params.append(key, 'true');
+        });
+      }
+      
+      // Add search query
+      if (filters.searchQuery) {
+        params.append('search', filters.searchQuery);
+      }
+      
+      // Add year filters
+      if (filters.yearFilters && filters.yearFilters.length > 0) {
+        params.append('years', filters.yearFilters.join(','));
+      }
+      
+      // Add category filters
+      if (filters.filterCategories && filters.filterCategories.length > 0) {
+        params.append('categories', filters.filterCategories.join(','));
+      }
+      
+      // Add origin filters
+      if (filters.filterOrigins && filters.filterOrigins.length > 0) {
+        params.append('origins', filters.filterOrigins.join(','));
+      }
+      
+      // Add series filters
+      if (filters.filterSeries && filters.filterSeries.length > 0) {
+        params.append('series', filters.filterSeries.join(','));
+      }
+      
+      // Add special filters
+      if (filters.filterIsLimitedEdition) {
+        params.append('isLimitedEdition', 'true');
+      }
+      
+      if (filters.filterIsMystery) {
+        params.append('isMystery', 'true');
+      }
+      
+      // Add sort option
+      if (filters.sortOption) {
+        params.append('sort', filters.sortOption);
+      }
+      
+      // Set max pins to 250
+      params.append('maxPins', '250');
+      
+      console.log('Fetching pins with params:', params.toString());
+      const response = await axios.get(`/api/pins/export?${params.toString()}`);
+      
+      if (response.data && response.data.pins) {
+        setExportPins(response.data.pins);
+        console.log(`Loaded ${response.data.pins.length} pins for export`);
+        setLoadingMessage(`Loaded ${response.data.pins.length} pins for export`);
+        
+        // Auto-generate the image after loading pins
+        if (response.data.pins.length > 0) {
+          setTimeout(() => {
+            generateImage(response.data.pins);
+          }, 500);
+        } else {
+          toast.error('No pins match your current filters');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading pins for export:', error);
+      toast.error('Failed to load pins for export');
+      setLoadingMessage('Error loading pins. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  }, [isOpen, pins, imageUrl]);
+  };
 
-  if (!isOpen) return null;
-
-  const generateImage = async () => {
-    if (pins.length === 0) {
+  const generateImage = async (pinsToExport) => {
+    const pinsArray = pinsToExport || exportPins;
+    
+    if (pinsArray.length === 0) {
       toast.error('No pins to export');
       return;
     }
 
-    if (pins.length > 250) {
+    if (pinsArray.length > 250) {
       toast.error('Cannot export more than 250 pins at once');
       return;
     }
 
     setIsGenerating(true);
+    setLoadingMessage('Generating image...');
+    
     try {
       // Fixed width of 2500px
       const width = 2500;
       
       // Determine pins per row based on count (5 or 10)
-      const pinsPerRow = pins.length <= 30 ? 5 : 10;
+      const pinsPerRow = pinsArray.length <= 30 ? 5 : 10;
       
       // Calculate pin size (square)
       const pinSize = width / pinsPerRow;
       
       // Calculate number of rows needed
-      const rows = Math.ceil(Math.min(pins.length, 250) / pinsPerRow);
+      const rows = Math.ceil(Math.min(pinsArray.length, 250) / pinsPerRow);
       
       // Calculate height (pins + 100px for filter info)
       const height = (pinSize * rows) + 100;
@@ -64,14 +152,16 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       ctx.fillRect(0, 0, width, height);
 
       // Draw pins
-      for (let i = 0; i < Math.min(pins.length, 250); i++) {
-        const pin = pins[i];
+      for (let i = 0; i < Math.min(pinsArray.length, 250); i++) {
+        const pin = pinsArray[i];
         const row = Math.floor(i / pinsPerRow);
         const col = i % pinsPerRow;
         const x = col * pinSize;
         const y = row * pinSize;
 
         try {
+          setLoadingMessage(`Generating image... Processing pin ${i+1} of ${Math.min(pinsArray.length, 250)}`);
+          
           // Load image
           const img = await loadImage(pin.imageUrl);
           
@@ -190,7 +280,7 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       }
       
       // Add pin count
-      filterTexts.push(`Total: ${pins.length} pins`);
+      filterTexts.push(`Total: ${pinsArray.length} pins`);
       
       // Draw filter text
       const filterText = filterTexts.join(' | ');
@@ -199,10 +289,12 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       // Convert to data URL and set
       const dataUrl = canvas.toDataURL('image/png');
       setImageUrl(dataUrl);
+      setLoadingMessage('');
       
     } catch (error) {
       console.error('Error generating image:', error);
       toast.error('Failed to generate image');
+      setLoadingMessage('Error generating image. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -260,20 +352,40 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
         </div>
 
         <div className="space-y-4">
-          {!imageUrl && (
+          {(isLoading || isGenerating) && (
+            <div className="text-center text-white">
+              <p className="mb-4">{loadingMessage || 'Processing...'}</p>
+              <div className="flex justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            </div>
+          )}
+
+          {!isLoading && !isGenerating && !imageUrl && exportPins.length > 0 && (
             <div className="text-center text-white">
               <p className="mb-4">
-                {isGenerating ? (
-                  'Generating image, please wait...'
-                ) : (
-                  `Generating an image of your pin collection (${pins.length} pins) with current filters applied.`
-                )}
+                Ready to generate an image of {exportPins.length} pins with your current filters.
               </p>
-              <div className="flex justify-center">
-                {isGenerating && (
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                )}
-              </div>
+              <button
+                onClick={() => generateImage()}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Generate Image
+              </button>
+            </div>
+          )}
+
+          {!isLoading && !isGenerating && !imageUrl && exportPins.length === 0 && (
+            <div className="text-center text-white">
+              <p className="mb-4">
+                No pins match your current filters.
+              </p>
+              <button
+                onClick={loadAllPinsForExport}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Retry Loading Pins
+              </button>
             </div>
           )}
 
@@ -294,7 +406,7 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
                   Download Image
                 </button>
                 <button
-                  onClick={generateImage}
+                  onClick={() => generateImage()}
                   disabled={isGenerating}
                   className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
