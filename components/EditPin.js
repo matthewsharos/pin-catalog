@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLeft, FaTags, FaCheck, FaHeart } from 'react-icons/fa';
+import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLeft, FaTags, FaCheck, FaHeart, FaStar } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import SmokeEffect from './SmokeEffect';
@@ -180,6 +180,8 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
         smokeColor = 'brown';
       } else if (newStatus === 'wishlist') {
         smokeColor = 'blue';
+      } else if (newStatus === 'underReview') {
+        smokeColor = 'amber';
       }
 
       // Add smoke effect
@@ -198,25 +200,29 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
         updates = {
           isCollected: true,
           isDeleted: false,
-          isWishlist: false
+          isWishlist: false,
+          isUnderReview: false
         };
       } else if (newStatus === 'uncollected') {
         updates = {
           isCollected: false,
-          isDeleted: true,
-          isWishlist: false
+          isDeleted: false,
+          isWishlist: false,
+          isUnderReview: false
         };
       } else if (newStatus === 'wishlist') {
         updates = {
           isCollected: false,
-          isDeleted: true,
-          isWishlist: true
+          isDeleted: false,
+          isWishlist: true,
+          isUnderReview: false
         };
-      } else if (newStatus === 'uncategorize') {
+      } else if (newStatus === 'underReview') {
         updates = {
           isCollected: false,
           isDeleted: false,
-          isWishlist: false
+          isWishlist: false,
+          isUnderReview: true
         };
       }
 
@@ -300,36 +306,54 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
                 </label>
 
                 {/* Status Buttons */}
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap gap-2 mt-4">
                   <button
                     type="button"
                     data-status="collected"
                     onClick={() => handleStatusChange('collected')}
-                    className={`h-7 px-2 text-xs rounded-lg transition-colors flex items-center ${
-                      formData.status === 'collected' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                      pin?.isCollected
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    Collected
+                    <FaCheck className="mr-2" /> Owned
                   </button>
                   <button
                     type="button"
                     data-status="uncollected"
                     onClick={() => handleStatusChange('uncollected')}
-                    className={`h-7 px-2 text-xs rounded-lg transition-colors flex items-center ${
-                      formData.status === 'uncollected' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                      !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview
+                        ? 'bg-yellow-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    Uncollected
+                    <FaTimes className="mr-2" /> Uncollected
                   </button>
                   <button
                     type="button"
                     data-status="wishlist"
                     onClick={() => handleStatusChange('wishlist')}
-                    className={`h-7 px-2 text-xs rounded-lg transition-colors flex items-center ${
-                      formData.status === 'wishlist' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                      pin?.isWishlist
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    Wishlist
+                    <FaHeart className="mr-2" /> Wishlist
+                  </button>
+                  <button
+                    type="button"
+                    data-status="underReview"
+                    onClick={() => handleStatusChange('underReview')}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                      pin?.isUnderReview
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    <FaStar className="mr-2" /> Under Review
                   </button>
                 </div>
               </div>

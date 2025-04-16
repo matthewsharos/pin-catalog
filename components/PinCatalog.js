@@ -46,7 +46,8 @@ export default function PinCatalog() {
     all: true,
     collected: false,
     uncollected: false,
-    wishlist: false
+    wishlist: false,
+    underReview: false
   });
   const [filterOptions, setFilterOptions] = useState({
     years: [],
@@ -138,6 +139,7 @@ export default function PinCatalog() {
       queryParams.set('collected', statusFilters.collected.toString());
       queryParams.set('uncollected', statusFilters.uncollected.toString());
       queryParams.set('wishlist', statusFilters.wishlist.toString());
+      queryParams.set('underReview', statusFilters.underReview.toString());
 
       // Sort and pagination
       queryParams.set('sortBy', sortField);
@@ -416,6 +418,7 @@ export default function PinCatalog() {
       params.set('collected', statusFilters.collected.toString());
       params.set('uncollected', statusFilters.uncollected.toString());
       params.set('wishlist', statusFilters.wishlist.toString());
+      params.set('underReview', statusFilters.underReview.toString());
 
       const response = await api.get(`/api/pins/options?${params.toString()}`);
       return response.data;
@@ -448,6 +451,7 @@ export default function PinCatalog() {
       params.set('collected', statusFilters.collected.toString());
       params.set('uncollected', statusFilters.uncollected.toString());
       params.set('wishlist', statusFilters.wishlist.toString());
+      params.set('underReview', statusFilters.underReview.toString());
 
       const response = await api.get(`/api/pins/options?${params.toString()}`);
       const data = response.data;
@@ -556,7 +560,8 @@ export default function PinCatalog() {
       all: true,
       collected: false,
       uncollected: false,
-      wishlist: false
+      wishlist: false,
+      underReview: false
     });
     setPage(1);
     // Remove focus from search input after clearing
@@ -577,7 +582,7 @@ export default function PinCatalog() {
         };
         
         // If all statuses would be deselected, keep this one selected
-        if (!newState.all && !newState.collected && !newState.uncollected && !newState.wishlist) {
+        if (!newState.all && !newState.collected && !newState.uncollected && !newState.wishlist && !newState.underReview) {
           return {
             ...newState,
             all: true // Default to All if trying to deselect everything
@@ -591,7 +596,8 @@ export default function PinCatalog() {
           all: status === 'all',
           collected: status === 'collected',
           uncollected: status === 'uncollected',
-          wishlist: status === 'wishlist'
+          wishlist: status === 'wishlist',
+          underReview: status === 'underReview'
         };
       }
     });
@@ -919,6 +925,7 @@ export default function PinCatalog() {
       if (statusFilters.collected) statusFiltersText.push('Collected');
       if (statusFilters.uncollected) statusFiltersText.push('Uncollected');
       if (statusFilters.wishlist) statusFiltersText.push('Wishlist');
+      if (statusFilters.underReview) statusFiltersText.push('Under Review');
       if (statusFiltersText.length > 0) filterInfo += `Status: ${statusFiltersText.join(', ')} `;
       
       // Add sort information
@@ -1123,6 +1130,17 @@ export default function PinCatalog() {
             >
               <FaHeart className="mr-1 text-xs" />
               Wishlist
+            </button>
+            <button
+              onClick={(e) => handleStatusClick('underReview', e)}
+              className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
+                statusFilters.underReview
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              <FaStar className="mr-1 text-xs" />
+              Under Review
             </button>
             <button
               onClick={() => setShowFilterModal(true)}
