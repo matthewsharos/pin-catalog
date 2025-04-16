@@ -450,12 +450,20 @@ export default function PinCatalog() {
       params.set('wishlist', statusFilters.wishlist.toString());
 
       const response = await api.get(`/api/pins/options?${params.toString()}`);
+      const data = response.data;
+      
+      // Update available options state
       setFilterOptions({
-        years: response.data.years || [],
-        series: response.data.series || [],
-        origins: response.data.origins || [],
-        tags: response.data.categories || []
+        years: data.years || [],
+        series: data.series || [],
+        origins: data.origins || [],
+        tags: data.categories || []
       });
+
+      // Update individual available options state
+      setAvailableCategories(data.categories || []);
+      setAvailableOrigins(data.origins || []);
+      setAvailableSeries(data.series || []);
     } catch (error) {
       console.error('Error updating available options:', error);
       setFilterOptions({
@@ -464,6 +472,9 @@ export default function PinCatalog() {
         origins: [],
         tags: []
       });
+      setAvailableCategories([]);
+      setAvailableOrigins([]);
+      setAvailableSeries([]);
     }
   };
 
