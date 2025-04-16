@@ -193,7 +193,7 @@ export async function GET(req) {
       where,
       orderBy,
       skip: (page - 1) * 100,
-      take: 100,
+      take: Math.min(100, 300 - ((page - 1) * 100)), // Limit total results to 300
     });
     
     // Clean up data

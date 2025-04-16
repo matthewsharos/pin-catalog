@@ -90,10 +90,17 @@ export default function PinCatalog() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchPins = useCallback(async () => {
+  // State for lazy loading
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasLoadedAll, setHasLoadedAll] = useState(false);
+
+  const fetchPins = useCallback(async (loadMore = false) => {
     try {
-      if (initialLoad) {
+      if (!loadMore && initialLoad) {
         setLoading(true);
+      }
+      if (loadMore) {
+        setIsLoadingMore(true);
       }
 
       const queryParams = new URLSearchParams();
@@ -140,7 +147,11 @@ export default function PinCatalog() {
       const response = await api.get(`/api/pins?${queryParams.toString()}`);
       const data = response.data;
 
-      setPins(data.pins || []);
+      if (loadMore) {
+        setPins(prevPins => [...prevPins, ...data.pins]);
+      } else {
+        setPins(data.pins || []);
+      }
       setTotal(data.total || 0);
       
       setFilterOptions({
@@ -150,6 +161,9 @@ export default function PinCatalog() {
         tags: data.filterOptions?.tags || [],
       });
       
+      // Check if we've loaded all available pins
+      setHasLoadedAll(pins.length >= Math.min(300, data.total));
+
       if (initialLoad) {
         setInitialLoad(false);
       }
@@ -160,6 +174,7 @@ export default function PinCatalog() {
       setInitialLoad(false);
     } finally {
       setLoading(false);
+      setIsLoadingMore(false);
     }
   }, [
     page,
@@ -173,13 +188,39 @@ export default function PinCatalog() {
     filterIsLimitedEdition,
     filterIsMystery,
     statusFilters,
-    initialLoad
+    initialLoad,
+    pins.length
   ]);
 
   // Fetch pins when filters change
   useEffect(() => {
-    fetchPins();
+    fetchPins(false);
   }, [fetchPins]);
+
+  // Add a function to load more pins
+  const loadMorePins = useCallback(() => {
+    if (!isLoadingMore && !hasLoadedAll && pins.length < 300) {
+      setPage(prevPage => prevPage + 1);
+      fetchPins(true);
+    }
+  }, [isLoadingMore, hasLoadedAll, pins.length, fetchPins]);
+
+  // Add scroll event listener for infinite scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 1000 &&
+        !isLoadingMore &&
+        !hasLoadedAll &&
+        pins.length < 300
+      ) {
+        loadMorePins();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isLoadingMore, hasLoadedAll, pins.length, loadMorePins]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -567,8 +608,8 @@ export default function PinCatalog() {
       setIsExporting(true);
       toast.loading('Generating image...', { id: 'export-toast' });
       
-      // Get up to 250 pins
-      const pinsToExport = pins.slice(0, 250);
+      // Get up to 300 pins
+      const pinsToExport = pins.slice(0, 300);
       
       if (pinsToExport.length === 0) {
         toast.error('No pins to export');
