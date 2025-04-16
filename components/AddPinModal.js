@@ -18,7 +18,9 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
 
     setLoading(true);
     try {
+      console.log("Submitting pin ID:", pinId.trim());
       const response = await axios.post('/api/pins/import', { pinId: pinId.trim() });
+      console.log("API response:", response.data);
       
       if (response.data.summary) {
         // Multiple pins were processed
@@ -69,7 +71,10 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
     onClose();
   };
 
+  // If the modal is not open, don't render anything
   if (!isOpen) return null;
+
+  console.log("Rendering AddPinModal, isOpen:", isOpen);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -80,7 +85,7 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
           </h2>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-white text-2xl"
           >
             ×
           </button>

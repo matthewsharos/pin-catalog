@@ -340,13 +340,18 @@ export default function PinCatalog() {
     setSelectedPin(pins[newIndex]);
   }, [pins]);
 
+  const handleAddPinClick = useCallback(() => {
+    console.log("Add Pin button clicked");
+    setShowAddPinModal(true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-800 text-white">
       <HeaderNavigation
         total={total}
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
-        onAddPinClick={() => setShowAddPinModal(true)}
+        onAddPinClick={handleAddPinClick}
         onScrollToTop={handleScrollToTop}
         searchInputRef={searchInputRef}
         onClearAllFilters={handleClearAllFilters}
@@ -496,8 +501,9 @@ export default function PinCatalog() {
 
       {showAddPinModal && (
         <AddPinModal
+          isOpen={showAddPinModal}
           onClose={() => setShowAddPinModal(false)}
-          onAdd={handleAddPin}
+          onPinAdded={handleAddPin}
         />
       )}
 
