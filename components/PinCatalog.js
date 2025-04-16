@@ -337,12 +337,24 @@ export default function PinCatalog() {
       }
 
       // Update pin in database
-      await api.put(`/api/pins/${pinId}`, { id: pinId, ...updates });
+      const response = await fetch(`/api/pins`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: pinId, ...updates })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update pin');
+      }
+
+      const updatedPin = await response.json();
       
       // Update pin in local state
       setPins(prevPins => prevPins.map(pin => {
         if (pin.id === pinId) {
-          return { ...pin, ...updates };
+          return { ...pin, ...updatedPin };
         }
         return pin;
       }));

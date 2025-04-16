@@ -234,13 +234,30 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
       }
 
       // Update the pin
-      await onStatusChange(pin.id, newStatus);
+      const response = await fetch(`/api/pins`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: pin.id, ...updates })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update pin');
+      }
+
+      const updatedPin = await response.json();
       
       // Update local state
       setFormData(prev => ({
         ...prev,
-        ...updates
+        ...updatedPin
       }));
+
+      // Call the parent's onStatusChange callback
+      if (onStatusChange) {
+        onStatusChange(pin.id, newStatus);
+      }
 
       // Close the loading toast with success message
       toast.success(`Pin ${
