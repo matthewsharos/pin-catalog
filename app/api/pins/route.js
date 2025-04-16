@@ -163,7 +163,16 @@ export async function GET(req) {
           orderBy = { pinName: sortOrder || 'asc' };
           break;
         case 'releaseDate':
-          orderBy = { releaseDate: sortOrder || 'desc' };
+          // For releaseDate sorting, use nulls last
+          orderBy = [
+            {
+              releaseDate: {
+                sort: sortOrder || 'desc',
+                nulls: 'last'
+              }
+            },
+            { pinName: 'asc' } // Secondary sort by name
+          ];
           break;
         case 'updatedAt':
           orderBy = { updatedAt: sortOrder || 'desc' };
@@ -180,22 +189,32 @@ export async function GET(req) {
         default:
           // Default sorting priority:
           // 1. updatedAt latest first
-          // 2. release date newest first
+          // 2. release date newest first (nulls last)
           // 3. name alphabetical
           orderBy = [
             { updatedAt: 'desc' },
-            { releaseDate: 'desc' },
+            {
+              releaseDate: {
+                sort: 'desc',
+                nulls: 'last'
+              }
+            },
             { pinName: 'asc' }
           ];
       }
     } else {
       // Default sorting priority:
       // 1. updatedAt latest first
-      // 2. release date newest first
+      // 2. release date newest first (nulls last)
       // 3. name alphabetical
       orderBy = [
         { updatedAt: 'desc' },
-        { releaseDate: 'desc' },
+        {
+          releaseDate: {
+            sort: 'desc',
+            nulls: 'last'
+          }
+        },
         { pinName: 'asc' }
       ];
     }
