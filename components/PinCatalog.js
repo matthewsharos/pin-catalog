@@ -345,6 +345,11 @@ export default function PinCatalog() {
     setShowAddPinModal(true);
   }, []);
 
+  const handleExportClick = useCallback(() => {
+    console.log("Export button clicked, showing export modal");
+    setShowExportModal(true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-800 text-white">
       <HeaderNavigation
@@ -364,7 +369,7 @@ export default function PinCatalog() {
         <div className="flex justify-end items-center mb-4">
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setShowExportModal(true)}
+              onClick={handleExportClick}
               className="flex items-center space-x-1 h-8 px-3 text-xs bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
               title="Export as Image"
             >
@@ -509,6 +514,7 @@ export default function PinCatalog() {
 
       {showExportModal && (
         <ExportModal
+          isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
           pins={pins}
           filters={{

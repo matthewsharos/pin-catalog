@@ -5,10 +5,14 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
 
+  console.log("ExportModal rendered", { isOpen, pinsCount: pins?.length });
+
   useEffect(() => {
     if (!isOpen) {
       setImageUrl('');
       setIsGenerating(false);
+    } else {
+      console.log("ExportModal opened");
     }
   }, [isOpen]);
 
