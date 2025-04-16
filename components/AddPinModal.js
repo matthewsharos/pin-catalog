@@ -152,7 +152,7 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
                 type="text"
                 value={pinId}
                 onChange={(e) => setPinId(e.target.value)}
-                placeholder="Enter Pin&Pop ID (e.g., 74149) or multiple IDs (comma-separated)"
+                placeholder="Enter Pin&Pop ID (e.g., 74149)"
                 className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={loading}
               />
