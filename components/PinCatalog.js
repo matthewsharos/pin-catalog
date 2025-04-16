@@ -537,17 +537,27 @@ export default function PinCatalog() {
     setStatusFilters(prev => {
       if (e.metaKey || e.ctrlKey) {
         // Command/Ctrl click - toggle this status only
-        return {
+        const newState = {
           ...prev,
           [status]: !prev[status]
         };
+        
+        // If all statuses would be deselected, keep this one selected
+        if (!newState.all && !newState.collected && !newState.uncollected && !newState.wishlist) {
+          return {
+            ...newState,
+            all: true // Default to All if trying to deselect everything
+          };
+        }
+        
+        return newState;
       } else {
         // Normal click - set only this status
         return {
-          all: status === 'all' && !prev.all,
-          collected: status === 'collected' && !prev.collected,
-          uncollected: status === 'uncollected' && !prev.uncollected,
-          wishlist: status === 'wishlist' && !prev.wishlist
+          all: status === 'all',
+          collected: status === 'collected',
+          uncollected: status === 'uncollected',
+          wishlist: status === 'wishlist'
         };
       }
     });
