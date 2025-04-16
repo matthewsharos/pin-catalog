@@ -533,12 +533,22 @@ export default function PinCatalog() {
     
     setStatusFilters(prev => {
       if (status === 'all') {
-        // Clear all filters
-        return {
-          collected: false,
-          uncollected: false,
-          wishlist: false
-        };
+        if (e.metaKey || e.ctrlKey) {
+          // Command/Ctrl click on All - toggle between all filters off and all filters on
+          const allActive = prev.collected && prev.uncollected && prev.wishlist;
+          return {
+            collected: !allActive,
+            uncollected: !allActive,
+            wishlist: !allActive
+          };
+        } else {
+          // Normal click - clear all filters
+          return {
+            collected: false,
+            uncollected: false,
+            wishlist: false
+          };
+        }
       }
       
       if (e.metaKey || e.ctrlKey) {
