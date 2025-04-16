@@ -435,6 +435,7 @@ export default function PinCatalog() {
       const params = new URLSearchParams();
       
       // Add current filters to params
+      if (searchQuery) params.set('search', searchQuery);
       if (filterCategories.length > 0) params.set('categories', filterCategories.join(','));
       if (filterOrigins.length > 0) params.set('origins', filterOrigins.join(','));
       if (filterSeries.length > 0) params.set('series', filterSeries.join(','));
@@ -470,7 +471,7 @@ export default function PinCatalog() {
   // Update available options when any filter changes except years
   useEffect(() => {
     updateAvailableOptions();
-  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, statusFilters]);
+  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, statusFilters, searchQuery]);
 
   const handleFilterChange = async (filterType, value) => {
     switch (filterType) {

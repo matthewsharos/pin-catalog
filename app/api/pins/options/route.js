@@ -11,6 +11,7 @@ export async function GET(req) {
     const series = searchParams.get('series')?.split(',').filter(Boolean) || [];
     const isLimitedEdition = searchParams.get('isLimitedEdition') === 'true';
     const isMystery = searchParams.get('isMystery') === 'true';
+    const searchQuery = searchParams.get('search') || '';
     
     // Get status filters
     const collected = searchParams.get('collected') === 'true';
@@ -21,6 +22,18 @@ export async function GET(req) {
     const baseWhere = {
       AND: [],
     };
+
+    // Add search query condition if present
+    if (searchQuery) {
+      baseWhere.AND.push({
+        OR: [
+          { pinName: { contains: searchQuery, mode: 'insensitive' } },
+          { series: { contains: searchQuery, mode: 'insensitive' } },
+          { origin: { contains: searchQuery, mode: 'insensitive' } },
+          { tags: { hasSome: [searchQuery] } }
+        ]
+      });
+    }
 
     // Add filter conditions
     if (categories.length > 0) {
