@@ -52,7 +52,7 @@ export default function PinCatalog() {
     years: [],
     series: [],
     origins: [],
-    tags: [],
+    tags: []
   });
   const [availableCategories, setAvailableCategories] = useState([]);
   const [availableOrigins, setAvailableOrigins] = useState([]);
@@ -432,19 +432,33 @@ export default function PinCatalog() {
   // Update available options when filters change
   const updateAvailableOptions = async () => {
     try {
-      const categoryOptions = await getAvailableOptions('category');
-      const originOptions = await getAvailableOptions('origin');
-      const seriesOptions = await getAvailableOptions('series');
+      const params = new URLSearchParams();
+      
+      // Add current filters to params
+      if (filterCategories.length > 0) params.set('categories', filterCategories.join(','));
+      if (filterOrigins.length > 0) params.set('origins', filterOrigins.join(','));
+      if (filterSeries.length > 0) params.set('series', filterSeries.join(','));
+      if (filterIsLimitedEdition) params.set('isLimitedEdition', 'true');
+      if (filterIsMystery) params.set('isMystery', 'true');
+      if (statusFilters.collected) params.set('collected', 'true');
+      if (statusFilters.uncollected) params.set('uncollected', 'true');
+      if (statusFilters.wishlist) params.set('wishlist', 'true');
 
-      setAvailableCategories(categoryOptions?.categories || []);
-      setAvailableOrigins(originOptions?.origins || []);
-      setAvailableSeries(seriesOptions?.series || []);
+      const response = await api.get(`/api/pins/options?${params.toString()}`);
+      setFilterOptions({
+        years: response.data.years || [],
+        series: response.data.series || [],
+        origins: response.data.origins || [],
+        tags: response.data.categories || []
+      });
     } catch (error) {
       console.error('Error updating available options:', error);
-      // Set empty arrays as fallback
-      setAvailableCategories([]);
-      setAvailableOrigins([]);
-      setAvailableSeries([]);
+      setFilterOptions({
+        years: [],
+        series: [],
+        origins: [],
+        tags: []
+      });
     }
   };
 
@@ -453,10 +467,10 @@ export default function PinCatalog() {
     updateAvailableOptions();
   }, []);
 
-  // Update available options when any filter changes including status filters
+  // Update available options when any filter changes except years
   useEffect(() => {
     updateAvailableOptions();
-  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, statusFilters.collected, statusFilters.uncollected, statusFilters.wishlist]);
+  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, statusFilters]);
 
   const handleFilterChange = async (filterType, value) => {
     switch (filterType) {
@@ -1166,7 +1180,7 @@ export default function PinCatalog() {
             </button>
             
             {showSortMenu && (
-              <div className="absolute right-0 mt-1 w-40 bg-gray-800 rounded-lg shadow-lg py-1 z-50">
+              <div className="absolute right-0 mt-1 w-40 bg-gray-800 rounded-lg shadow-lg z-50">
                 <button
                   onClick={() => handleSort('updatedAt')}
                   className={`w-full px-2 py-1 text-xs text-left hover:bg-gray-700 transition-colors ${

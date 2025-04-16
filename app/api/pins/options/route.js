@@ -79,7 +79,7 @@ export async function GET(req) {
 
     // Get all available options based on current filters
     try {
-      const [availableCategories, availableOrigins, availableSeries] = await Promise.all([
+      const [availableCategories, availableOrigins, availableSeries, availableYears] = await Promise.all([
         prisma.pin.findMany({
           where: {
             ...baseWhere,
@@ -106,12 +106,24 @@ export async function GET(req) {
           select: { series: true },
           distinct: ['series'],
         }).then(pins => [...new Set(pins.map(pin => pin.series))].filter(Boolean).sort()),
+
+        prisma.pin.findMany({
+          where: {
+            ...baseWhere,
+            AND: baseWhere.AND?.filter(condition => !('year' in condition)) || []
+          },
+          select: { year: true },
+          distinct: ['year'],
+        }).then(pins => [...new Set(pins.map(pin => pin.year))]
+          .filter(Boolean)
+          .sort((a, b) => b - a)), // Sort years in descending order
       ]);
 
       return NextResponse.json({
         categories: availableCategories,
         origins: availableOrigins,
         series: availableSeries,
+        years: availableYears,
       });
     } catch (prismaError) {
       console.error('Prisma error in filter options:', prismaError);
@@ -120,6 +132,7 @@ export async function GET(req) {
         categories: [],
         origins: [],
         series: [],
+        years: [],
       }, { status: 500 });
     }
   } catch (error) {
@@ -129,6 +142,7 @@ export async function GET(req) {
       categories: [],
       origins: [],
       series: [],
+      years: [],
     }, { status: 500 });
   } finally {
     await prisma.$disconnect();
