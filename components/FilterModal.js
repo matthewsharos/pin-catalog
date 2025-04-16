@@ -59,7 +59,7 @@ export default function FilterModal({
               <div className="mt-1 p-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 <button
                   onClick={() => {
-                    onFilterChange('category', []);
+                    onFilterChange('categories', []);
                     setShowCategoryDropdown(false);
                   }}
                   className="w-full text-left px-2 py-1.5 text-sm text-white hover:bg-gray-700 rounded"
@@ -72,7 +72,7 @@ export default function FilterModal({
                     <button
                       key={category}
                       onClick={() => {
-                        onFilterChange('category', [category]);
+                        onFilterChange('categories', [category]);
                         setShowCategoryDropdown(false);
                       }}
                       className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-700 rounded ${
@@ -110,7 +110,7 @@ export default function FilterModal({
               <div className="mt-1 p-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 <button
                   onClick={() => {
-                    onFilterChange('origin', []);
+                    onFilterChange('origins', []);
                     setShowOriginDropdown(false);
                   }}
                   className="w-full text-left px-2 py-1.5 text-sm text-white hover:bg-gray-700 rounded"
@@ -123,7 +123,7 @@ export default function FilterModal({
                     <button
                       key={origin}
                       onClick={() => {
-                        onFilterChange('origin', [origin]);
+                        onFilterChange('origins', [origin]);
                         setShowOriginDropdown(false);
                       }}
                       className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-700 rounded ${
@@ -223,13 +223,12 @@ export default function FilterModal({
         <div className="px-6 py-4 border-t border-gray-800 flex justify-between">
           <button
             onClick={() => {
-              // Call the parent's clear filters function
+              // Reset all filters
               onFilterChange('categories', []);
               onFilterChange('origins', []);
               onFilterChange('series', []);
               onLimitedEditionChange(false);
               onMysteryChange(false);
-              onClose();
             }}
             className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-600 focus:outline-none"
           >

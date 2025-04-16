@@ -232,10 +232,10 @@ export default function PinCatalog() {
 
   const handleFilterChange = useCallback((type, value) => {
     switch (type) {
-      case 'category':
+      case 'categories':
         setFilterCategories(value || []);
         break;
-      case 'origin':
+      case 'origins':
         setFilterOrigins(value || []);
         break;
       case 'series':
@@ -243,7 +243,12 @@ export default function PinCatalog() {
         break;
     }
     setPage(1);
-  }, []);
+    
+    // Fetch available filters when filters change to update dropdowns
+    setTimeout(() => {
+      fetchAvailableFilters();
+    }, 100);
+  }, [fetchAvailableFilters]);
 
   const handleSearchChange = useCallback((value) => {
     setSearchQuery(value);
