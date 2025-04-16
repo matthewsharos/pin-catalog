@@ -283,6 +283,8 @@ export default function PinCatalog() {
         smokeColor = 'brown';
       } else if (newStatus === 'wishlist') {
         smokeColor = 'blue';
+      } else if (newStatus === 'underReview') {
+        smokeColor = 'amber';
       }
 
       // Add smoke effect
@@ -301,37 +303,49 @@ export default function PinCatalog() {
         updates = {
           isCollected: true,
           isDeleted: false,
-          isWishlist: false
+          isWishlist: false,
+          isUnderReview: false
         };
       } else if (newStatus === 'uncollected') {
         updates = {
           isCollected: false,
-          isDeleted: true,
-          isWishlist: false
+          isDeleted: false,
+          isWishlist: false,
+          isUnderReview: false
         };
       } else if (newStatus === 'wishlist') {
         updates = {
           isCollected: false,
-          isDeleted: true,
-          isWishlist: true
+          isDeleted: false,
+          isWishlist: true,
+          isUnderReview: false
         };
-      } else if (newStatus === 'uncategorize') {
+      } else if (newStatus === 'underReview') {
         updates = {
           isCollected: false,
           isDeleted: false,
-          isWishlist: false
+          isWishlist: false,
+          isUnderReview: true
         };
       }
 
-      await api.post('/api/pins/bulk-update', {
-        pinIds: [pinId],
-        updates: updates
-      });
-
-      // Remove pin from list
-      setPins(prev => prev.filter(p => p.id !== pinId));
+      // Update pin in database
+      await api.put(`/api/pins/${pinId}`, updates);
       
-      toast.success('Pin updated');
+      // Update pin in local state
+      setPins(prevPins => prevPins.map(pin => {
+        if (pin.id === pinId) {
+          return { ...pin, ...updates };
+        }
+        return pin;
+      }));
+
+      // Show success message
+      toast.success(`Pin ${newStatus === 'collected' ? 'collected' : 
+        newStatus === 'wishlist' ? 'added to wishlist' : 
+        newStatus === 'underReview' ? 'marked for review' : 
+        'uncollected'}`);
+
     } catch (error) {
       console.error('Error updating pin status:', error);
       toast.error('Failed to update pin status');
@@ -571,38 +585,28 @@ export default function PinCatalog() {
   };
 
   const handleStatusClick = (status, e) => {
-    e.preventDefault(); // Prevent text selection
-    
+    e.preventDefault();
     setStatusFilters(prev => {
-      if (e.metaKey || e.ctrlKey) {
-        // Command/Ctrl click - toggle this status only
-        const newState = {
-          ...prev,
-          [status]: !prev[status]
-        };
-        
-        // If all statuses would be deselected, keep this one selected
-        if (!newState.all && !newState.collected && !newState.uncollected && !newState.wishlist && !newState.underReview) {
-          return {
-            ...newState,
-            all: true // Default to All if trying to deselect everything
-          };
-        }
-        
-        return newState;
-      } else {
-        // Normal click - set only this status
-        return {
-          all: status === 'all',
-          collected: status === 'collected',
-          uncollected: status === 'uncollected',
-          wishlist: status === 'wishlist',
-          underReview: status === 'underReview'
-        };
+      const newState = { ...prev };
+      
+      // Toggle the clicked status
+      newState[status] = !prev[status];
+      
+      // If toggling off and no other status is selected, set 'all' to true
+      if (!newState[status] && !Object.values(newState).some(v => v)) {
+        newState.all = true;
       }
+      
+      // If toggling on, set all others to false
+      if (newState[status]) {
+        Object.keys(newState).forEach(key => {
+          if (key !== status) newState[key] = false;
+        });
+      }
+      
+      return newState;
     });
-    
-    setPage(1); // Reset to first page when filters change
+    setPage(1);
   };
 
   const handleYearClick = (year, e) => {

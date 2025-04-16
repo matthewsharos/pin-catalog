@@ -226,23 +226,21 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
         };
       }
 
-      // Use the imported axios instance
-      await axios.post('/api/pins/bulk-update', {
-        pinIds: [pin.id],
-        updates: updates
-      });
+      // Update the pin
+      await onStatusChange(pin.id, newStatus);
+      
+      // Update local state
+      setFormData(prev => ({
+        ...prev,
+        ...updates
+      }));
 
-      toast.success('Pin updated', { id: loadingToast });
-      
-      // Call onStatusChange to refresh pins list
-      if (onStatusChange) {
-        onStatusChange();
-      }
-      
-      // Move to next pin if available
-      if (onNext) {
-        onNext();
-      }
+      // Close the loading toast with success message
+      toast.success(`Pin ${newStatus === 'collected' ? 'collected' : 
+        newStatus === 'wishlist' ? 'added to wishlist' : 
+        newStatus === 'underReview' ? 'marked for review' : 
+        'uncollected'}`, { id: loadingToast });
+
     } catch (error) {
       console.error('Error updating pin status:', error);
       toast.error('Failed to update pin status');
@@ -324,7 +322,7 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
                     data-status="uncollected"
                     onClick={() => handleStatusChange('uncollected')}
                     className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                      !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview && pin?.status !== 'all'
+                      !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview && !pin?.isDeleted
                         ? 'bg-yellow-600 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
