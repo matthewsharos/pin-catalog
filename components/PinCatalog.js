@@ -945,7 +945,7 @@ export default function PinCatalog() {
       if (statusFilters.collected) statusFiltersText.push('Collected');
       if (statusFilters.uncollected) statusFiltersText.push('Uncollected');
       if (statusFilters.wishlist) statusFiltersText.push('Wishlist');
-      if (statusFilters.underReview) statusFiltersText.push('Under Review');
+      if (statusFilters.underReview) statusFiltersText.push('Review');
       if (statusFiltersText.length > 0) filterInfo += `Status: ${statusFiltersText.join(', ')} `;
       
       // Add sort information
@@ -1160,7 +1160,7 @@ export default function PinCatalog() {
               }`}
             >
               <FaStar className="mr-1 text-xs" />
-              Under Review
+              Review
             </button>
             <button
               onClick={() => setShowFilterModal(true)}

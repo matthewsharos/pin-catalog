@@ -342,61 +342,61 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
                     type="button"
                     data-status="collected"
                     onClick={() => handleStatusChange('collected')}
-                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
                       pin?.isCollected
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    <FaCheck className="mr-2" /> Owned
+                    <FaCheck className="mr-1.5" /> Owned
                   </button>
                   <button
                     type="button"
                     data-status="uncollected"
                     onClick={() => handleStatusChange('uncollected')}
-                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
                       !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview && pin?.isDeleted
                         ? 'bg-yellow-600 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    <FaTimes className="mr-2" /> Uncollected
+                    <FaTimes className="mr-1.5" /> Uncollected
                   </button>
                   <button
                     type="button"
                     data-status="wishlist"
                     onClick={() => handleStatusChange('wishlist')}
-                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
                       pin?.isWishlist
                         ? 'bg-purple-500 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    <FaHeart className="mr-2" /> Wishlist
+                    <FaHeart className="mr-1.5" /> Wishlist
                   </button>
                   <button
                     type="button"
                     data-status="underReview"
                     onClick={() => handleStatusChange('underReview')}
-                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
                       pin?.isUnderReview
                         ? 'bg-amber-500 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    <FaStar className="mr-2" /> Under Review
+                    <FaStar className="mr-1.5" /> Review
                   </button>
                   <button
                     type="button"
                     data-status="all"
                     onClick={() => handleStatusChange('all')}
-                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
                       !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview && !pin?.isDeleted
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    <FaInbox className="mr-2" /> All
+                    <FaInbox className="mr-1.5" /> All
                   </button>
                 </div>
               </div>
