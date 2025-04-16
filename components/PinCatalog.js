@@ -134,6 +134,7 @@ export default function PinCatalog() {
       if (filterIsMystery) queryParams.set('isMystery', 'true');
 
       // Status filters - now supports multiple
+      if (statusFilters.all) queryParams.set('all', 'true');
       if (statusFilters.collected) queryParams.set('collected', 'true');
       if (statusFilters.uncollected) queryParams.set('uncollected', 'true');
       if (statusFilters.wishlist) queryParams.set('wishlist', 'true');
@@ -1037,7 +1038,7 @@ export default function PinCatalog() {
             <button
               onClick={(e) => handleStatusClick('all', e)}
               className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center justify-center ${
-                !statusFilters.collected && !statusFilters.uncollected && !statusFilters.wishlist
+                statusFilters.all
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
