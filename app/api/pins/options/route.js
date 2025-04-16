@@ -72,46 +72,63 @@ export async function GET(req) {
       }
     }
 
+    // Handle empty AND array to prevent Prisma errors
+    if (baseWhere.AND.length === 0) {
+      delete baseWhere.AND;
+    }
+
     // Get all available options based on current filters
-    const [availableCategories, availableOrigins, availableSeries] = await Promise.all([
-      prisma.pin.findMany({
-        where: {
-          ...baseWhere,
-          AND: baseWhere.AND.filter(condition => !('tags' in condition))
-        },
-        select: { tags: true },
-        distinct: ['tags'],
-      }).then(pins => [...new Set(pins.flatMap(pin => pin.tags))].sort()),
+    try {
+      const [availableCategories, availableOrigins, availableSeries] = await Promise.all([
+        prisma.pin.findMany({
+          where: {
+            ...baseWhere,
+            AND: baseWhere.AND?.filter(condition => !('tags' in condition)) || []
+          },
+          select: { tags: true },
+          distinct: ['tags'],
+        }).then(pins => [...new Set(pins.flatMap(pin => pin.tags))].sort()),
 
-      prisma.pin.findMany({
-        where: {
-          ...baseWhere,
-          AND: baseWhere.AND.filter(condition => !('origin' in condition))
-        },
-        select: { origin: true },
-        distinct: ['origin'],
-      }).then(pins => [...new Set(pins.map(pin => pin.origin))].filter(Boolean).sort()),
+        prisma.pin.findMany({
+          where: {
+            ...baseWhere,
+            AND: baseWhere.AND?.filter(condition => !('origin' in condition)) || []
+          },
+          select: { origin: true },
+          distinct: ['origin'],
+        }).then(pins => [...new Set(pins.map(pin => pin.origin))].filter(Boolean).sort()),
 
-      prisma.pin.findMany({
-        where: {
-          ...baseWhere,
-          AND: baseWhere.AND.filter(condition => !('series' in condition))
-        },
-        select: { series: true },
-        distinct: ['series'],
-      }).then(pins => [...new Set(pins.map(pin => pin.series))].filter(Boolean).sort()),
-    ]);
+        prisma.pin.findMany({
+          where: {
+            ...baseWhere,
+            AND: baseWhere.AND?.filter(condition => !('series' in condition)) || []
+          },
+          select: { series: true },
+          distinct: ['series'],
+        }).then(pins => [...new Set(pins.map(pin => pin.series))].filter(Boolean).sort()),
+      ]);
 
-    return NextResponse.json({
-      categories: availableCategories,
-      origins: availableOrigins,
-      series: availableSeries,
-    });
+      return NextResponse.json({
+        categories: availableCategories,
+        origins: availableOrigins,
+        series: availableSeries,
+      });
+    } catch (prismaError) {
+      console.error('Prisma error in filter options:', prismaError);
+      // Return empty results instead of failing
+      return NextResponse.json({
+        categories: [],
+        origins: [],
+        series: [],
+      });
+    }
   } catch (error) {
     console.error('Error fetching filter options:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch filter options' },
-      { status: 500 }
-    );
+    // Return empty results instead of failing
+    return NextResponse.json({
+      categories: [],
+      origins: [],
+      series: [],
+    });
   }
 }
