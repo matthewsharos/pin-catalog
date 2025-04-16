@@ -324,7 +324,7 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
                     data-status="uncollected"
                     onClick={() => handleStatusChange('uncollected')}
                     className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                      !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview
+                      !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview && pin?.status !== 'all'
                         ? 'bg-yellow-600 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
