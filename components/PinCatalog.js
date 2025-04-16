@@ -645,8 +645,16 @@ export default function PinCatalog() {
                 }}
                 placeholder="Search pins..."
                 className="w-full h-7 pl-8 pr-3 text-xs bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                style={{ fontSize: '16px' }}
+                inputMode="search"
+                autoComplete="off"
               />
               <FaSearch className="absolute left-2.5 top-2 text-gray-400 text-xs" />
+              <style jsx>{`
+                input::placeholder {
+                  font-size: 13px;
+                }
+              `}</style>
             </div>
             
             <button

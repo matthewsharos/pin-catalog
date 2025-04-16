@@ -51,3 +51,24 @@ body {
 .form-checkbox {
   @apply rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-gray-800;
 }
+
+/* Prevent zooming on input fields on mobile */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+textarea {
+  font-size: 16px !important; /* Minimum font size to prevent zoom on iOS */
+  max-height: 100%; /* Prevent layout shifts */
+}
+
+/* Fix for iOS Safari */
+@supports (-webkit-touch-callout: none) {
+  input, 
+  textarea, 
+  select {
+    font-size: 16px !important;
+  }
+}
