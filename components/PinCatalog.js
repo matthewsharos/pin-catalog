@@ -1360,7 +1360,7 @@ export default function PinCatalog() {
 
       {/* Pagination */}
       {Math.ceil(total / 100) > 1 && (
-        <div className="mt-4 flex justify-center">
+        <div className="mt-4 flex justify-center mb-16">
           <div className="flex items-center space-x-3 text-sm text-gray-300">
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
@@ -1661,6 +1661,25 @@ export default function PinCatalog() {
           }}
         />
       ))}
+      
+      {/* Footer */}
+      <footer className="bg-gray-800 text-gray-400 text-sm py-8 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="flex items-center space-x-2">
+              <span>Made with</span>
+              <FaHeart className="text-red-500" />
+              <span>by</span>
+              <a href="https://twitter.com/matthewsharos" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                @matthewsharos
+              </a>
+            </div>
+            <div className="text-gray-500">
+              &copy; {new Date().getFullYear()} Pin Catalog. All rights reserved.
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
         <link rel="icon" href="/icon.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
       </head>
-      <body className={`${inter.className} bg-gray-900 min-h-screen text-gray-100`}>
+      <body className={`${inter.className} bg-gray-900 text-white min-h-screen flex flex-col`}>
         <Toaster 
           position="top-right"
           toastOptions={{
@@ -51,7 +51,9 @@ export default function RootLayout({ children }) {
             },
           }}
         />
-        {children}
+        <div className="flex-grow">
+          {children}
+        </div>
       </body>
     </html>
   )
