@@ -211,13 +211,12 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       const renderBatchSize = 10; // Smaller batch size to prevent freezing
       const renderBatches = Math.ceil(loadedImages.length / renderBatchSize);
       
+      let processedCount = 0;
+      
       for (let batchIndex = 0; batchIndex < renderBatches; batchIndex++) {
         const start = batchIndex * renderBatchSize;
         const end = Math.min(start + renderBatchSize, loadedImages.length);
         const batch = loadedImages.slice(start, end);
-        
-        // Update progress message
-        setLoadingMessage(`Rendering image... ${Math.min(end, loadedImages.length)}/${totalPins}`);
         
         // Process this batch
         for (const { img, pin, index, error } of batch) {
@@ -236,6 +235,7 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
               ctx.textAlign = 'center';
               ctx.fillText('Image Error', x + pinSize/2, y + pinSize/2);
               ctx.fillText(`#${pin.pinId || 'Unknown'}`, x + pinSize/2, y + pinSize/2 + 30);
+              processedCount++;
               continue;
             }
             
@@ -278,11 +278,18 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
             else if (pin.isUnderReview) statusText = 'Under Review';
             
             ctx.fillText(`#${pin.pinId} - ${statusText}`, x + pinSize/2, y + pinSize - 10);
+            
+            // Increment processed count
+            processedCount++;
           } catch (err) {
             console.error(`Error rendering pin ${pin.pinId}:`, err);
             // Continue with next pin even if one fails
+            processedCount++;
           }
         }
+        
+        // Update progress message only once per batch
+        setLoadingMessage(`Rendering image... ${processedCount}/${totalPins}`);
         
         // Give the UI a chance to update between batches with longer timeout for later batches
         // This helps prevent the browser from freezing on the final batches
