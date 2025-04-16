@@ -300,28 +300,29 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
             {/* Comments Section */}
             <div>
               <label className="block text-xs font-medium text-white mb-1">Comments</label>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-2">
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-2 mb-2">
                 {comments.length > 0 ? (
-                  <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
+                  <div className="space-y-1 max-h-32 overflow-y-auto mb-2">
                     {comments.map(comment => (
-                      <div key={comment.id} className="flex items-start justify-between bg-gray-700 p-2 rounded">
+                      <div key={comment.id} className="flex items-start justify-between bg-gray-700 rounded p-1.5">
                         <div className="flex-1">
-                          <p className="text-white text-sm">{comment.text}</p>
-                          <p className="text-gray-400 text-xs mt-1">
+                          <p className="text-xs text-white">{comment.text}</p>
+                          <p className="text-xs text-gray-400">
                             {new Date(comment.createdAt).toLocaleString()}
                           </p>
                         </div>
-                        <button 
+                        <button
                           onClick={() => handleDeleteComment(comment.id)}
-                          className="text-gray-400 hover:text-red-500 ml-2"
+                          className="text-red-400 hover:text-red-500"
+                          title="Delete comment"
                         >
-                          <FaTrash size={14} />
+                          <FaTrash size={12} />
                         </button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm mb-3">No comments yet</p>
+                  <p className="text-gray-400 text-xs mb-2">No comments yet</p>
                 )}
                 
                 <div className="flex">
@@ -330,12 +331,11 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment..."
-                    className="flex-1 px-3 py-2 bg-gray-700 text-white border border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 bg-gray-700 text-white text-xs border-0 rounded-l-lg p-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
                   <button
-                    type="button"
                     onClick={handleAddComment}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none"
+                    className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-r-lg hover:bg-blue-700 transition-colors"
                   >
                     Add
                   </button>
@@ -343,29 +343,20 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               </div>
             </div>
             
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-800">
+            <div className="flex justify-end space-x-3 mt-4">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 focus:outline-none"
-                disabled={isSubmitting}
+                className="px-3 py-1.5 bg-gray-700 text-xs text-white rounded-lg hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none flex items-center"
                 disabled={isSubmitting}
+                className="px-3 py-1.5 bg-blue-600 text-xs text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </>
-                ) : 'Save Changes'}
+                Save Changes
               </button>
             </div>
           </form>
