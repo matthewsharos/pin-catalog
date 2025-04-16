@@ -309,7 +309,7 @@ export default function PinCatalog() {
       } else if (newStatus === 'uncollected') {
         updates = {
           isCollected: false,
-          isDeleted: false,
+          isDeleted: true,
           isWishlist: false,
           isUnderReview: false
         };
@@ -327,10 +327,17 @@ export default function PinCatalog() {
           isWishlist: false,
           isUnderReview: true
         };
+      } else if (newStatus === 'all') {
+        updates = {
+          isCollected: false,
+          isDeleted: false,
+          isWishlist: false,
+          isUnderReview: false
+        };
       }
 
       // Update pin in database
-      await api.put(`/api/pins/${pinId}`, updates);
+      await api.put(`/api/pins/${pinId}`, { id: pinId, ...updates });
       
       // Update pin in local state
       setPins(prevPins => prevPins.map(pin => {
@@ -341,10 +348,12 @@ export default function PinCatalog() {
       }));
 
       // Show success message
-      toast.success(`Pin ${newStatus === 'collected' ? 'collected' : 
+      toast.success(`Pin ${
+        newStatus === 'collected' ? 'collected' : 
         newStatus === 'wishlist' ? 'added to wishlist' : 
-        newStatus === 'underReview' ? 'marked for review' : 
-        'uncollected'}`);
+        newStatus === 'underReview' ? 'marked for review' :
+        newStatus === 'uncollected' ? 'marked as uncollected' :
+        'reset to default state'}`);
 
     } catch (error) {
       console.error('Error updating pin status:', error);

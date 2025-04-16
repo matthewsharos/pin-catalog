@@ -41,7 +41,7 @@ export async function GET(req) {
         statusConditions.push({ 
           AND: [
             { isCollected: false },
-            { isDeleted: false },
+            { isDeleted: true },
             { isWishlist: false },
             { isUnderReview: false }
           ]
@@ -69,7 +69,7 @@ export async function GET(req) {
 
       where.AND.push({ OR: statusConditions });
     } else {
-      // Default behavior - show pins that haven't been categorized yet
+      // Default behavior - show pins that haven't been categorized yet (All)
       where.AND.push({
         AND: [
           { isCollected: false },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLeft, FaTags, FaCheck, FaHeart, FaStar } from 'react-icons/fa';
+import { FaTimes, FaUpload, FaComment, FaCandyCane, FaChevronRight, FaChevronLeft, FaTags, FaCheck, FaHeart, FaStar, FaInbox } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import SmokeEffect from './SmokeEffect';
@@ -206,7 +206,7 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
       } else if (newStatus === 'uncollected') {
         updates = {
           isCollected: false,
-          isDeleted: false,
+          isDeleted: true,
           isWishlist: false,
           isUnderReview: false
         };
@@ -224,6 +224,13 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
           isWishlist: false,
           isUnderReview: true
         };
+      } else if (newStatus === 'all') {
+        updates = {
+          isCollected: false,
+          isDeleted: false,
+          isWishlist: false,
+          isUnderReview: false
+        };
       }
 
       // Update the pin
@@ -236,10 +243,12 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
       }));
 
       // Close the loading toast with success message
-      toast.success(`Pin ${newStatus === 'collected' ? 'collected' : 
+      toast.success(`Pin ${
+        newStatus === 'collected' ? 'collected' : 
         newStatus === 'wishlist' ? 'added to wishlist' : 
-        newStatus === 'underReview' ? 'marked for review' : 
-        'uncollected'}`, { id: loadingToast });
+        newStatus === 'underReview' ? 'marked for review' :
+        newStatus === 'uncollected' ? 'marked as uncollected' :
+        'reset to default state'}`, { id: loadingToast });
 
     } catch (error) {
       console.error('Error updating pin status:', error);
@@ -322,7 +331,7 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
                     data-status="uncollected"
                     onClick={() => handleStatusChange('uncollected')}
                     className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                      !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview && !pin?.isDeleted
+                      !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview && pin?.isDeleted
                         ? 'bg-yellow-600 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
@@ -352,6 +361,18 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
                     }`}
                   >
                     <FaStar className="mr-2" /> Under Review
+                  </button>
+                  <button
+                    type="button"
+                    data-status="all"
+                    onClick={() => handleStatusChange('all')}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                      !pin?.isCollected && !pin?.isWishlist && !pin?.isUnderReview && !pin?.isDeleted
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    <FaInbox className="mr-2" /> All
                   </button>
                 </div>
               </div>
