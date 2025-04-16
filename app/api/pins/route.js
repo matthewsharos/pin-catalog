@@ -37,12 +37,7 @@ export async function GET(req) {
       }
       
       if (uncollected === 'true') {
-        statusConditions.push({ 
-          AND: [
-            { isCollected: false },
-            { isWishlist: false }
-          ]
-        });
+        statusConditions.push({ isUncollected: true });
       }
       
       if (wishlist === 'true') {
@@ -55,7 +50,8 @@ export async function GET(req) {
       where.AND.push({
         AND: [
           { isCollected: false },
-          { isWishlist: false }
+          { isWishlist: false },
+          { isUncollected: false }
         ]
       });
     }
