@@ -220,12 +220,26 @@ export default function FilterModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-800 flex justify-end">
+        <div className="px-6 py-4 border-t border-gray-800 flex justify-between">
+          <button
+            onClick={() => {
+              // Call the parent's clear filters function
+              onFilterChange('categories', []);
+              onFilterChange('origins', []);
+              onFilterChange('series', []);
+              onLimitedEditionChange(false);
+              onMysteryChange(false);
+              onClose();
+            }}
+            className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-600 focus:outline-none"
+          >
+            Reset Filters
+          </button>
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 focus:outline-none"
           >
-            Apply Filters
+            Close
           </button>
         </div>
       </div>
