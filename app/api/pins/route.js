@@ -7,30 +7,65 @@ const prisma = new PrismaClient();
 // Also used to fetch top 10 pins for verification
 export async function GET(req) {
   try {
-    const { searchParams } = new URL(req.url);
+    const searchParams = new URL(req.url).searchParams;
     const page = parseInt(searchParams.get('page')) || 1;
-    const search = searchParams.get('search') || '';
-    const sortBy = searchParams.get('sortBy') || 'updatedAt';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
-    const year = searchParams.get('year') || '';
-    const category = searchParams.get('category') || '';
-    const origin = searchParams.get('origin') || '';
-    const selectedSeries = searchParams.get('series') || '';
-    const collected = searchParams.get('collected') || '';
-    const wishlist = searchParams.get('wishlist') || '';
-    const uncollected = searchParams.get('uncollected') || '';
-    const underReview = searchParams.get('underReview') || '';
-    const isLimitedEdition = searchParams.get('isLimitedEdition') || '';
-    const isMystery = searchParams.get('isMystery') || '';
+    const pageSize = parseInt(searchParams.get('pageSize')) || 30;
+    const collected = searchParams.get('collected');
+    const wishlist = searchParams.get('wishlist');
+    const uncollected = searchParams.get('uncollected');
+    const underReview = searchParams.get('underReview');
+    const searchQuery = searchParams.get('search');
+    const sort = searchParams.get('sort');
+    let sortField = 'updatedAt';
+    let sortOrder = 'desc';
     
-    // Build the where clause for filtering
-    const where = {
-      AND: [] // Use AND to combine different filter types
+    // Process sort option
+    if (sort) {
+      switch (sort) {
+        case 'Recently Updated':
+          sortField = 'updatedAt';
+          sortOrder = 'desc';
+          break;
+        case 'Name (A-Z)':
+          sortField = 'pinName';
+          sortOrder = 'asc';
+          break;
+        case 'Name (Z-A)':
+          sortField = 'pinName';
+          sortOrder = 'desc';
+          break;
+        case 'Newest First':
+          sortField = 'releaseDate';
+          sortOrder = 'desc';
+          break;
+        case 'Oldest First':
+          sortField = 'releaseDate';
+          sortOrder = 'asc';
+          break;
+        default:
+          // Default to recently updated
+          sortField = 'updatedAt';
+          sortOrder = 'desc';
+      }
+    }
+    
+    const year = searchParams.get('year');
+    const years = searchParams.get('years')?.split(',').filter(Boolean).map(Number);
+    const series = searchParams.get('series');
+    const origin = searchParams.get('origin');
+    const edition = searchParams.get('edition');
+    const tags = searchParams.get('tags')?.split(',').filter(Boolean);
+    const categories = searchParams.get('categories')?.split(',').filter(Boolean);
+    const isLimitedEdition = searchParams.get('isLimitedEdition') === 'true';
+    const isMystery = searchParams.get('isMystery') === 'true';
+    const getFiltersOnly = searchParams.get('filtersOnly') === 'true';
+
+    let where = {
+      AND: []
     };
-    
+
     // Status filters
     if (collected === 'true' || wishlist === 'true' || uncollected === 'true' || underReview === 'true' || searchParams.get('all') === 'true') {
-      // If any status filter is active, build an OR condition for statuses
       const statusConditions = [];
       
       if (collected === 'true') {
@@ -67,290 +102,150 @@ export async function GET(req) {
         });
       }
 
-      where.AND.push({ OR: statusConditions });
-    } else {
-      // Default behavior - show pins that haven't been categorized yet (All)
-      where.AND.push({
-        AND: [
-          { isCollected: false },
-          { isDeleted: false },
-          { isWishlist: false },
-          { isUnderReview: false }
-        ]
-      });
-    }
-    
-    // Search functionality
-    if (search) {
-      // Split search into individual terms and filter out empty strings
-      const searchTerms = search.toLowerCase().split(/\s+/).filter(term => term.length > 0);
-      
-      if (searchTerms.length > 0) {
-        // Create conditions for each search term
-        const searchConditions = searchTerms.map(term => ({
-          OR: [
-            { pinName: { contains: term, mode: 'insensitive' } },
-            { pinId: { contains: term, mode: 'insensitive' } },
-            { series: { contains: term, mode: 'insensitive' } },
-            { origin: { contains: term, mode: 'insensitive' } },
-            { tags: { hasSome: [term] } }
-          ]
-        }));
-        
-        // Add all search conditions to the AND array
-        // This ensures all terms must match somewhere in the pin data
-        where.AND.push(...searchConditions);
-      }
-    }
-    
-    // Filter by year
-    if (year) {
-      const years = year.split(',').filter(y => y);
-      if (years.length > 0) {
-        where.AND.push({
-          year: {
-            in: years.map(y => parseInt(y, 10))
-          }
-        });
-      }
-    }
-    
-    // Filter by category (tag)
-    if (category) {
-      const categories = category.split(',').filter(c => c);
-      if (categories.length > 0) {
-        where.AND.push({
-          tags: {
-            hasSome: categories
-          }
-        });
-      }
-    }
-    
-    // Filter by origin
-    if (origin) {
-      const origins = origin.split(',').filter(o => o);
-      if (origins.length > 0) {
-        where.AND.push({
-          origin: {
-            contains: origins[0],
-            mode: 'insensitive'
-          }
-        });
+      if (statusConditions.length > 0) {
+        where.AND.push({ OR: statusConditions });
       }
     }
 
-    // Filter by series
-    if (selectedSeries) {
-      const seriesList = selectedSeries.split(',').filter(s => s);
-      if (seriesList.length > 0) {
-        where.AND.push({
-          series: {
-            in: seriesList
+    // Get available filters based on current status selection
+    if (getFiltersOnly) {
+      try {
+        // If no where conditions, don't apply any filters
+        if (where.AND.length === 0) {
+          where = {};
+        }
+
+        console.log('Fetching filters with where:', JSON.stringify(where, null, 2)); // Debug log
+
+        const pins = await prisma.pin.findMany({
+          where,
+          select: {
+            year: true,
+            series: true,
+            origin: true,
+            edition: true,
+            tags: true
           }
         });
+
+        console.log('Found pins for filters:', pins.length); // Debug log
+
+        // Extract unique values
+        const filters = {
+          years: [...new Set(pins.map(pin => pin.year).filter(Boolean))],
+          series: [...new Set(pins.map(pin => pin.series).filter(Boolean))],
+          origins: [...new Set(pins.map(pin => pin.origin).filter(Boolean))],
+          tags: [...new Set(pins.flatMap(pin => pin.tags || []))]
+        };
+
+        console.log('Processed filters:', filters); // Debug log
+
+        // Sort filters
+        filters.years.sort((a, b) => b - a); // Years descending
+        filters.series.sort();
+        filters.origins.sort();
+        filters.tags.sort();
+
+        return NextResponse.json(filters);
+      } catch (error) {
+        console.error('Error in filter processing:', error);
+        return NextResponse.json({ error: 'Failed to process filters' }, { status: 500 });
       }
+    }
+
+    // Search filter
+    if (searchQuery) {
+      where.AND.push({
+        OR: [
+          { pinName: { contains: searchQuery, mode: 'insensitive' } },
+          { series: { contains: searchQuery, mode: 'insensitive' } },
+          { origin: { contains: searchQuery, mode: 'insensitive' } },
+          { edition: { contains: searchQuery, mode: 'insensitive' } },
+          { pinId: { contains: searchQuery, mode: 'insensitive' } }
+        ]
+      });
+    }
+
+    // Year filter
+    if (year) {
+      where.AND.push({ year: parseInt(year) });
+    }
+    
+    // Multiple years filter
+    if (years && years.length > 0) {
+      where.AND.push({ 
+        year: {
+          in: years
+        }
+      });
+    }
+
+    // Series filter
+    if (series) {
+      where.AND.push({ series: { equals: series, mode: 'insensitive' } });
+    }
+
+    // Origin filter
+    if (origin) {
+      where.AND.push({ origin: { equals: origin, mode: 'insensitive' } });
+    }
+
+    // Edition filter
+    if (edition) {
+      where.AND.push({ edition: { equals: edition, mode: 'insensitive' } });
+    }
+
+    // Tags filter
+    if (tags && tags.length > 0) {
+      where.AND.push({
+        tags: {
+          hasSome: tags
+        }
+      });
+    }
+    
+    // Categories filter
+    if (categories && categories.length > 0) {
+      where.AND.push({
+        tags: {
+          hasSome: categories
+        }
+      });
     }
     
     // Limited Edition filter
-    if (isLimitedEdition === 'true') {
+    if (isLimitedEdition) {
       where.AND.push({ isLimitedEdition: true });
     }
     
     // Mystery filter
-    if (isMystery === 'true') {
+    if (isMystery) {
       where.AND.push({ isMystery: true });
     }
-    
-    // Sorting
-    let orderBy = {};
-    
-    if (sortBy) {
-      switch (sortBy) {
-        case 'pinName':
-          orderBy = { pinName: sortOrder || 'asc' };
-          break;
-        case 'releaseDate':
-          // For releaseDate sorting, use nulls last
-          orderBy = [
-            {
-              releaseDate: {
-                sort: sortOrder || 'desc',
-                nulls: 'last'
-              }
-            },
-            { pinName: 'asc' } // Secondary sort by name
-          ];
-          break;
-        case 'updatedAt':
-          orderBy = { updatedAt: sortOrder || 'desc' };
-          break;
-        case 'series':
-          orderBy = { series: sortOrder || 'asc' };
-          break;
-        case 'origin':
-          orderBy = { origin: sortOrder || 'asc' };
-          break;
-        case 'isCollected':
-          orderBy = { isCollected: sortOrder || 'desc' };
-          break;
-        default:
-          // Default sorting priority:
-          // 1. updatedAt latest first
-          // 2. release date newest first (nulls last)
-          // 3. name alphabetical
-          orderBy = [
-            { updatedAt: 'desc' },
-            {
-              releaseDate: {
-                sort: 'desc',
-                nulls: 'last'
-              }
-            },
-            { pinName: 'asc' }
-          ];
-      }
-    } else {
-      // Default sorting priority:
-      // 1. updatedAt latest first
-      // 2. release date newest first (nulls last)
-      // 3. name alphabetical
-      orderBy = [
-        { updatedAt: 'desc' },
-        {
-          releaseDate: {
-            sort: 'desc',
-            nulls: 'last'
-          }
-        },
-        { pinName: 'asc' }
-      ];
-    }
-    
-    // Get total count for pagination
-    const total = await prisma.pin.count({ where });
-    
+
     // Get pins with pagination
-    const pins = await prisma.pin.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * 100,
-      take: Math.min(100, 300 - ((page - 1) * 100)), // Limit total results to 300
-    });
-    
-    // Clean up data
-    const cleanedPins = pins.map(pin => {
-      // Remove parentheses from origin and series
-      const cleanOrigin = pin.origin ? pin.origin.replace(/\([^)]*\)/g, '').trim() : pin.origin;
-      const cleanSeries = pin.series ? pin.series.replace(/\([^)]*\)/g, '').trim() : pin.series;
-      
-      // Extract integer from edition
-      let editionNumber = null;
-      if (pin.edition) {
-        const match = pin.edition.match(/\d+/);
-        if (match) {
-          editionNumber = parseInt(match[0], 10);
-        }
-      }
-      
-      return {
-        ...pin,
-        origin: cleanOrigin,
-        series: cleanSeries,
-        edition: editionNumber
-      };
-    });
-    
-    // Get filter options based on current filters
-    // Create base filters that exclude their own filter type
-    const categoryBaseFilter = { ...where };
-    delete categoryBaseFilter.AND?.find(f => f.tags);
+    const [pins, totalCount] = await prisma.$transaction([
+      prisma.pin.findMany({
+        where,
+        orderBy: {
+          [sortField]: sortOrder
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      }),
+      prisma.pin.count({ where })
+    ]);
 
-    const originBaseFilter = { ...where };
-    delete originBaseFilter.AND?.find(f => f.origin);
-
-    const seriesBaseFilter = { ...where };
-    delete seriesBaseFilter.AND?.find(f => f.series);
-    
-    // Get years without applying other filters if no category is selected
-    const yearsFilter = category ? { ...where } : {};
-    delete yearsFilter.AND?.find(f => f.year);
-    
-    const years = await prisma.pin.groupBy({
-      by: ['year'],
-      where: {
-        ...yearsFilter,
-        year: { not: null }
-      },
-      orderBy: {
-        year: 'desc'
-      }
-    }).then(results => results.map(r => r.year));
-    
-    // Get series based on other filters
-    const series = await prisma.pin.groupBy({
-      by: ['series'],
-      where: {
-        ...seriesBaseFilter,
-        series: { not: null }
-      },
-      orderBy: {
-        series: 'asc'
-      }
-    }).then(results => results.map(r => r.series));
-    
-    // Get origins based on other filters
-    const origins = await prisma.pin.groupBy({
-      by: ['origin'],
-      where: {
-        ...originBaseFilter,
-        origin: { not: null }
-      },
-      orderBy: {
-        origin: 'asc'
-      }
-    }).then(results => results.map(r => r.origin));
-    
-    // Get tags based on other filters
-    // For tags, we need a different approach since they're in an array
-    const pinsWithTags = await prisma.pin.findMany({
-      where: categoryBaseFilter,
-      select: {
-        tags: true
-      }
-    });
-    
-    // Extract all unique tags
-    const allTags = new Set();
-    pinsWithTags.forEach(pin => {
-      if (pin.tags && Array.isArray(pin.tags)) {
-        pin.tags.forEach(tag => allTags.add(tag));
-      }
-    });
-    const tags = Array.from(allTags).sort();
-    
-    // Clean up filter options
-    const cleanedOrigins = origins.map(origin => 
-      origin ? origin.replace(/\([^)]*\)/g, '').trim() : origin
-    );
-    
-    const cleanedSeries = series.map(series => 
-      series ? series.replace(/\([^)]*\)/g, '').trim() : series
-    );
-    
     return NextResponse.json({
-      pins: cleanedPins,
-      total,
-      filterOptions: {
-        years,
-        series: cleanedSeries,
-        origins: cleanedOrigins,
-        tags
-      }
+      pins,
+      totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / pageSize)
     });
+
   } catch (error) {
-    console.error('Error fetching pins:', error);
-    return NextResponse.json({ error: 'Failed to fetch pins' }, { status: 500 });
+    console.error('Error in GET /api/pins:', error);
+    return NextResponse.json({ error: error.message || 'Failed to fetch pins' }, { status: 500 });
   }
 }
 
