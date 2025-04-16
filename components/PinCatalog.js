@@ -351,13 +351,8 @@ export default function PinCatalog() {
 
       const updatedPin = await response.json();
       
-      // Update pin in local state
-      setPins(prevPins => prevPins.map(pin => {
-        if (pin.id === pinId) {
-          return { ...pin, ...updatedPin };
-        }
-        return pin;
-      }));
+      // Remove the pin from the current view
+      setPins(prevPins => prevPins.filter(pin => pin.id !== pinId));
 
       // Show success message
       toast.success(`Pin ${
@@ -1491,6 +1486,16 @@ export default function PinCatalog() {
             const currentIndex = pins.findIndex(p => p.id === editingPin.id);
             if (currentIndex > 0) {
               setEditingPin(pins[currentIndex - 1]);
+            }
+          }}
+          onNextPin={() => {
+            const currentIndex = pins.findIndex(p => p.id === editingPin.id);
+            if (currentIndex < pins.length - 1) {
+              setEditingPin(pins[currentIndex + 1]);
+            } else if (currentIndex === pins.length - 1) {
+              // If we're on the last pin, close the modal
+              setShowEditModal(false);
+              setEditingPin(null);
             }
           }}
         />

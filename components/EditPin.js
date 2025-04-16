@@ -7,7 +7,7 @@ import Image from 'next/image';
 import SmokeEffect from './SmokeEffect';
 import axios from 'axios';
 
-export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onStatusChange, onEditTags }) {
+export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onStatusChange, onEditTags, onNextPin }) {
   const [formData, setFormData] = useState({
     pinName: pin?.pinName || '',
     series: pin?.series || '',
@@ -259,13 +259,20 @@ export default function EditPin({ pin = {}, onClose, onSave, onNext, onPrev, onS
         onStatusChange(pin.id, newStatus);
       }
 
-      // Close the loading toast with success message
+      // Show success message
       toast.success(`Pin ${
         newStatus === 'collected' ? 'collected' : 
         newStatus === 'wishlist' ? 'added to wishlist' : 
         newStatus === 'underReview' ? 'marked for review' :
         newStatus === 'uncollected' ? 'marked as uncollected' :
         'reset to default state'}`, { id: loadingToast });
+
+      // Move to the next pin if available
+      if (onNextPin) {
+        onNextPin();
+      } else {
+        onClose(); // If there's no next pin, close the modal
+      }
 
     } catch (error) {
       console.error('Error updating pin status:', error);
