@@ -1670,12 +1670,12 @@ export default function PinCatalog() {
               <span>Made with</span>
               <FaHeart className="text-red-500" />
               <span>by</span>
-              <a href="https://twitter.com/matthewsharos" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
-                @matthewsharos
+              <a href="https://www.instagram.com/everypinyoutake/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                @everypinyoutake
               </a>
             </div>
             <div className="text-gray-500">
-              &copy; {new Date().getFullYear()} Pin Catalog. All rights reserved.
+              &copy; 2025 Sharos Pin Catalog. All rights reserved.
             </div>
           </div>
         </div>
