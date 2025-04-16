@@ -115,6 +115,56 @@ export async function GET(req) {
           where = {};
         }
 
+        // Add additional filters for dynamic dropdowns
+        // Series filter
+        if (series) {
+          where.AND.push({ series: { equals: series, mode: 'insensitive' } });
+        }
+
+        // Origin filter
+        if (origin) {
+          where.AND.push({ origin: { equals: origin, mode: 'insensitive' } });
+        }
+
+        // Categories filter
+        if (categories && categories.length > 0) {
+          where.AND.push({
+            tags: {
+              hasSome: categories
+            }
+          });
+        }
+
+        // Origins filter from params
+        const origins = searchParams.get('origins')?.split(',').filter(Boolean);
+        if (origins && origins.length > 0) {
+          where.AND.push({ 
+            origin: { 
+              in: origins 
+            } 
+          });
+        }
+
+        // Series filter from params
+        const seriesArray = searchParams.get('series')?.split(',').filter(Boolean);
+        if (seriesArray && seriesArray.length > 0) {
+          where.AND.push({ 
+            series: { 
+              in: seriesArray 
+            } 
+          });
+        }
+        
+        // Limited Edition filter
+        if (isLimitedEdition) {
+          where.AND.push({ isLimitedEdition: true });
+        }
+        
+        // Mystery filter
+        if (isMystery) {
+          where.AND.push({ isMystery: true });
+        }
+
         console.log('Fetching filters with where:', JSON.stringify(where, null, 2)); // Debug log
 
         const pins = await prisma.pin.findMany({

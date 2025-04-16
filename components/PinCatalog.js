@@ -160,12 +160,15 @@ export default function PinCatalog() {
     }
   }, [showFilterModal, fetchAvailableFilters]);
   
-  // Fetch available years when year dropdown is opened
   useEffect(() => {
     if (showYearDropdown) {
       fetchAvailableFilters();
     }
   }, [showYearDropdown, fetchAvailableFilters]);
+
+  useEffect(() => {
+    fetchAvailableFilters();
+  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, fetchAvailableFilters]);
 
   useEffect(() => {
     if (page > 1) {

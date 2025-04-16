@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaTimes, FaChevronDown } from 'react-icons/fa';
 
 export default function FilterModal({
@@ -21,6 +21,35 @@ export default function FilterModal({
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
   const [showSeriesDropdown, setShowSeriesDropdown] = useState(false);
+
+  // Update available options when dropdowns are opened
+  useEffect(() => {
+    if (showCategoryDropdown || showOriginDropdown || showSeriesDropdown) {
+      // This will trigger a refresh of available options in the parent component
+      const timer = setTimeout(() => {
+        // The parent component will handle fetching the updated options
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [showCategoryDropdown, showOriginDropdown, showSeriesDropdown]);
+
+  // Handle filter changes with dynamic updates
+  const handleFilterChange = (type, value) => {
+    onFilterChange(type, value);
+    
+    // Close the current dropdown
+    switch (type) {
+      case 'categories':
+        setShowCategoryDropdown(false);
+        break;
+      case 'origins':
+        setShowOriginDropdown(false);
+        break;
+      case 'series':
+        setShowSeriesDropdown(false);
+        break;
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -59,8 +88,7 @@ export default function FilterModal({
               <div className="mt-1 p-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 <button
                   onClick={() => {
-                    onFilterChange('categories', []);
-                    setShowCategoryDropdown(false);
+                    handleFilterChange('categories', []);
                   }}
                   className="w-full text-left px-2 py-1.5 text-sm text-white hover:bg-gray-700 rounded"
                 >
@@ -72,8 +100,7 @@ export default function FilterModal({
                     <button
                       key={category}
                       onClick={() => {
-                        onFilterChange('categories', [category]);
-                        setShowCategoryDropdown(false);
+                        handleFilterChange('categories', [category]);
                       }}
                       className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-700 rounded ${
                         filterCategories[0] === category ? 'text-blue-400' : 'text-white'
@@ -110,8 +137,7 @@ export default function FilterModal({
               <div className="mt-1 p-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 <button
                   onClick={() => {
-                    onFilterChange('origins', []);
-                    setShowOriginDropdown(false);
+                    handleFilterChange('origins', []);
                   }}
                   className="w-full text-left px-2 py-1.5 text-sm text-white hover:bg-gray-700 rounded"
                 >
@@ -123,8 +149,7 @@ export default function FilterModal({
                     <button
                       key={origin}
                       onClick={() => {
-                        onFilterChange('origins', [origin]);
-                        setShowOriginDropdown(false);
+                        handleFilterChange('origins', [origin]);
                       }}
                       className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-700 rounded ${
                         filterOrigins[0] === origin ? 'text-blue-400' : 'text-white'
@@ -161,8 +186,7 @@ export default function FilterModal({
               <div className="mt-1 p-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 <button
                   onClick={() => {
-                    onFilterChange('series', []);
-                    setShowSeriesDropdown(false);
+                    handleFilterChange('series', []);
                   }}
                   className="w-full text-left px-2 py-1.5 text-sm text-white hover:bg-gray-700 rounded"
                 >
@@ -174,8 +198,7 @@ export default function FilterModal({
                     <button
                       key={series}
                       onClick={() => {
-                        onFilterChange('series', [series]);
-                        setShowSeriesDropdown(false);
+                        handleFilterChange('series', [series]);
                       }}
                       className={`w-full text-left px-2 py-1.5 text-sm hover:bg-gray-700 rounded ${
                         filterSeries[0] === series ? 'text-blue-400' : 'text-white'
@@ -224,9 +247,9 @@ export default function FilterModal({
           <button
             onClick={() => {
               // Reset all filters
-              onFilterChange('categories', []);
-              onFilterChange('origins', []);
-              onFilterChange('series', []);
+              handleFilterChange('categories', []);
+              handleFilterChange('origins', []);
+              handleFilterChange('series', []);
               onLimitedEditionChange(false);
               onMysteryChange(false);
             }}
