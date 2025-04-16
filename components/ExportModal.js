@@ -87,14 +87,16 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       const response = await axios.get(`/api/pins/export?${params.toString()}`);
       
       if (response.data && response.data.pins) {
-        setExportPins(response.data.pins);
-        console.log(`Loaded ${response.data.pins.length} pins for export`);
-        setLoadingMessage(`Loaded ${response.data.pins.length} pins for export`);
+        // Limit to 250 pins maximum to prevent browser freezing
+        const limitedPins = response.data.pins.slice(0, 250);
+        setExportPins(limitedPins);
+        console.log(`Loaded ${limitedPins.length} pins for export (from ${response.data.pins.length} total)`);
+        setLoadingMessage(`Loaded ${limitedPins.length} pins for export`);
         
         // Auto-generate the image after loading pins
-        if (response.data.pins.length > 0) {
+        if (limitedPins.length > 0) {
           setTimeout(() => {
-            generateImage(response.data.pins);
+            generateImage(limitedPins);
           }, 500);
         } else {
           toast.error('No pins match your current filters');
@@ -206,7 +208,7 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       setLoadingMessage('Rendering image...');
       
       // Process in batches to keep UI responsive
-      const renderBatchSize = 20;
+      const renderBatchSize = 10; // Smaller batch size to prevent freezing
       const renderBatches = Math.ceil(loadedImages.length / renderBatchSize);
       
       for (let batchIndex = 0; batchIndex < renderBatches; batchIndex++) {
@@ -219,66 +221,72 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
         
         // Process this batch
         for (const { img, pin, index, error } of batch) {
-          const row = Math.floor(index / pinsPerRow);
-          const col = index % pinsPerRow;
-          const x = col * pinSize;
-          const y = row * pinSize;
-          
-          if (error || !img) {
-            // Draw error placeholder
-            ctx.fillStyle = '#f0f0f0';
-            ctx.fillRect(x, y, pinSize, pinSize);
-            ctx.fillStyle = 'red';
-            ctx.font = '20px Arial';
+          try {
+            const row = Math.floor(index / pinsPerRow);
+            const col = index % pinsPerRow;
+            const x = col * pinSize;
+            const y = row * pinSize;
+            
+            if (error || !img) {
+              // Draw error placeholder
+              ctx.fillStyle = '#f0f0f0';
+              ctx.fillRect(x, y, pinSize, pinSize);
+              ctx.fillStyle = 'red';
+              ctx.font = '20px Arial';
+              ctx.textAlign = 'center';
+              ctx.fillText('Image Error', x + pinSize/2, y + pinSize/2);
+              ctx.fillText(`#${pin.pinId || 'Unknown'}`, x + pinSize/2, y + pinSize/2 + 30);
+              continue;
+            }
+            
+            // Calculate dimensions to maintain aspect ratio within square
+            let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+            
+            if (img.width > img.height) {
+              // Landscape image
+              drawWidth = pinSize;
+              drawHeight = (img.height / img.width) * pinSize;
+              offsetY = (pinSize - drawHeight) / 2;
+            } else {
+              // Portrait image
+              drawHeight = pinSize;
+              drawWidth = (img.width / img.height) * pinSize;
+              offsetX = (pinSize - drawWidth) / 2;
+            }
+            
+            // Draw image centered in its square
+            ctx.drawImage(img, x + offsetX, y + offsetY, drawWidth, drawHeight);
+            
+            // Draw pin info background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(x, y + pinSize - 60, pinSize, 60);
+            
+            // Draw pin name
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 20px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('Image Error', x + pinSize/2, y + pinSize/2);
-            ctx.fillText(`#${pin.pinId || 'Unknown'}`, x + pinSize/2, y + pinSize/2 + 30);
-            continue;
+            ctx.fillText(truncateText(pin.pinName || 'Unknown', 20), x + pinSize/2, y + pinSize - 35);
+            
+            // Draw pin ID and status
+            ctx.font = '16px Arial';
+            
+            // Determine status text
+            let statusText = '';
+            if (pin.isCollected) statusText = 'Collected';
+            else if (pin.isWishlist) statusText = 'Wishlist';
+            else if (pin.isDeleted) statusText = 'Uncollected';
+            else if (pin.isUnderReview) statusText = 'Under Review';
+            
+            ctx.fillText(`#${pin.pinId} - ${statusText}`, x + pinSize/2, y + pinSize - 10);
+          } catch (err) {
+            console.error(`Error rendering pin ${pin.pinId}:`, err);
+            // Continue with next pin even if one fails
           }
-          
-          // Calculate dimensions to maintain aspect ratio within square
-          let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
-          
-          if (img.width > img.height) {
-            // Landscape image
-            drawWidth = pinSize;
-            drawHeight = (img.height / img.width) * pinSize;
-            offsetY = (pinSize - drawHeight) / 2;
-          } else {
-            // Portrait image
-            drawHeight = pinSize;
-            drawWidth = (img.width / img.height) * pinSize;
-            offsetX = (pinSize - drawWidth) / 2;
-          }
-          
-          // Draw image centered in its square
-          ctx.drawImage(img, x + offsetX, y + offsetY, drawWidth, drawHeight);
-          
-          // Draw pin info background
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-          ctx.fillRect(x, y + pinSize - 60, pinSize, 60);
-          
-          // Draw pin name
-          ctx.fillStyle = 'white';
-          ctx.font = 'bold 20px Arial';
-          ctx.textAlign = 'center';
-          ctx.fillText(truncateText(pin.pinName || 'Unknown', 20), x + pinSize/2, y + pinSize - 35);
-          
-          // Draw pin ID and status
-          ctx.font = '16px Arial';
-          
-          // Determine status text
-          let statusText = '';
-          if (pin.isCollected) statusText = 'Collected';
-          else if (pin.isWishlist) statusText = 'Wishlist';
-          else if (pin.isDeleted) statusText = 'Uncollected';
-          else if (pin.isUnderReview) statusText = 'Under Review';
-          
-          ctx.fillText(`#${pin.pinId} - ${statusText}`, x + pinSize/2, y + pinSize - 10);
         }
         
-        // Give the UI a chance to update between batches
-        await new Promise(resolve => setTimeout(resolve, 0));
+        // Give the UI a chance to update between batches with longer timeout for later batches
+        // This helps prevent the browser from freezing on the final batches
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
 
       // Draw filter information at bottom
