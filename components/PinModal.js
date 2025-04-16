@@ -229,7 +229,7 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               <span className="font-medium">Pin ID:</span> {pin.pinId || 'No ID'}
             </div>
             <a 
-              href={pin.pinPopUrl || '#'} 
+              href={formData.pinpopUrl || '#'} 
               target="_blank" 
               rel="noopener noreferrer"
               className="bg-gray-800 text-white p-2 rounded-lg hover:bg-gray-700 mr-2"
@@ -292,6 +292,23 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
                   name="releaseDate"
                   value={formData.releaseDate || ''}
                   onChange={handleDateChange}
+                  className="w-full pl-10 px-3 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-white mb-1">Pin & Pop URL</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <FaCandyCane className="text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  name="pinpopUrl"
+                  value={formData.pinpopUrl || ''}
+                  onChange={handleChange}
+                  placeholder="https://pinandpop.com/pins/..."
                   className="w-full pl-10 px-3 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
