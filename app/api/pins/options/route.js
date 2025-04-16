@@ -115,20 +115,22 @@ export async function GET(req) {
       });
     } catch (prismaError) {
       console.error('Prisma error in filter options:', prismaError);
-      // Return empty results instead of failing
       return NextResponse.json({
+        error: 'Database error',
         categories: [],
         origins: [],
         series: [],
-      });
+      }, { status: 500 });
     }
   } catch (error) {
     console.error('Error fetching filter options:', error);
-    // Return empty results instead of failing
     return NextResponse.json({
+      error: 'Server error',
       categories: [],
       origins: [],
       series: [],
-    });
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
