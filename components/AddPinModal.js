@@ -12,19 +12,23 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!pinId.trim()) {
-      toast.error('Please enter a Pin&Pop ID');
+      toast.error('Please enter at least one Pin&Pop ID');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await axios.post('/api/pins/scrape', { pinId: pinId.trim() });
+      const response = await axios.post('/api/pins/import', { pinId: pinId.trim() });
       
       if (response.data.summary) {
         // Multiple pins were processed
         setMultipleResults(response.data);
         // Notify parent about all added pins
-        response.data.results.added.forEach(result => onPinAdded(result.pin));
+        if (response.data.results.added && response.data.results.added.length > 0) {
+          response.data.results.added.forEach(result => {
+            if (result.pin) onPinAdded(result.pin);
+          });
+        }
         
         // Show toast with summary
         const { total, added, existing, failed } = response.data.summary;
@@ -41,11 +45,17 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
       }
     } catch (error) {
       console.error('Error adding pin:', error);
-      if (error.response?.data?.error === 'Pin already exists in your collection' && error.response?.data?.pin) {
-        setSuccessPin(error.response.data.pin);
-        toast.error('Pin already exists in your collection');
+      
+      // Check for specific error messages
+      const errorMessage = error.response?.data?.error || 'Failed to add pin';
+      
+      // If it's a unique constraint error, show a more user-friendly message
+      if (errorMessage.includes('Unique constraint failed')) {
+        toast.error('This pin already exists in your collection');
+      } else if (errorMessage.includes('Pin not found')) {
+        toast.error('Pin not found on Pin&Pop. Please check the ID and try again.');
       } else {
-        toast.error(error.response?.data?.error || 'Failed to add pin');
+        toast.error(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -66,7 +76,7 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
       <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full">
         <div className="flex justify-between items-start mb-6">
           <h2 className="text-2xl font-bold text-white">
-            {multipleResults ? 'Pins Processed' : successPin ? 'Pin Added Successfully' : 'Add New Pin'}
+            {multipleResults ? 'Pins Processed' : successPin ? 'Pin Added Successfully' : 'Add New Pins'}
           </h2>
           <button
             onClick={handleClose}
@@ -96,6 +106,20 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
                 <div className="text-sm text-gray-300">Total</div>
               </div>
             </div>
+
+            {multipleResults.results.existing.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold text-blue-400 mb-2">Already in Collection:</h3>
+                <div className="bg-gray-700 p-2 rounded text-sm space-y-1 max-h-32 overflow-y-auto">
+                  {multipleResults.results.existing.map((item, idx) => (
+                    <div key={idx} className="flex items-center text-gray-300">
+                      <span className="text-blue-400 mr-2">•</span>
+                      <span>ID {item.pinId}: {item.pin.pinName}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {multipleResults.results.failed.length > 0 && (
               <div className="mt-4">
@@ -146,16 +170,18 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
-                Pin&Pop ID
+                Pin&Pop IDs
               </label>
-              <input
-                type="text"
+              <textarea
                 value={pinId}
                 onChange={(e) => setPinId(e.target.value)}
-                placeholder="Enter Pin&Pop ID (e.g., 74149)"
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter Pin&Pop IDs (e.g., 74149, 12345, 67890)"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[100px]"
                 disabled={loading}
               />
+              <p className="text-xs text-gray-400 mt-1">
+                Enter multiple IDs separated by commas or new lines
+              </p>
             </div>
 
             <button
@@ -169,7 +195,7 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
                   Processing...
                 </span>
               ) : (
-                'Add Pin'
+                'Add Pins'
               )}
             </button>
           </form>
