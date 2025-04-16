@@ -131,7 +131,7 @@ export default function PinCatalog() {
       if (statusFilters.wishlist) queryParams.set('wishlist', 'true');
 
       // Sort and pagination
-      queryParams.set('sortField', sortField);
+      queryParams.set('sortBy', sortField);
       queryParams.set('sortOrder', sortOrder);
       queryParams.set('page', page.toString());
 
