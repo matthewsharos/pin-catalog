@@ -151,19 +151,90 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, width, height);
 
-      // Draw pins
-      for (let i = 0; i < Math.min(pinsArray.length, 250); i++) {
-        const pin = pinsArray[i];
-        const row = Math.floor(i / pinsPerRow);
-        const col = i % pinsPerRow;
-        const x = col * pinSize;
-        const y = row * pinSize;
-
-        try {
-          setLoadingMessage(`Generating image... Processing pin ${i+1} of ${Math.min(pinsArray.length, 250)}`);
+      // Preload all images in parallel to improve performance
+      setLoadingMessage('Preloading images...');
+      
+      // Create an array to hold all image loading promises
+      const imagePromises = pinsArray.slice(0, 250).map((pin, index) => {
+        return new Promise((resolve) => {
+          loadImage(pin.imageUrl)
+            .then(img => {
+              resolve({ img, pin, index });
+            })
+            .catch(error => {
+              console.error(`Error loading image for pin ${pin.pinId}:`, error);
+              resolve({ error, pin, index });
+            });
+        });
+      });
+      
+      // Update loading message with progress
+      let loadedCount = 0;
+      const totalPins = Math.min(pinsArray.length, 250);
+      
+      // Create a progress tracker for image loading
+      const updateProgress = () => {
+        loadedCount++;
+        if (loadedCount % 10 === 0 || loadedCount === totalPins) {
+          setLoadingMessage(`Preloading images... ${loadedCount}/${totalPins}`);
+        }
+      };
+      
+      // Process images in batches for better UI responsiveness
+      const batchSize = 10;
+      const batches = Math.ceil(imagePromises.length / batchSize);
+      
+      let loadedImages = [];
+      
+      for (let i = 0; i < batches; i++) {
+        const start = i * batchSize;
+        const end = Math.min(start + batchSize, imagePromises.length);
+        const batchPromises = imagePromises.slice(start, end);
+        
+        const batchResults = await Promise.all(batchPromises);
+        loadedImages = [...loadedImages, ...batchResults];
+        
+        // Update progress after each batch
+        loadedCount = loadedImages.length;
+        setLoadingMessage(`Preloading images... ${loadedCount}/${totalPins}`);
+        
+        // Give the UI a chance to update
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+      
+      // Now draw all images to canvas
+      setLoadingMessage('Rendering image...');
+      
+      // Process in batches to keep UI responsive
+      const renderBatchSize = 20;
+      const renderBatches = Math.ceil(loadedImages.length / renderBatchSize);
+      
+      for (let batchIndex = 0; batchIndex < renderBatches; batchIndex++) {
+        const start = batchIndex * renderBatchSize;
+        const end = Math.min(start + renderBatchSize, loadedImages.length);
+        const batch = loadedImages.slice(start, end);
+        
+        // Update progress message
+        setLoadingMessage(`Rendering image... ${Math.min(end, loadedImages.length)}/${totalPins}`);
+        
+        // Process this batch
+        for (const { img, pin, index, error } of batch) {
+          const row = Math.floor(index / pinsPerRow);
+          const col = index % pinsPerRow;
+          const x = col * pinSize;
+          const y = row * pinSize;
           
-          // Load image
-          const img = await loadImage(pin.imageUrl);
+          if (error || !img) {
+            // Draw error placeholder
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(x, y, pinSize, pinSize);
+            ctx.fillStyle = 'red';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Image Error', x + pinSize/2, y + pinSize/2);
+            ctx.fillText(`#${pin.pinId || 'Unknown'}`, x + pinSize/2, y + pinSize/2 + 30);
+            continue;
+          }
           
           // Calculate dimensions to maintain aspect ratio within square
           let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
@@ -204,20 +275,14 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
           else if (pin.isUnderReview) statusText = 'Under Review';
           
           ctx.fillText(`#${pin.pinId} - ${statusText}`, x + pinSize/2, y + pinSize - 10);
-        } catch (error) {
-          console.error('Error loading image:', error);
-          // Draw error placeholder
-          ctx.fillStyle = '#f0f0f0';
-          ctx.fillRect(x, y, pinSize, pinSize);
-          ctx.fillStyle = 'red';
-          ctx.font = '20px Arial';
-          ctx.textAlign = 'center';
-          ctx.fillText('Image Error', x + pinSize/2, y + pinSize/2);
-          ctx.fillText(`#${pin.pinId || 'Unknown'}`, x + pinSize/2, y + pinSize/2 + 30);
         }
+        
+        // Give the UI a chance to update between batches
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
 
       // Draw filter information at bottom
+      setLoadingMessage('Adding filter information...');
       const filterY = height - 80;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.fillRect(0, filterY, width, 80);
@@ -287,6 +352,7 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       ctx.fillText(truncateText(filterText, 120), 20, filterY + 45);
 
       // Convert to data URL and set
+      setLoadingMessage('Finalizing image...');
       const dataUrl = canvas.toDataURL('image/png');
       setImageUrl(dataUrl);
       setLoadingMessage('');
@@ -306,25 +372,49 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
-  // Helper function to load images with CORS handling
-  const loadImage = (url) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = (e) => {
-        console.error('Image load error:', e);
-        // Try with proxy if direct load fails
-        const proxyImg = new Image();
-        proxyImg.crossOrigin = 'anonymous';
-        proxyImg.onload = () => resolve(proxyImg);
-        proxyImg.onerror = () => reject(new Error('Failed to load image even with proxy'));
-        // Use a proxy to handle CORS issues
-        proxyImg.src = `/api/image-proxy?url=${encodeURIComponent(url)}`;
-      };
-      img.src = url;
-    });
-  };
+  // Helper function to load images with CORS handling and caching
+  const loadImage = (() => {
+    // Create a cache for loaded images
+    const imageCache = new Map();
+    
+    return (url) => {
+      // Check if image is already in cache
+      if (imageCache.has(url)) {
+        return Promise.resolve(imageCache.get(url));
+      }
+      
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = () => {
+          // Store in cache
+          imageCache.set(url, img);
+          resolve(img);
+        };
+        
+        img.onerror = (e) => {
+          console.error('Image load error:', e);
+          // Try with proxy if direct load fails
+          const proxyImg = new Image();
+          proxyImg.crossOrigin = 'anonymous';
+          
+          proxyImg.onload = () => {
+            // Store in cache
+            imageCache.set(url, proxyImg);
+            resolve(proxyImg);
+          };
+          
+          proxyImg.onerror = () => reject(new Error('Failed to load image even with proxy'));
+          
+          // Use a proxy to handle CORS issues
+          proxyImg.src = `/api/image-proxy?url=${encodeURIComponent(url)}`;
+        };
+        
+        img.src = url;
+      });
+    };
+  })();
 
   const handleDownload = () => {
     if (!imageUrl) return;
