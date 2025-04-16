@@ -22,7 +22,7 @@ export default function HeaderNavigation({
   return (
     <div className="sticky top-0 z-50 bg-gray-900 shadow-lg">
       {/* Row 1: Logo, Title, Pin Count, Action Buttons */}
-      <div className="px-2 sm:px-6 py-1.5">
+      <div className="px-2 md:px-4 lg:px-6 py-1.5">
         <div className="flex items-center justify-between">
           {/* Header */}
           <div className="flex items-center">
@@ -64,7 +64,7 @@ export default function HeaderNavigation({
       </div>
 
       {/* Row 2: Search Bar */}
-      <div className="px-2 sm:px-6 py-1.5 border-t border-gray-800">
+      <div className="px-2 md:px-4 lg:px-6 py-1.5 border-t border-gray-800">
         <div className="relative flex">
           <div className="relative flex-grow">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -89,7 +89,7 @@ export default function HeaderNavigation({
       </div>
       
       {/* Row 3: Status Filters */}
-      <div className="px-2 sm:px-6 py-2 border-t border-gray-800">
+      <div className="px-2 md:px-4 lg:px-6 py-2 border-t border-gray-800">
         <StatusFilters
           statusFilters={statusFilters}
           onStatusClick={onStatusClick}

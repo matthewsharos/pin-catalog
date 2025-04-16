@@ -48,12 +48,12 @@ export default function PinGrid({
   };
 
   return (
-    <div ref={contentRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+    <div ref={contentRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-2 md:px-4 lg:px-6">
       {pins.map((pin, index) => (
         <div
           key={pin.id}
           ref={index === pins.length - 1 ? lastPinElementRef : null}
-          className="relative bg-gray-900 rounded-lg overflow-hidden shadow-lg transform transition-transform hover:scale-105"
+          className="relative bg-gray-900 rounded-lg overflow-hidden shadow-lg transform transition-transform hover:scale-105 md:hover:shadow-xl"
         >
           {/* Status Indicator */}
           <div className="absolute top-2 left-2 z-10">
@@ -86,7 +86,7 @@ export default function PinGrid({
 
           {/* Pin Image */}
           <div 
-            className="aspect-square bg-gray-800 cursor-pointer"
+            className="aspect-square bg-gray-800 cursor-pointer p-1 md:p-2"
             onClick={() => onPinClick(pin)}
           >
             {pin.imageUrl ? (
@@ -108,6 +108,11 @@ export default function PinGrid({
             <h3 className="text-sm font-medium text-white truncate">
               {pin.pinName || 'Unnamed Pin'}
             </h3>
+            {pin.series && (
+              <p className="text-xs text-gray-500 truncate mt-0.5">
+                {pin.series}
+              </p>
+            )}
           </div>
 
           {/* Status Action Buttons */}
