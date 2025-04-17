@@ -16,6 +16,20 @@ const allowedOrigins = [
   'https://pin-catalog.vercel.app'
 ];
 
+// Helper function to check if origin is allowed
+const isOriginAllowed = (origin) => {
+  // If no origin (same-origin request), allow it
+  if (!origin) return true;
+  
+  // Check exact matches
+  if (allowedOrigins.includes(origin)) return true;
+  
+  // Check localhost with any port
+  if (origin.match(/^http:\/\/localhost:\d+$/)) return true;
+  
+  return false;
+};
+
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +38,7 @@ export async function OPTIONS(req) {
   const origin = req.headers.get('origin') || '';
   
   // Check if origin is allowed
-  if (!allowedOrigins.includes(origin)) {
+  if (!isOriginAllowed(origin)) {
     return new NextResponse(null, { status: 403 });
   }
 
@@ -38,7 +52,7 @@ export async function GET(req) {
   const origin = req.headers.get('origin') || '';
 
   // Check if origin is allowed
-  if (!allowedOrigins.includes(origin)) {
+  if (!isOriginAllowed(origin)) {
     return NextResponse.json(
       { error: 'Origin not allowed' },
       { status: 403 }
@@ -86,7 +100,7 @@ export async function POST(req) {
   const origin = req.headers.get('origin') || '';
   
   // Check if origin is allowed
-  if (!allowedOrigins.includes(origin)) {
+  if (!isOriginAllowed(origin)) {
     return NextResponse.json(
       { error: 'Origin not allowed' },
       { status: 403 }

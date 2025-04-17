@@ -339,9 +339,9 @@ export async function POST(req) {
       pinData.tags = validTags;
     }
 
+    // Create the pin without pinId first
     const pin = await prisma.pin.create({
       data: {
-        pinId: pinData.pinId,
         pinName: pinData.pinName,
         imageUrl: pinData.imageUrl || '',
         releaseDate: pinData.releaseDate ? new Date(pinData.releaseDate) : null,
@@ -349,12 +349,23 @@ export async function POST(req) {
         origin: pinData.origin || '',
         edition: pinData.edition || '',
         isLimitedEdition: pinData.isLimitedEdition || false,
-        isCollected: pinData.isCollected || false,
-        tags: pinData.tags || [], // Add validated tags
+        isMystery: pinData.isMystery || false,
+        isCollected: false,
+        isDeleted: false,
+        isWishlist: false,
+        isUnderReview: false,
+        tags: pinData.tags || [],
+        year: pinData.year || null,
       },
     });
 
-    return NextResponse.json(pin, { status: 201 });
+    // Update the pin to set pinId equal to id for manually added pins
+    const updatedPin = await prisma.pin.update({
+      where: { id: pin.id },
+      data: { pinId: pin.id.toString() }
+    });
+
+    return NextResponse.json(updatedPin, { status: 201 });
   } catch (error) {
     console.error('Error creating pin:', error);
     return NextResponse.json({ error: 'Failed to create pin' }, { status: 500 });
