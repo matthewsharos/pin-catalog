@@ -1,6 +1,7 @@
 "use client";
 
 import { FaCheck, FaTimes, FaHeart, FaStar } from 'react-icons/fa';
+import { useState } from 'react';
 
 export default function PinGrid({
   pins,
@@ -10,6 +11,9 @@ export default function PinGrid({
   onStatusChange,
   lastPinElementRef
 }) {
+  const [animatingPins, setAnimatingPins] = useState({});
+  const [flashingButtons, setFlashingButtons] = useState({});
+
   const handleStatusChange = (e, pin, status) => {
     e.stopPropagation();
     e.preventDefault(); // Prevent any default behavior
@@ -43,8 +47,34 @@ export default function PinGrid({
       }
     }
     
-    // Apply the update immediately to make the pin disappear from the current view
-    onStatusChange(updatedPin);
+    // Set flashing state for the button
+    setFlashingButtons(prev => ({
+      ...prev,
+      [`${pin.id}-${status}`]: true
+    }));
+    
+    // Clear flashing state after animation completes
+    setTimeout(() => {
+      setFlashingButtons(prev => ({
+        ...prev,
+        [`${pin.id}-${status}`]: false
+      }));
+    }, 500);
+    
+    // Set animating state for the pin card
+    setAnimatingPins(prev => ({
+      ...prev,
+      [pin.id]: true
+    }));
+    
+    // Apply the update after animation completes
+    setTimeout(() => {
+      onStatusChange(updatedPin);
+      setAnimatingPins(prev => ({
+        ...prev,
+        [pin.id]: false
+      }));
+    }, 300);
   };
 
   return (
@@ -53,7 +83,9 @@ export default function PinGrid({
         <div
           key={pin.id}
           ref={index === pins.length - 1 ? lastPinElementRef : null}
-          className="relative bg-gray-900 rounded-lg overflow-hidden shadow-lg transform transition-transform hover:scale-105 md:hover:shadow-xl"
+          className={`relative bg-gray-900 rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 md:hover:shadow-xl ${
+            animatingPins[pin.id] ? 'opacity-0 scale-95' : 'opacity-100'
+          }`}
         >
           {/* Status Indicator */}
           <div className="absolute top-2 left-2 z-10">
@@ -121,7 +153,7 @@ export default function PinGrid({
               onClick={(e) => handleStatusChange(e, pin, 'collected')}
               className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
                 pin.isCollected ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+              } ${flashingButtons[`${pin.id}-collected`] ? 'animate-pulse-green' : ''}`}
               title="Mark as Collected"
             >
               <FaCheck className="mx-auto" />
@@ -130,7 +162,7 @@ export default function PinGrid({
               onClick={(e) => handleStatusChange(e, pin, 'wishlist')}
               className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
                 pin.isWishlist ? 'bg-blue-400 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+              } ${flashingButtons[`${pin.id}-wishlist`] ? 'animate-pulse-blue' : ''}`}
               title="Add to Wishlist"
             >
               <FaHeart className="mx-auto" />
@@ -139,7 +171,7 @@ export default function PinGrid({
               onClick={(e) => handleStatusChange(e, pin, 'uncollected')}
               className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
                 pin.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+              } ${flashingButtons[`${pin.id}-uncollected`] ? 'animate-pulse-yellow' : ''}`}
               title="Mark as Uncollected"
             >
               <FaTimes className="mx-auto" />
@@ -148,7 +180,7 @@ export default function PinGrid({
               onClick={(e) => handleStatusChange(e, pin, 'underReview')}
               className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
                 pin.isUnderReview ? 'bg-amber-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+              } ${flashingButtons[`${pin.id}-underReview`] ? 'animate-pulse-amber' : ''}`}
               title="Mark for Review"
             >
               <FaStar className="mx-auto" />

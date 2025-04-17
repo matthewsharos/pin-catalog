@@ -9,6 +9,8 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
   const [newComment, setNewComment] = useState('');
   const [showTagModal, setShowTagModal] = useState(false);
   const [currentPinIndex, setCurrentPinIndex] = useState(currentIndex || 0);
+  const [flashingButtons, setFlashingButtons] = useState({});
+  const [imageAnimating, setImageAnimating] = useState(false);
 
   useEffect(() => {
     setFormData(pin || {});
@@ -57,6 +59,23 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
   };
 
   const handleStatusChange = (status) => {
+    // Set flashing state for the button
+    setFlashingButtons(prev => ({
+      ...prev,
+      [status]: true
+    }));
+    
+    // Clear flashing state after animation completes
+    setTimeout(() => {
+      setFlashingButtons(prev => ({
+        ...prev,
+        [status]: false
+      }));
+    }, 500);
+    
+    // Start image animation
+    setImageAnimating(true);
+    
     // Reset all status flags first
     const updatedPin = { 
       ...pin,
@@ -86,13 +105,19 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
       }
     }
     
-    // Update the pin in the parent component first
-    onUpdate(updatedPin);
-    
-    // Then navigate to the next pin
-    if (pins && pins.length > 1) {
-      navigatePin('next');
-    }
+    // Wait for animation to complete before updating
+    setTimeout(() => {
+      // Update the pin in the parent component
+      onUpdate(updatedPin);
+      
+      // Then navigate to the next pin
+      if (pins && pins.length > 1) {
+        navigatePin('next');
+      }
+      
+      // Reset animation state
+      setImageAnimating(false);
+    }, 300);
   };
 
   const handleAddComment = () => {
@@ -157,7 +182,9 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               <img 
                 src={pin.imageUrl || '/placeholder-pin.png'} 
                 alt={pin.pinName} 
-                className="w-full h-auto max-h-[500px] object-contain rounded-lg shadow-lg"
+                className={`w-full h-auto max-h-[500px] object-contain rounded-lg shadow-lg transition-all duration-300 ${
+                  imageAnimating ? 'opacity-0 scale-95' : 'opacity-100'
+                }`}
               />
             </div>
           </div>
@@ -168,7 +195,7 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               onClick={() => handleStatusChange('collected')}
               className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
                 formData.isCollected ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
+              } ${flashingButtons['collected'] ? 'animate-pulse-green' : ''}`}
               title="Mark as Collected"
             >
               <div className="flex items-center justify-center">
@@ -180,7 +207,7 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               onClick={() => handleStatusChange('uncollected')}
               className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
                 formData.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
+              } ${flashingButtons['uncollected'] ? 'animate-pulse-yellow' : ''}`}
               title="Mark as Uncollected"
             >
               <div className="flex items-center justify-center">
@@ -192,7 +219,7 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               onClick={() => handleStatusChange('wishlist')}
               className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
                 formData.isWishlist ? 'bg-blue-400 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
+              } ${flashingButtons['wishlist'] ? 'animate-pulse-blue' : ''}`}
               title="Add to Wishlist"
             >
               <div className="flex items-center justify-center">
@@ -204,7 +231,7 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               onClick={() => handleStatusChange('underReview')}
               className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
                 formData.isUnderReview ? 'bg-amber-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
+              } ${flashingButtons['underReview'] ? 'animate-pulse-amber' : ''}`}
               title="Mark for Review"
             >
               <div className="flex items-center justify-center">
@@ -214,7 +241,9 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
             </button>
             <button
               onClick={() => handleStatusChange('all')}
-              className="flex-1 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              className={`flex-1 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors ${
+                flashingButtons['all'] ? 'animate-pulse-blue' : ''
+              }`}
               title="Clear Status"
             >
               <div className="flex items-center justify-center">
