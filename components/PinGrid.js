@@ -67,9 +67,12 @@ export default function PinGrid({
       [pin.id]: true
     }));
     
+    // Find the current index of the pin
+    const currentIndex = pins.findIndex(p => p.id === pin.id);
+    
     // Apply the update after animation completes
     setTimeout(() => {
-      onStatusChange(updatedPin);
+      onStatusChange(updatedPin, currentIndex);
       setAnimatingPins(prev => ({
         ...prev,
         [pin.id]: false

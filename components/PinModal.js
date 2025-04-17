@@ -107,13 +107,11 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
     
     // Wait for animation to complete before updating
     setTimeout(() => {
-      // Update the pin in the parent component
-      onUpdate(updatedPin);
+      // Store the current index before updating
+      const currentIndex = pins.findIndex(p => p.id === pin.id);
       
-      // Then navigate to the next pin
-      if (pins && pins.length > 1) {
-        navigatePin('next');
-      }
+      // Update the pin in the parent component
+      onUpdate(updatedPin, currentIndex);
       
       // Reset animation state
       setImageAnimating(false);

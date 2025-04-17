@@ -258,16 +258,36 @@ export default function PinCatalog() {
     setPage(1);
   }, []);
 
-  const handlePinUpdate = useCallback((updatedPin) => {
-    // When on "All" filter, pins should still disappear when status changes
-    // This is to match the behavior on other filter views
-    
-    // Always remove the pin from the current view when status changes
-    setPins(prevPins => prevPins.filter(pin => pin.id !== updatedPin.id));
+  const handlePinUpdate = useCallback((updatedPin, currentIndex) => {
+    // Remove the updated pin from the current view
+    setPins(prevPins => {
+      // Create a copy of the pins array without the updated pin
+      const newPins = prevPins.filter(pin => pin.id !== updatedPin.id);
+      
+      // If we have a currentIndex, navigate to the next pin in the list
+      if (currentIndex !== undefined && selectedPin && selectedPin.id === updatedPin.id) {
+        // If there are pins left in the list
+        if (newPins.length > 0) {
+          // Determine which pin to show next
+          let nextIndex = currentIndex;
+          // If we're at the end of the list, go to the last remaining pin
+          if (nextIndex >= newPins.length) {
+            nextIndex = newPins.length - 1;
+          }
+          // Set the selected pin to the next one in the list
+          setSelectedPin(newPins[nextIndex]);
+        } else {
+          // If no pins left, close the modal
+          setSelectedPin(null);
+        }
+      }
+      
+      return newPins;
+    });
     
     // Send update to the server
     updatePinStatus(updatedPin);
-  }, [statusFilters]);
+  }, [selectedPin]);
 
   const updatePinStatus = async (pin) => {
     try {
@@ -292,14 +312,11 @@ export default function PinCatalog() {
         throw new Error('Failed to update pin status');
       }
       
-      // After successful update, refresh pins to show updated data
-      fetchPins(1, false);
+      // No need to refresh pins immediately since we've already removed the pin
+      // from the view and the modal is closed. This prevents the sorting from resetting.
     } catch (error) {
       console.error('Error updating pin status:', error);
       toast.error('Failed to update pin status');
-      
-      // Refresh pins to ensure UI is in sync with server
-      fetchPins(1, false);
     }
   };
 
@@ -477,7 +494,7 @@ export default function PinCatalog() {
           onPinClick={setSelectedPin}
           loading={loading}
           contentRef={contentRef}
-          onStatusChange={handlePinUpdate}
+          onStatusChange={(updatedPin, currentIndex) => handlePinUpdate(updatedPin, currentIndex)}
           lastPinElementRef={lastPinElementRef}
         />
       </div>
@@ -504,7 +521,7 @@ export default function PinCatalog() {
         <PinModal
           pin={selectedPin}
           onClose={() => setSelectedPin(null)}
-          onUpdate={handlePinUpdate}
+          onUpdate={(updatedPin, currentIndex) => handlePinUpdate(updatedPin, currentIndex)}
           onDelete={handlePinDelete}
           pins={pins}
           currentIndex={pins.findIndex(p => p.id === selectedPin.id)}
