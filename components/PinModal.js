@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FaCheck, FaTimes, FaHeart, FaStar, FaTag, FaCandyCane, FaTrash, FaCalendarAlt } from 'react-icons/fa';
+import EditTagsModal from './EditTagsModal';
 
 export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, currentIndex, onNavigate }) {
   const [formData, setFormData] = useState(pin || {});
@@ -406,6 +407,18 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
           </form>
         </div>
       </div>
+      
+      {/* Tag Modal */}
+      {showTagModal && (
+        <EditTagsModal
+          pin={pin}
+          onClose={() => setShowTagModal(false)}
+          onSave={(updatedPin) => {
+            setFormData(prev => ({ ...prev, tags: updatedPin.tags }));
+            setShowTagModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
