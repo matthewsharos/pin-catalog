@@ -595,7 +595,7 @@ export default function PinCatalog() {
                 data-dropdown="sort"
               >
                 <FaSort className="mr-1" />
-                <span>Sort: {sortOption}</span>
+                <span>{sortOption}</span>
               </button>
               
               {showSortDropdown && (
