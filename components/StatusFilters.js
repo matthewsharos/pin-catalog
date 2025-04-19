@@ -16,6 +16,8 @@ export default function StatusFilters({
             ? 'bg-blue-600 text-white'
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
         }`}
+        data-filter="status"
+        data-status="all"
       >
         <FaInbox className="mr-1 text-xs" />
         All
@@ -27,6 +29,8 @@ export default function StatusFilters({
             ? 'bg-green-600 text-white'
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
         }`}
+        data-filter="status"
+        data-status="collected"
       >
         <FaCheck className="mr-1 text-xs" />
         Owned
@@ -38,6 +42,8 @@ export default function StatusFilters({
             ? 'bg-yellow-600 text-white'
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
         }`}
+        data-filter="status"
+        data-status="uncollected"
       >
         <FaTimes className="mr-1 text-xs" />
         Uncollected
@@ -50,6 +56,8 @@ export default function StatusFilters({
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
         }`}
         title="Hold ⌘/Ctrl or Shift to select multiple statuses"
+        data-filter="status"
+        data-status="wishlist"
       >
         <FaHeart className="mr-1 text-xs" />
         Wishlist
@@ -61,6 +69,8 @@ export default function StatusFilters({
             ? 'bg-amber-500 text-white'
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
         }`}
+        data-filter="status"
+        data-status="underReview"
       >
         <FaStar className="mr-1 text-xs" />
         Review
@@ -69,6 +79,7 @@ export default function StatusFilters({
         onClick={onMoreFiltersClick}
         className="h-7 w-7 flex items-center justify-center text-xs bg-gray-700 text-white rounded-r-md hover:bg-gray-600 transition-colors border-l border-gray-800"
         title="More Filters"
+        data-filter="more"
       >
         <FaPlus />
       </button>
