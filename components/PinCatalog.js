@@ -236,12 +236,6 @@ export default function PinCatalog() {
     }
   }, [page, fetchPins]);
 
-  // Refresh pins when filters change
-  useEffect(() => {
-    setPage(1);
-    fetchPins(1, false);
-  }, [statusFilters, sortOption, yearFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, fetchPins]);
-
   // Add click outside listener for dropdowns
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -333,11 +327,16 @@ export default function PinCatalog() {
         });
       }
       
+      // Force an immediate fetch with the updated filters
+      setTimeout(() => {
+        fetchPins(1, false);
+      }, 0);
+      
       return newFilters;
     });
     
     setPage(1);
-  }, []);
+  }, [fetchPins]);
 
   const handleFilterChange = useCallback((type, value) => {
     // Cancel any in-flight requests
@@ -357,7 +356,12 @@ export default function PinCatalog() {
         break;
     }
     setPage(1);
-  }, []);
+    
+    // Force an immediate fetch with the updated filters
+    setTimeout(() => {
+      fetchPins(1, false);
+    }, 0);
+  }, [fetchPins]);
 
   const handleSearchChange = useCallback((value) => {
     // Cancel any in-flight requests
@@ -367,7 +371,12 @@ export default function PinCatalog() {
     
     setSearchQuery(value);
     setPage(1);
-  }, []);
+    
+    // Force an immediate fetch with the updated filters
+    setTimeout(() => {
+      fetchPins(1, false);
+    }, 0);
+  }, [fetchPins]);
 
   const handleYearChange = useCallback((year) => {
     // Cancel any in-flight requests
@@ -385,7 +394,12 @@ export default function PinCatalog() {
     });
     
     setPage(1);
-  }, []);
+    
+    // Force an immediate fetch with the updated filters
+    setTimeout(() => {
+      fetchPins(1, false);
+    }, 0);
+  }, [fetchPins]);
 
   const handleSortChange = useCallback((option) => {
     // Cancel any in-flight requests
@@ -396,7 +410,12 @@ export default function PinCatalog() {
     setSortOption(option);
     setShowSortDropdown(false);
     setPage(1);
-  }, []);
+    
+    // Force an immediate fetch with the updated filters
+    setTimeout(() => {
+      fetchPins(1, false);
+    }, 0);
+  }, [fetchPins]);
 
   const handlePinUpdate = useCallback((updatedPin, currentIndex) => {
     // Remove the updated pin from the current view
