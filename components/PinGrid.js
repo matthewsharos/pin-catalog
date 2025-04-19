@@ -9,10 +9,31 @@ export default function PinGrid({
   loading,
   contentRef,
   onStatusChange,
-  lastPinElementRef
+  lastPinElementRef,
+  zoomLevel = 3 // Default to 3 which is the current layout
 }) {
   const [animatingPins, setAnimatingPins] = useState({});
   const [flashingButtons, setFlashingButtons] = useState({});
+
+  // Function to get grid columns class based on zoom level
+  const getGridColumnsClass = () => {
+    switch (zoomLevel) {
+      case 1: // Minimum zoom - fewer pins per row
+        return "grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+      case 2:
+        return "grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+      case 3: // Default - current layout
+        return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+      case 4:
+        return "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7";
+      case 5:
+        return "grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8";
+      case 6: // Maximum zoom - more pins per row
+        return "grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-10";
+      default:
+        return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+    }
+  };
 
   const handleStatusChange = (e, pin, status) => {
     e.stopPropagation();
@@ -81,7 +102,7 @@ export default function PinGrid({
   };
 
   return (
-    <div ref={contentRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-2 md:px-4 lg:px-6">
+    <div ref={contentRef} className={`grid ${getGridColumnsClass()} gap-4 px-2 md:px-4 lg:px-6`}>
       {pins.map((pin, index) => (
         <div
           key={pin.id}

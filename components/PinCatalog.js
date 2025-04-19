@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { FaCamera, FaSort, FaCalendarAlt } from 'react-icons/fa';
+import { FaCamera, FaSort, FaCalendarAlt, FaSearchMinus, FaSearchPlus } from 'react-icons/fa';
 import HeaderNavigation from './HeaderNavigation';
 import StatusFilters from './StatusFilters';
 import FilterModal from './FilterModal';
@@ -31,6 +31,8 @@ export default function PinCatalog() {
     wishlist: false,
     underReview: false
   });
+  // Add zoom level state (default: 3 = current view)
+  const [zoomLevel, setZoomLevel] = useState(3);
 
   // Filter state
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -496,6 +498,11 @@ export default function PinCatalog() {
     setShowExportModal(true);
   }, []);
 
+  // Handle zoom level change
+  const handleZoomChange = useCallback((e) => {
+    setZoomLevel(parseInt(e.target.value));
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-800 text-white">
       <HeaderNavigation
@@ -512,7 +519,25 @@ export default function PinCatalog() {
       />
 
       <div className="px-2 sm:px-6 py-4">
-        <div className="flex justify-end items-center mb-4">
+        <div className="flex justify-between items-center mb-4">
+          {/* Zoom Slider - Left Side */}
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center bg-gray-700 rounded-lg px-3 py-1">
+              <FaSearchMinus className="text-gray-400 text-xs mr-1" />
+              <input
+                type="range"
+                min="1"
+                max="6"
+                value={zoomLevel}
+                onChange={handleZoomChange}
+                className="w-24 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                title="Adjust number of pins per row"
+              />
+              <FaSearchPlus className="text-gray-400 text-xs ml-1" />
+            </div>
+          </div>
+          
+          {/* Action Buttons - Right Side */}
           <div className="flex items-center space-x-2">
             <button
               onClick={handleExportClick}
@@ -625,6 +650,7 @@ export default function PinCatalog() {
           contentRef={contentRef}
           onStatusChange={(updatedPin, currentIndex) => handlePinUpdate(updatedPin, currentIndex)}
           lastPinElementRef={lastPinElementRef}
+          zoomLevel={zoomLevel}
         />
       </div>
 
