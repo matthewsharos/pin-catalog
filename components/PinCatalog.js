@@ -11,19 +11,6 @@ import PinModal from './PinModal';
 import AddPinModal from './AddPinModal';
 import ExportModal from './ExportModal';
 
-// Add debounce utility function
-const debounce = (func, wait) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
-
 export default function PinCatalog() {
   // State
   const [pins, setPins] = useState([]);
@@ -44,8 +31,6 @@ export default function PinCatalog() {
     wishlist: false,
     underReview: false
   });
-  // Add a flag to track if filters are being updated
-  const [isFilterUpdating, setIsFilterUpdating] = useState(false);
 
   // Filter state
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -68,33 +53,7 @@ export default function PinCatalog() {
   const searchInputRef = useRef(null);
   const observer = useRef(null);
   const abortControllerRef = useRef(null);
-  const filterStateRef = useRef({
-    statusFilters,
-    searchQuery,
-    filterCategories,
-    filterOrigins,
-    filterSeries,
-    filterIsLimitedEdition,
-    filterIsMystery,
-    yearFilters,
-    sortOption
-  });
-
-  // Update the ref whenever filter state changes
-  useEffect(() => {
-    filterStateRef.current = {
-      statusFilters,
-      searchQuery,
-      filterCategories,
-      filterOrigins,
-      filterSeries,
-      filterIsLimitedEdition,
-      filterIsMystery,
-      yearFilters,
-      sortOption
-    };
-  }, [statusFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, sortOption]);
-
+  
   const lastPinElementRef = useCallback(node => {
     if (loading) return;
     if (observer.current) observer.current.disconnect();
@@ -120,26 +79,23 @@ export default function PinCatalog() {
       
       setLoading(true);
       
-      // Use the current filter state from the ref to avoid closure issues
-      const currentFilterState = filterStateRef.current;
-      
       const params = new URLSearchParams();
       params.append('page', pageNum);
-      params.append('search', currentFilterState.searchQuery);
+      params.append('search', searchQuery);
       
-      if (currentFilterState.statusFilters.collected) params.append('collected', 'true');
-      if (currentFilterState.statusFilters.uncollected) params.append('uncollected', 'true');
-      if (currentFilterState.statusFilters.wishlist) params.append('wishlist', 'true');
-      if (currentFilterState.statusFilters.underReview) params.append('underReview', 'true');
-      if (currentFilterState.statusFilters.all) params.append('all', 'true');
+      if (statusFilters.collected) params.append('collected', 'true');
+      if (statusFilters.uncollected) params.append('uncollected', 'true');
+      if (statusFilters.wishlist) params.append('wishlist', 'true');
+      if (statusFilters.underReview) params.append('underReview', 'true');
+      if (statusFilters.all) params.append('all', 'true');
 
-      if (currentFilterState.filterCategories.length) params.append('categories', currentFilterState.filterCategories.join(','));
-      if (currentFilterState.filterOrigins.length) params.append('origins', currentFilterState.filterOrigins.join(','));
-      if (currentFilterState.filterSeries.length) params.append('series', currentFilterState.filterSeries.join(','));
-      if (currentFilterState.filterIsLimitedEdition) params.append('isLimitedEdition', 'true');
-      if (currentFilterState.filterIsMystery) params.append('isMystery', 'true');
-      if (currentFilterState.yearFilters.length) params.append('years', currentFilterState.yearFilters.join(','));
-      params.append('sort', currentFilterState.sortOption);
+      if (filterCategories.length) params.append('categories', filterCategories.join(','));
+      if (filterOrigins.length) params.append('origins', filterOrigins.join(','));
+      if (filterSeries.length) params.append('series', filterSeries.join(','));
+      if (filterIsLimitedEdition) params.append('isLimitedEdition', 'true');
+      if (filterIsMystery) params.append('isMystery', 'true');
+      if (yearFilters.length) params.append('years', yearFilters.join(','));
+      params.append('sort', sortOption);
 
       const response = await fetch(`/api/pins?${params.toString()}`, { signal });
       
@@ -169,18 +125,9 @@ export default function PinCatalog() {
       // Only update loading state if the request wasn't aborted
       if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
         setLoading(false);
-        setIsFilterUpdating(false);
       }
     }
-  }, []);
-
-  // Debounced version of fetchPins for search and rapid filter changes
-  const debouncedFetchPins = useCallback(
-    debounce((pageNum, append) => {
-      fetchPins(pageNum, append);
-    }, 300),
-    [fetchPins]
-  );
+  }, [searchQuery, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, sortOption]);
 
   // Fetch available filters with abort controller
   const fetchAvailableFilters = useCallback(async () => {
@@ -194,27 +141,26 @@ export default function PinCatalog() {
       abortControllerRef.current = new AbortController();
       const signal = abortControllerRef.current.signal;
       
-      const currentFilterState = filterStateRef.current;
-      
       const params = new URLSearchParams();
       params.append('filtersOnly', 'true');
       
       // Add all current filter states to get dynamic filter options
-      if (currentFilterState.statusFilters.collected) params.append('collected', 'true');
-      if (currentFilterState.statusFilters.uncollected) params.append('uncollected', 'true');
-      if (currentFilterState.statusFilters.wishlist) params.append('wishlist', 'true');
-      if (currentFilterState.statusFilters.underReview) params.append('underReview', 'true');
-      if (currentFilterState.statusFilters.all) params.append('all', 'true');
-
-      if (currentFilterState.searchQuery) params.append('search', currentFilterState.searchQuery);
+      if (statusFilters.collected) params.append('collected', 'true');
+      if (statusFilters.uncollected) params.append('uncollected', 'true');
+      if (statusFilters.wishlist) params.append('wishlist', 'true');
+      if (statusFilters.underReview) params.append('underReview', 'true');
+      if (statusFilters.all) params.append('all', 'true');
+      
+      // Add current search query
+      if (searchQuery) params.append('search', searchQuery);
       
       // Add current filter selections to get dynamic options
-      if (currentFilterState.filterCategories.length) params.append('categories', currentFilterState.filterCategories.join(','));
-      if (currentFilterState.filterOrigins.length) params.append('origins', currentFilterState.filterOrigins.join(','));
-      if (currentFilterState.filterSeries.length) params.append('series', currentFilterState.filterSeries.join(','));
-      if (currentFilterState.filterIsLimitedEdition) params.append('isLimitedEdition', 'true');
-      if (currentFilterState.filterIsMystery) params.append('isMystery', 'true');
-      if (currentFilterState.yearFilters.length) params.append('years', currentFilterState.yearFilters.join(','));
+      if (filterCategories.length) params.append('categories', filterCategories.join(','));
+      if (filterOrigins.length) params.append('origins', filterOrigins.join(','));
+      if (filterSeries.length) params.append('series', filterSeries.join(','));
+      if (filterIsLimitedEdition) params.append('isLimitedEdition', 'true');
+      if (filterIsMystery) params.append('isMystery', 'true');
+      if (yearFilters.length) params.append('years', yearFilters.join(','));
 
       const response = await fetch(`/api/pins?${params.toString()}`, { signal });
       
@@ -246,15 +192,7 @@ export default function PinCatalog() {
         setAvailableYears([]);
       }
     }
-  }, []);
-
-  // Debounced version of fetchAvailableFilters
-  const debouncedFetchAvailableFilters = useCallback(
-    debounce(() => {
-      fetchAvailableFilters();
-    }, 300),
-    [fetchAvailableFilters]
-  );
+  }, [statusFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters]);
 
   // Effects
   // Initial load
@@ -273,37 +211,34 @@ export default function PinCatalog() {
   // Fetch filters when modal is opened
   useEffect(() => {
     if (showFilterModal) {
-      debouncedFetchAvailableFilters();
+      fetchAvailableFilters();
     }
-  }, [showFilterModal, debouncedFetchAvailableFilters]);
+  }, [showFilterModal, fetchAvailableFilters]);
   
   // Fetch years when dropdown is opened
   useEffect(() => {
     if (showYearDropdown) {
-      debouncedFetchAvailableFilters();
+      fetchAvailableFilters();
     }
-  }, [showYearDropdown, debouncedFetchAvailableFilters]);
+  }, [showYearDropdown, fetchAvailableFilters]);
 
   // Update available filters when filter selections change
   useEffect(() => {
-    debouncedFetchAvailableFilters();
-  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, debouncedFetchAvailableFilters]);
+    fetchAvailableFilters();
+  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, fetchAvailableFilters]);
 
   // Load more pins when page changes
   useEffect(() => {
     if (page > 1) {
-      debouncedFetchPins(page, true);
+      fetchPins(page, true);
     }
-  }, [page, debouncedFetchPins]);
+  }, [page, fetchPins]);
 
   // Refresh pins when filters change
   useEffect(() => {
-    if (!isFilterUpdating) {
-      setIsFilterUpdating(true);
-      setPage(1);
-      debouncedFetchPins(1, false);
-    }
-  }, [statusFilters, sortOption, yearFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, debouncedFetchPins]);
+    setPage(1);
+    fetchPins(1, false);
+  }, [statusFilters, sortOption, yearFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, fetchPins]);
 
   // Add click outside listener for dropdowns
   useEffect(() => {
@@ -348,33 +283,18 @@ export default function PinCatalog() {
     setYearFilters([]);
     setPage(1);
     
-    // Update the filter state ref immediately
-    filterStateRef.current = {
-      statusFilters: {
-        all: true,
-        collected: false,
-        uncollected: false,
-        wishlist: false,
-        underReview: false
-      },
-      searchQuery: '',
-      filterCategories: [],
-      filterOrigins: [],
-      filterSeries: [],
-      filterIsLimitedEdition: false,
-      filterIsMystery: false,
-      yearFilters: [],
-      sortOption
-    };
-    
     // Force an immediate fetch with the cleared filters
-    setIsFilterUpdating(true);
     fetchPins(1, false);
-  }, [sortOption, fetchPins]);
+  }, [fetchPins]);
 
   const handleStatusClick = useCallback((status, event) => {
     event.preventDefault();
     const multiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
+    
+    // Cancel any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     
     setStatusFilters(prev => {
       let newFilters = { ...prev };
@@ -411,47 +331,69 @@ export default function PinCatalog() {
         });
       }
       
-      // Update the filter state ref immediately
-      filterStateRef.current = {
-        ...filterStateRef.current,
-        statusFilters: newFilters
-      };
-      
       return newFilters;
     });
     
     setPage(1);
-    setIsFilterUpdating(true);
   }, []);
 
   const handleFilterChange = useCallback((type, value) => {
+    // Cancel any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
     switch (type) {
       case 'categories':
         setFilterCategories(value || []);
-        // Update ref immediately
-        filterStateRef.current.filterCategories = value || [];
         break;
       case 'origins':
         setFilterOrigins(value || []);
-        // Update ref immediately
-        filterStateRef.current.filterOrigins = value || [];
         break;
       case 'series':
         setFilterSeries(value || []);
-        // Update ref immediately
-        filterStateRef.current.filterSeries = value || [];
         break;
     }
     setPage(1);
-    setIsFilterUpdating(true);
   }, []);
 
   const handleSearchChange = useCallback((value) => {
+    // Cancel any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
     setSearchQuery(value);
-    // Update ref immediately
-    filterStateRef.current.searchQuery = value;
     setPage(1);
-    setIsFilterUpdating(true);
+  }, []);
+
+  const handleYearChange = useCallback((year) => {
+    // Cancel any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    setYearFilters(prev => {
+      // If the year is already in the array, remove it
+      if (prev.includes(year)) {
+        return prev.filter(y => y !== year);
+      }
+      // Otherwise, add it to the array
+      return [...prev, year];
+    });
+    
+    setPage(1);
+  }, []);
+
+  const handleSortChange = useCallback((option) => {
+    // Cancel any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    setSortOption(option);
+    setShowSortDropdown(false);
+    setPage(1);
   }, []);
 
   const handlePinUpdate = useCallback((updatedPin, currentIndex) => {
@@ -528,44 +470,6 @@ export default function PinCatalog() {
 
   const handleScrollToTop = useCallback(() => {
     contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
-  const handleYearChange = useCallback((year) => {
-    setYearFilters(prev => {
-      let newYearFilters;
-      // If the year is already in the array, remove it
-      if (prev.includes(year)) {
-        newYearFilters = prev.filter(y => y !== year);
-      } else {
-        // Otherwise, add it to the array
-        newYearFilters = [...prev, year];
-      }
-      
-      // Update the filter state ref immediately
-      filterStateRef.current = {
-        ...filterStateRef.current,
-        yearFilters: newYearFilters
-      };
-      
-      return newYearFilters;
-    });
-    
-    setPage(1);
-    setIsFilterUpdating(true);
-  }, []);
-
-  const handleSortChange = useCallback((option) => {
-    setSortOption(option);
-    
-    // Update the filter state ref immediately
-    filterStateRef.current = {
-      ...filterStateRef.current,
-      sortOption: option
-    };
-    
-    setShowSortDropdown(false);
-    setPage(1);
-    setIsFilterUpdating(true);
   }, []);
 
   const handlePinNavigation = useCallback((direction, currentPin) => {
