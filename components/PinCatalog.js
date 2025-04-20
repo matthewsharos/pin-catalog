@@ -483,6 +483,11 @@ export default function PinCatalog() {
   }, [fetchPins]);
 
   const handleStatusClick = useCallback((status, event) => {
+    // Cancel any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
     setStatusFilters(prevFilters => {
       // Create a copy of the current filters
       const newFilters = { ...prevFilters };
@@ -533,7 +538,18 @@ export default function PinCatalog() {
     
     // Reset page to 1 when changing filters
     setPage(1);
-  }, []);
+    
+    // Always fetch fresh data from the server when changing status filters
+    // This ensures that all updated pins are correctly displayed
+    setTimeout(() => {
+      // Clear the current pins to show loading state
+      setPins([]);
+      setLoading(true);
+      
+      // Fetch fresh data from the server
+      fetchPins(1, false);
+    }, 50);
+  }, [fetchPins]);
 
   const handleFilterChange = useCallback((type, value) => {
     // Cancel any in-flight requests
