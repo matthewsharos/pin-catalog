@@ -70,7 +70,6 @@ export default function EditTagsModal({ pin, onClose, onSave }) {
     try {
       setLoading(true);
       await axios.put(`/api/pins/${pin.id}`, {
-        ...pin,
         tags: selectedTags
       });
       
