@@ -196,6 +196,25 @@ export default function PinCatalog() {
     }, 300);
   }, [fetchPins]);
 
+  // Fetch available filters
+  const fetchAvailableFilters = useCallback(async () => {
+    if (!initialized) return;
+
+    try {
+      const response = await fetch('/api/pins?filtersOnly=true');
+      if (!response.ok) {
+        throw new Error('Failed to fetch filters');
+      }
+      const data = await response.json();
+      setAvailableCategories(data.categories || []);
+      setAvailableOrigins(data.origins || []);
+      setAvailableSeries(data.series || []);
+      setAvailableYears(data.years || []);
+    } catch (error) {
+      console.error('Error fetching filters:', error);
+    }
+  }, [initialized]);
+
   // Effect for filter changes
   useEffect(() => {
     updateFilters();
