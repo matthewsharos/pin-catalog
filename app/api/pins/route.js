@@ -137,7 +137,7 @@ export async function GET(req) {
     if (tag && tag !== '') {
       if (tag === 'No Tags') {
         where.tags = {
-          isEmpty: true
+          equals: []  // This will match pins where tags is an empty array
         };
       } else {
         where.tags = {
