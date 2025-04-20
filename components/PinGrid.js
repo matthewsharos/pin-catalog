@@ -1,6 +1,6 @@
 "use client";
 
-import { FaTimes, FaHeart, FaStar } from 'react-icons/fa';
+import { FaTimes, FaHeart, FaStar, FaCheck } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 
 export default function PinGrid({
@@ -148,7 +148,9 @@ export default function PinGrid({
               {/* Status Indicator */}
               <div className="absolute top-2 left-2 z-10">
                 {pin.isCollected && (
-                  <div className="bg-green-600 text-white p-1 rounded-full w-3 h-3"></div>
+                  <div className="bg-green-600 text-white p-1 rounded-full">
+                    <FaCheck size={12} />
+                  </div>
                 )}
                 {!pin.isCollected && pin.isWishlist && (
                   <div className="bg-blue-400 text-white p-1 rounded-full">
@@ -156,9 +158,7 @@ export default function PinGrid({
                   </div>
                 )}
                 {!pin.isCollected && !pin.isWishlist && pin.isDeleted && (
-                  <div className="bg-yellow-600 text-white p-1 rounded-full">
-                    <FaTimes size={12} />
-                  </div>
+                  <div className="bg-yellow-600 text-white p-1 rounded-full w-3 h-3"></div>
                 )}
                 {pin.isUnderReview && !pin.isCollected && !pin.isWishlist && !pin.isDeleted && (
                   <div className="bg-amber-500 text-white p-1 rounded-full">
@@ -272,7 +272,7 @@ export default function PinGrid({
                   } ${flashingButtons[`${pin.id}-uncollected`] ? 'animate-pulse-yellow' : ''}`}
                   title="Mark as Uncollected"
                 >
-                  <FaTimes className="mx-auto" />
+                  <div className="bg-yellow-600 w-3 h-3 mx-auto rounded-full"></div>
                 </button>
                 <button
                   onClick={(e) => handleStatusChange(e, pin, 'underReview')}
