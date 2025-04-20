@@ -16,7 +16,6 @@ export default function TagsPage() {
   const [error, setError] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteAllConfirmOpen, setDeleteAllConfirmOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter tags based on search query
@@ -92,28 +91,6 @@ export default function TagsPage() {
     }
   };
 
-  // Delete all tags from all pins
-  const handleDeleteAllTags = async () => {
-    try {
-      setLoading(true);
-      
-      // Pass an empty array to delete all tags from all pins
-      await axios.delete('/api/tags', { data: { tags: [] } });
-      
-      // Clear the tags list
-      setTags([]);
-      setSelectedTags([]);
-      
-      toast.success('All tags have been deleted from all pins');
-      setDeleteAllConfirmOpen(false);
-    } catch (err) {
-      console.error('Error deleting all tags:', err);
-      toast.error('Failed to delete all tags');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Load tags on component mount
   useEffect(() => {
     fetchTags();
@@ -153,16 +130,7 @@ export default function TagsPage() {
 
       {/* Create Tag Form */}
       <div className="bg-gray-800 rounded-lg p-6 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-white">Create New Tag</h2>
-          <button
-            onClick={() => setDeleteAllConfirmOpen(true)}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
-            disabled={loading || tags.length === 0}
-          >
-            <FaTrash className="mr-2" /> Delete All Tags
-          </button>
-        </div>
+        <h2 className="text-xl font-semibold text-white mb-4">Create New Tag</h2>
         <form onSubmit={handleCreateTag} className="flex space-x-2">
           <input
             type="text"
@@ -283,35 +251,6 @@ export default function TagsPage() {
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete Tags
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete All Tags Confirmation Modal */}
-      {deleteAllConfirmOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-semibold text-white mb-4">Delete All Tags</h2>
-            <p className="text-gray-300 mb-6">
-              Are you sure you want to delete <span className="text-red-400">ALL {tags.length} tags</span> from the database? 
-              This will remove all tags from all pins regardless of their status.
-              <br /><br />
-              <span className="text-red-400 font-bold">WARNING: This action cannot be undone!</span>
-            </p>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setDeleteAllConfirmOpen(false)}
-                className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteAllTags}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Delete All Tags
               </button>
             </div>
           </div>
