@@ -10,63 +10,51 @@ export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
 
-    // Extract query parameters
-    const page = parseInt(searchParams.get('page')) || 1;
-    const pageSize = parseInt(searchParams.get('pageSize')) || 100;
-    const search = searchParams.get('search');
-    const sort = searchParams.get('sort');
+    // Parse query parameters
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '100');
+    const search = searchParams.get('search') || '';
     const tag = searchParams.get('tag');
-    const filtersOnly = searchParams.get('filtersOnly') === 'true';
-    const categories = searchParams.get('categories')?.split(',').filter(Boolean);
-    const origins = searchParams.get('origins')?.split(',').filter(Boolean);
-    const series = searchParams.get('series')?.split(',').filter(Boolean);
-    const years = searchParams.get('years')?.split(',').map(Number).filter(Boolean);
-    const isLimitedEdition = searchParams.get('isLimitedEdition') === 'true';
-    const isMystery = searchParams.get('isMystery') === 'true';
+    const sort = searchParams.get('sort') || 'Recently Updated';
+    
+    // Parse array parameters
+    const years = searchParams.get('years')?.split(',').filter(Boolean).map(Number) || [];
+    const categories = searchParams.get('categories')?.split(',').filter(Boolean) || [];
+    const origins = searchParams.get('origins')?.split(',').filter(Boolean) || [];
+    const series = searchParams.get('series')?.split(',').filter(Boolean) || [];
 
-    // Status filters
-    const all = searchParams.get('all') === 'true';
-    const collected = searchParams.get('collected') === 'true';
-    const uncollected = searchParams.get('uncollected') === 'true';
-    const wishlist = searchParams.get('wishlist') === 'true';
-    const underReview = searchParams.get('underReview') === 'true';
-
-    // If filtersOnly is true, fetch available filters
-    if (filtersOnly) {
-      try {
-        // Fetch distinct values for each filter type
-        const [categoriesResult, originsResult, seriesResult, yearsResult] = await Promise.all([
-          prisma.$queryRaw`SELECT DISTINCT unnest(categories) as value FROM "Pin" WHERE categories IS NOT NULL ORDER BY value`,
-          prisma.$queryRaw`SELECT DISTINCT unnest(origins) as value FROM "Pin" WHERE origins IS NOT NULL ORDER BY value`,
-          prisma.$queryRaw`SELECT DISTINCT unnest(series) as value FROM "Pin" WHERE series IS NOT NULL ORDER BY value`,
-          prisma.$queryRaw`SELECT DISTINCT year FROM "Pin" WHERE year IS NOT NULL ORDER BY year DESC`
-        ]);
-
-        // Process the results safely
-        const filters = {
-          categories: categoriesResult.map(r => r.value).filter(Boolean),
-          origins: originsResult.map(r => r.value).filter(Boolean),
-          series: seriesResult.map(r => r.value).filter(Boolean),
-          years: yearsResult.map(r => r.year).filter(Boolean)
-        };
-
-        return NextResponse.json(filters);
-      } catch (error) {
-        console.error('Error fetching filters:', error);
-        // Return empty filters as fallback
-        return NextResponse.json({
-          categories: [],
-          origins: [],
-          series: [],
-          years: []
-        });
-      }
+    // Handle sort parameter
+    let orderBy;
+    switch (sort) {
+      case 'Recently Updated':
+        orderBy = { updatedAt: 'desc' };
+        break;
+      case 'Pin ID':
+        orderBy = { pinId: 'asc' };
+        break;
+      case 'Name':
+        orderBy = { pinName: 'asc' };
+        break;
+      case 'Year':
+        orderBy = [{ year: 'desc' }, { pinId: 'asc' }];
+        break;
+      default:
+        orderBy = { updatedAt: 'desc' };
     }
 
     // Build optimized where clause
     const whereConditions = [];
 
     // Handle status filters
+    const all = searchParams.get('all') === 'true';
+    const collected = searchParams.get('collected') === 'true';
+    const uncollected = searchParams.get('uncollected') === 'true';
+    const wishlist = searchParams.get('wishlist') === 'true';
+    const underReview = searchParams.get('underReview') === 'true';
+    const isLimitedEdition = searchParams.get('isLimitedEdition');
+    const isMystery = searchParams.get('isMystery');
+
+    // If no specific status is selected (all=true), show all pins
     if (all) {
       // No status filter needed, show everything
     } else if (collected || uncollected || wishlist || underReview) {
@@ -114,20 +102,6 @@ export async function GET(req) {
     // Combine all conditions
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
-    // Determine sort order
-    let orderBy = [{ updatedAt: 'desc' }];
-    switch (sort) {
-      case 'Recently Added':
-        orderBy = [{ createdAt: 'desc' }];
-        break;
-      case 'Name':
-        orderBy = [{ pinName: 'asc' }];
-        break;
-      case 'Year':
-        orderBy = [{ year: 'desc' }, { pinName: 'asc' }];
-        break;
-    }
-
     // Fetch total count and pins in parallel
     try {
       const [total, pins] = await Promise.all([
@@ -149,7 +123,7 @@ export async function GET(req) {
             updatedAt: true,
             tags: true,
             series: true,
-            origin: true,
+            origins: true,
             categories: true,
             releaseDate: true,
             pinpopUrl: true
@@ -163,13 +137,13 @@ export async function GET(req) {
         throw new Error(`Database error: ${error.message}`);
       });
 
-      // Ensure tags are always an array
+      // Ensure array fields are always arrays
       const processedPins = pins.map(pin => ({
         ...pin,
         tags: Array.isArray(pin.tags) ? pin.tags : [],
         categories: Array.isArray(pin.categories) ? pin.categories : [],
         origins: Array.isArray(pin.origins) ? pin.origins : [],
-        series: Array.isArray(pin.series) ? [pin.series] : []
+        series: Array.isArray(pin.series) ? pin.series : []
       }));
 
       const totalPages = Math.ceil(total / pageSize);
