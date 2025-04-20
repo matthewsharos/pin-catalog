@@ -154,20 +154,44 @@ export default function PinCatalog() {
       const response = await Promise.race([
         fetch(`/api/pins?${params.toString()}`, { signal: controller.signal }),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Request timeout')), 10000)
+          setTimeout(() => reject(new Error('Request timeout - database query taking too long')), 30000)
         )
       ]);
 
       if (!response.ok) {
-        throw new Error('Failed to fetch pins');
+        const errorData = await response.json();
+        console.error('Pin API error response:', errorData);
+        throw new Error(`Failed to fetch pins: ${JSON.stringify(errorData)}`);
       }
 
+      // Parse response
       const data = await response.json();
+      console.log('Pins data received:', data);
+
+      // Ensure each pin has the expected structure
+      const processedData = {
+        ...data,
+        pins: data.pins.map(pin => ({
+          ...pin,
+          // Ensure tags is always an array
+          tags: Array.isArray(pin.tags) ? pin.tags : [],
+          // Convert single values to arrays for UI consistency
+          series: pin.series ? [pin.series] : [],
+          origins: pin.origin ? [pin.origin] : [],
+          categories: [] // Empty array since we don't have categories
+        }))
+      };
 
       // Update pins state
       setPins(prevPins => ({
-        data: append ? [...prevPins.data, ...data.data] : data.data,
-        pagination: data.pagination
+        ...prevPins,
+        data: append ? [...prevPins.data, ...processedData.pins] : processedData.pins,
+        pagination: {
+          page: pageNum,
+          totalPages: processedData.totalPages,
+          hasMore: processedData.hasMore
+        },
+        total: processedData.total
       }));
     } catch (error) {
       if (error.name === 'AbortError') return;
@@ -203,7 +227,9 @@ export default function PinCatalog() {
     try {
       const response = await fetch('/api/pins?filtersOnly=true');
       if (!response.ok) {
-        throw new Error('Failed to fetch filters');
+        const errorData = await response.json();
+        console.error('Filter API error response:', errorData);
+        throw new Error(`Failed to fetch filters: ${JSON.stringify(errorData)}`);
       }
       const data = await response.json();
       setAvailableCategories(data.categories || []);
@@ -212,6 +238,7 @@ export default function PinCatalog() {
       setAvailableYears(data.years || []);
     } catch (error) {
       console.error('Error fetching filters:', error);
+      toast.error(`Filter fetch error: ${error.message || 'Unknown error'}`);
     }
   }, [initialized]);
 

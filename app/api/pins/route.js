@@ -21,59 +21,90 @@ export async function GET(req) {
     // If filtersOnly is true, fetch available filters
     if (filtersOnly) {
       try {
-        // First check database connection
-        await prisma.$connect();
-
-        // Use simpler queries first to debug
-        const categoriesResult = await prisma.pin.findMany({
-          select: {
-            categories: true
-          },
-          where: {
-            categories: {
-              isEmpty: false
-            }
-          }
+        console.log('Fetching filters - starting process');
+        
+        // Try to get a single pin first to verify database connection
+        const testPin = await prisma.pin.findFirst().catch(e => {
+          console.error('Database connection test failed:', e);
+          throw new Error('Database connection failed');
         });
 
-        console.log('Categories query result:', categoriesResult);
-
-        const filters = {
-          categories: [...new Set(categoriesResult.flatMap(p => p.categories || []))].filter(Boolean).sort(),
-          origins: [],
-          series: [],
-          years: []
-        };
-
-        // Log the processed filters
-        console.log('Processed filters:', filters);
-
-        return NextResponse.json(filters);
-      } catch (error) {
-        // Log the full error object
-        console.error('Full error object:', error);
-        console.error('Error stack:', error.stack);
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        
-        if (error instanceof Error) {
-          return NextResponse.json({ 
-            error: 'Failed to fetch filters',
-            name: error.name,
-            message: error.message,
-            stack: error.stack,
-            timestamp: new Date().toISOString(),
-            path: '/api/pins?filtersOnly=true'
-          }, { status: 500 });
-        } else {
-          return NextResponse.json({ 
-            error: 'Failed to fetch filters',
-            details: 'Unknown error type',
-            value: String(error),
-            timestamp: new Date().toISOString(),
-            path: '/api/pins?filtersOnly=true'
-          }, { status: 500 });
+        if (!testPin) {
+          console.log('No pins found in database');
+          return NextResponse.json({
+            categories: [],
+            series: [],
+            origins: [],
+            years: []
+          });
         }
+
+        try {
+          // Get all distinct values
+          const pins = await prisma.pin.findMany({
+            select: {
+              series: true,
+              origin: true,
+              year: true
+            }
+          });
+
+          // Log raw data for debugging
+          console.log('Raw pins data:', JSON.stringify(pins, null, 2));
+
+          // Process the data safely
+          const allSeries = new Set();
+          const allOrigins = new Set();
+          const allYears = new Set();
+
+          pins.forEach(pin => {
+            // Handle series as a single string
+            if (pin.series) {
+              allSeries.add(pin.series);
+            }
+            
+            // Handle origin as a single string
+            if (pin.origin) {
+              allOrigins.add(pin.origin);
+            }
+            
+            if (typeof pin.year === 'number') {
+              allYears.add(pin.year);
+            }
+          });
+
+          const filters = {
+            categories: [], // No categories in the schema
+            series: Array.from(allSeries).sort(),
+            origins: Array.from(allOrigins).sort(),
+            years: Array.from(allYears).sort((a, b) => b - a)
+          };
+
+          // Log processed filters
+          console.log('Processed filters:', filters);
+
+          return NextResponse.json(filters);
+        } catch (queryError) {
+          console.error('Error querying filters:', queryError);
+          throw new Error(`Filter query failed: ${queryError.message}`);
+        }
+      } catch (error) {
+        console.error('Error in filters endpoint:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          cause: error.cause ? JSON.stringify(error.cause) : 'No cause',
+          code: error.code || 'No error code'
+        });
+
+        return NextResponse.json({
+          error: 'Failed to fetch filters',
+          name: error.name,
+          message: error.message,
+          details: error.toString(),
+          timestamp: new Date().toISOString(),
+          path: '/api/pins?filtersOnly=true'
+        }, { status: 500 });
       }
     }
     
@@ -153,8 +184,8 @@ export async function GET(req) {
     // Add remaining filters
     if (tag) whereConditions.push({ tags: { has: tag } });
     if (categories?.length) whereConditions.push({ categories: { hasSome: categories } });
-    if (origins?.length) whereConditions.push({ origins: { hasSome: origins } });
-    if (series?.length) whereConditions.push({ series: { hasSome: series } });
+    if (origins?.length) whereConditions.push({ origin: { in: origins } });
+    if (series?.length) whereConditions.push({ series: { in: series } });
     if (years?.length) whereConditions.push({ year: { in: years } });
     if (isLimitedEdition === 'true') whereConditions.push({ isLimitedEdition: true });
     if (isMystery === 'true') whereConditions.push({ isMystery: true });
@@ -164,6 +195,20 @@ export async function GET(req) {
 
     // Fetch total count and pins in parallel
     try {
+      console.log('Executing pin query with where conditions:', JSON.stringify(where));
+      
+      // First check if there are any pins at all
+      const testPin = await prisma.pin.findFirst();
+      if (!testPin) {
+        console.log('No pins found in database');
+        return NextResponse.json({
+          pins: [],
+          total: 0,
+          totalPages: 0,
+          hasMore: false
+        });
+      }
+      
       const [total, pins] = await Promise.all([
         prisma.pin.count({ where }),
         prisma.pin.findMany({
@@ -183,8 +228,7 @@ export async function GET(req) {
             updatedAt: true,
             tags: true,
             series: true,
-            origins: true,
-            categories: true,
+            origin: true,
             releaseDate: true,
             pinpopUrl: true
           },
@@ -192,38 +236,41 @@ export async function GET(req) {
           skip: (page - 1) * pageSize,
           take: pageSize
         })
-      ]).catch(error => {
-        console.error('Database query error:', error);
-        throw new Error(`Database error: ${error.message}`);
-      });
+      ]);
+
+      console.log(`Found ${pins.length} pins out of ${total} total matching pins`);
 
       // Ensure array fields are always arrays
       const processedPins = pins.map(pin => ({
         ...pin,
-        tags: Array.isArray(pin.tags) ? pin.tags : [],
-        categories: Array.isArray(pin.categories) ? pin.categories : [],
-        origins: Array.isArray(pin.origins) ? pin.origins : [],
-        series: Array.isArray(pin.series) ? pin.series : []
+        tags: Array.isArray(pin.tags) ? pin.tags : []
       }));
 
       const totalPages = Math.ceil(total / pageSize);
       const hasMore = page < totalPages;
 
       return NextResponse.json({
-        data: processedPins,
-        pagination: {
-          page,
-          totalPages,
-          total,
-          hasMore
-        }
+        pins: processedPins,
+        total,
+        totalPages,
+        hasMore
       });
     } catch (error) {
-      console.error('Error in pins query:', error);
-      return NextResponse.json({ 
+      console.error('Error fetching pins:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause ? JSON.stringify(error.cause) : 'No cause',
+        code: error.code || 'No error code'
+      });
+
+      return NextResponse.json({
         error: 'Failed to fetch pins',
-        details: error.message,
-        timestamp: new Date().toISOString()
+        name: error.name,
+        message: error.message,
+        details: error.toString(),
+        timestamp: new Date().toISOString(),
+        path: '/api/pins'
       }, { status: 500 });
     }
   } catch (error) {
