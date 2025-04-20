@@ -302,25 +302,11 @@ export async function POST(req) {
         }
       });
       
-      // Create a set of all unique tags
-      const existingTagsSet = new Set();
-      allTags.forEach(pin => {
-        if (pin.tags && Array.isArray(pin.tags)) {
-          pin.tags.forEach(tag => existingTagsSet.add(tag));
-        }
-      });
-      
-      // Filter out tags that don't exist
-      const validTags = pinData.tags.filter(tag => existingTagsSet.has(tag));
-      
-      // Log any invalid tags that were removed
-      const invalidTags = pinData.tags.filter(tag => !existingTagsSet.has(tag));
-      if (invalidTags.length > 0) {
-        console.log(`Removed ${invalidTags.length} invalid tags during pin creation:`, invalidTags);
-      }
-      
-      // Update the data object with only valid tags
-      pinData.tags = validTags;
+      // Get all valid tags from the database
+      const validTags = [...new Set(allTags.reduce((acc, pin) => [...acc, ...pin.tags], []))];
+
+      // Filter out invalid tags
+      pinData.tags = pinData.tags.filter(tag => validTags.includes(tag));
     }
 
     // Create the pin

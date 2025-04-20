@@ -107,6 +107,14 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
       return;
     }
 
+    // Filter out any invalid tags
+    const validTags = manualPinData.tags.filter(tag => availableTags.some(t => t.name === tag));
+    if (validTags.length !== manualPinData.tags.length) {
+      const removedCount = manualPinData.tags.length - validTags.length;
+      toast.warn(`Removed ${removedCount} invalid tag${removedCount !== 1 ? 's' : ''}`);
+      setManualPinData(prev => ({ ...prev, tags: validTags }));
+    }
+
     setLoading(true);
     try {
       let imageUrl = '';
@@ -178,23 +186,26 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
   };
 
   const handleTagToggle = (tag) => {
-    setManualPinData(prev => {
-      const currentTags = [...prev.tags];
-      
-      if (currentTags.includes(tag)) {
-        // Remove tag if already selected
-        return {
-          ...prev,
-          tags: currentTags.filter(t => t !== tag)
-        };
-      } else {
-        // Add tag if not selected
-        return {
-          ...prev,
-          tags: [...currentTags, tag]
-        };
-      }
-    });
+    // Only toggle if it's a valid tag
+    if (availableTags.some(t => t.name === tag)) {
+      setManualPinData(prev => {
+        const currentTags = [...prev.tags];
+        
+        if (currentTags.includes(tag)) {
+          // Remove tag if already selected
+          return {
+            ...prev,
+            tags: currentTags.filter(t => t !== tag)
+          };
+        } else {
+          // Add tag if not selected
+          return {
+            ...prev,
+            tags: [...currentTags, tag]
+          };
+        }
+      });
+    }
   };
 
   const handleInputChange = (e) => {
@@ -499,16 +510,16 @@ export default function AddPinModal({ isOpen, onClose, onPinAdded }) {
                       <div className="flex flex-wrap gap-2">
                         {availableTags.map(tag => (
                           <button
-                            key={tag}
+                            key={tag.name}
                             type="button"
-                            onClick={() => handleTagToggle(tag)}
+                            onClick={() => handleTagToggle(tag.name)}
                             className={`px-2 py-1 text-xs rounded-full ${
-                              manualPinData.tags.includes(tag)
+                              manualPinData.tags.includes(tag.name)
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
                             }`}
                           >
-                            {tag}
+                            {tag.name}
                           </button>
                         ))}
                       </div>

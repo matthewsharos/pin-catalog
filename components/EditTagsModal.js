@@ -29,7 +29,8 @@ export default function EditTagsModal({ pin, onClose, onSave }) {
     // Extract the tag name if it's an object
     const tagName = typeof tag === 'object' ? tag.name : tag;
     
-    if (!selectedTags.includes(tagName)) {
+    // Only add if it's a valid tag from availableTags
+    if (availableTags.some(t => t.name === tagName) && !selectedTags.includes(tagName)) {
       setSelectedTags([...selectedTags, tagName]);
     }
   };
@@ -48,8 +49,9 @@ export default function EditTagsModal({ pin, onClose, onSave }) {
       const response = await axios.post('/api/tags', { tag: newTag.trim() });
       const createdTag = response.data.tag;
       
-      // Add to available tags with count 0
-      setAvailableTags([...availableTags, { name: createdTag, count: 0 }]);
+      // Add to available tags
+      const newTagObj = { name: createdTag, count: 0 };
+      setAvailableTags(prevTags => [...prevTags, newTagObj].sort((a, b) => a.name.localeCompare(b.name)));
       
       // Add to selected tags
       handleAddTag(createdTag);
