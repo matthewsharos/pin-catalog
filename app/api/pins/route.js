@@ -143,7 +143,9 @@ export async function GET(req) {
             isUnderReview: true,
             isLimitedEdition: true,
             isMystery: true,
-            updatedAt: true
+            updatedAt: true,
+            tags: true,
+            series: true
           },
           orderBy,
           skip: (page - 1) * pageSize,

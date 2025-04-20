@@ -71,18 +71,33 @@ export default function EditTagsModal({ pin, onClose, onSave }) {
   const handleSave = async () => {
     try {
       setLoading(true);
-      const response = await axios.put(`/api/pins/${pin.id}`, {
-        ...pin, // Send all existing pin data
-        tags: selectedTags
-      });
+      
+      // Create a copy of the pin data to avoid mutating the original
+      const pinData = { ...pin };
+      
+      // Update the tags
+      pinData.tags = selectedTags;
+      
+      // Send the update request
+      const response = await axios.put(`/api/pins/${pin.id}`, pinData);
+      
+      if (!response.data) {
+        throw new Error('No data received from server');
+      }
       
       const updatedPin = response.data;
+      
+      // Make sure the tags are preserved in the response
+      if (!Array.isArray(updatedPin.tags)) {
+        updatedPin.tags = selectedTags;
+      }
+      
       toast.success('Tags updated successfully');
       onSave(updatedPin);
       onClose();
     } catch (error) {
       console.error('Error updating tags:', error);
-      toast.error('Failed to update tags');
+      toast.error(error.response?.data?.error || 'Failed to update tags');
     } finally {
       setLoading(false);
     }

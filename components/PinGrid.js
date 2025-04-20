@@ -194,11 +194,11 @@ export default function PinGrid({
                 </h3>
                 
                 {/* Display tags if available */}
-                {pin.tags && pin.tags.length > 0 && (
+                {Array.isArray(pin.tags) && pin.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {pin.tags.map((tag, index) => (
+                    {pin.tags.map((tag, tagIndex) => (
                       <span 
-                        key={index} 
+                        key={`${pin.id}-${tagIndex}-${tag}`}
                         className="bg-purple-900 text-white text-xs px-2 py-0.5 rounded-full cursor-pointer hover:bg-purple-700 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent opening the pin modal
