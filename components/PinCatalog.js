@@ -210,6 +210,12 @@ export default function PinCatalog() {
     };
   }, [fetchPins]);
 
+  // Refresh pins when filters change
+  useEffect(() => {
+    setPage(1);
+    fetchPins(1, false);
+  }, [statusFilters, sortOption, yearFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, fetchPins]);
+
   // Fetch filters when modal is opened
   useEffect(() => {
     if (showFilterModal) {
@@ -328,14 +334,10 @@ export default function PinCatalog() {
       }
       
       // Force an immediate fetch with the updated filters
-      setTimeout(() => {
-        fetchPins(1, false);
-      }, 0);
+      setPage(1);
       
       return newFilters;
     });
-    
-    setPage(1);
   }, [fetchPins]);
 
   const handleFilterChange = useCallback((type, value) => {
@@ -356,11 +358,6 @@ export default function PinCatalog() {
         break;
     }
     setPage(1);
-    
-    // Force an immediate fetch with the updated filters
-    setTimeout(() => {
-      fetchPins(1, false);
-    }, 0);
   }, [fetchPins]);
 
   const handleSearchChange = useCallback((value) => {
@@ -371,11 +368,6 @@ export default function PinCatalog() {
     
     setSearchQuery(value);
     setPage(1);
-    
-    // Force an immediate fetch with the updated filters
-    setTimeout(() => {
-      fetchPins(1, false);
-    }, 0);
   }, [fetchPins]);
 
   const handleYearChange = useCallback((year) => {
@@ -394,11 +386,6 @@ export default function PinCatalog() {
     });
     
     setPage(1);
-    
-    // Force an immediate fetch with the updated filters
-    setTimeout(() => {
-      fetchPins(1, false);
-    }, 0);
   }, [fetchPins]);
 
   const handleSortChange = useCallback((option) => {
@@ -410,11 +397,6 @@ export default function PinCatalog() {
     setSortOption(option);
     setShowSortDropdown(false);
     setPage(1);
-    
-    // Force an immediate fetch with the updated filters
-    setTimeout(() => {
-      fetchPins(1, false);
-    }, 0);
   }, [fetchPins]);
 
   const handlePinUpdate = useCallback((updatedPin, currentIndex) => {
