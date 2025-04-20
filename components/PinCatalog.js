@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
-import { FaCamera, FaSort, FaCalendarAlt, FaSearchMinus, FaSearchPlus, FaTimes } from 'react-icons/fa';
+import { FaCamera, FaSort, FaCalendarAlt, FaSearchMinus, FaSearchPlus, FaTimes, FaCheck, FaHeart, FaQuestion } from 'react-icons/fa';
 import HeaderNavigation from './HeaderNavigation';
 import StatusFilters from './StatusFilters';
 import FilterModal from './FilterModal';
@@ -996,3 +996,55 @@ export default function PinCatalog() {
     </div>
   );
 }
+
+const PinGrid = ({ pins, loading }) => {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">
+      {pins.map((pin) => (
+        <div key={pin.id} className="relative group">
+          <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200">
+            <Image
+              src={pin.imageUrl}
+              alt={pin.pinName}
+              width={500}
+              height={500}
+              className="object-cover"
+            />
+          </div>
+          <div className="absolute top-2 left-2 z-10">
+            {pin.isCollected && (
+              <div className="text-green-500">
+                <FaCheck size={20} />
+              </div>
+            )}
+            {pin.isDeleted && (
+              <div className="text-red-500">
+                <FaTimes size={20} />
+              </div>
+            )}
+            {pin.isWishlist && (
+              <div className="text-blue-500">
+                <FaHeart size={20} />
+              </div>
+            )}
+            {pin.isUnderReview && (
+              <div className="text-yellow-500">
+                <FaQuestion size={20} />
+              </div>
+            )}
+          </div>
+          <div className="mt-2">
+            <h3 className="text-sm text-gray-700">{pin.pinName}</h3>
+            <p className="text-sm text-gray-500">{pin.pinId}</p>
+            {pin.year && <p className="text-sm text-gray-500">{pin.year}</p>}
+          </div>
+        </div>
+      ))}
+      {loading && (
+        <div className="col-span-full flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      )}
+    </div>
+  );
+};
