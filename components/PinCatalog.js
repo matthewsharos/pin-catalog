@@ -679,12 +679,11 @@ export default function PinCatalog() {
       // Call the API to update the pin status in the database
       updatePinStatus(updatedPin);
       
-      // Schedule a background refresh after animation completes
-      setTimeout(() => {
-        fetchPins(1, false);
-      }, 500);
+      // We no longer need to refresh the entire catalog
+      // The pin has already been updated in the local state above
+      // or removed if it no longer matches the current filter
     }
-  }, [selectedPin, fetchPins, statusFilters]);
+  }, [selectedPin, statusFilters]);
 
   const updatePinStatus = async (pin) => {
     try {
