@@ -23,6 +23,8 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
     setFormData(updatedPin);
     // Update the pin in the parent component
     onUpdate(updatedPin);
+    // Close the tags modal
+    setShowTagModal(false);
   };
 
   if (!pin) return null;
@@ -35,7 +37,7 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
       const updatedPinData = {
         ...formData,
         comments,
-        tags: pin.tags // Preserve existing tags
+        tags: formData.tags // Preserve existing tags
       };
       
       const response = await fetch(`/api/pins/${pin.id}`, {
@@ -265,7 +267,7 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
           {/* Pin ID and Action Icons */}
           <div className="flex items-center mb-6 text-xs">
             <div className="text-white bg-gray-800 px-3 py-2 rounded-lg mr-2">
-              <span className="font-medium">Pin ID:</span> {pin.pinId || 'No ID'}
+              <span className="font-medium">Pin ID:</span> {formData.pinId || 'No ID'}
             </div>
             <a 
               href={formData.pinpopUrl || '#'} 
@@ -284,9 +286,9 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               >
                 <FaTag size={18} />
               </button>
-              {pin.tags && pin.tags.length > 0 && (
+              {formData.tags && formData.tags.length > 0 && (
                 <div className="ml-2 flex flex-wrap gap-1">
-                  {pin.tags.map((tag, index) => (
+                  {formData.tags.map((tag, index) => (
                     <span key={index} className="bg-purple-900 text-white text-xs px-2 py-0.5 rounded-full">
                       {tag}
                     </span>
