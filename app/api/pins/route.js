@@ -77,6 +77,16 @@ export async function GET(req) {
       if (statusConditions.length > 0) {
         whereConditions.push({ OR: statusConditions });
       }
+    } else {
+      // When "No Status" is selected, show pins that have no true status flags
+      whereConditions.push({
+        AND: [
+          { isCollected: false },
+          { isDeleted: false },
+          { isWishlist: false },
+          { isUnderReview: false }
+        ]
+      });
     }
 
     // Add optimized search condition if search query exists

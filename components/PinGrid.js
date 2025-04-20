@@ -145,28 +145,6 @@ export default function PinGrid({
                 animatingPins[pin.id] ? 'opacity-0 scale-95 translate-y-4' : 'opacity-100 hover:scale-105 md:hover:shadow-xl'
               }`}
             >
-              {/* Status Indicator */}
-              <div className="absolute top-2 left-2 z-10">
-                {pin.isCollected && (
-                  <div className="bg-green-600 text-white p-1 rounded-full">
-                    <FaCheck size={12} />
-                  </div>
-                )}
-                {!pin.isCollected && pin.isWishlist && (
-                  <div className="bg-blue-400 text-white p-1 rounded-full">
-                    <FaHeart size={12} />
-                  </div>
-                )}
-                {!pin.isCollected && !pin.isWishlist && pin.isDeleted && (
-                  <div className="bg-yellow-600 text-white p-1 rounded-full w-3 h-3"></div>
-                )}
-                {pin.isUnderReview && !pin.isCollected && !pin.isWishlist && !pin.isDeleted && (
-                  <div className="bg-amber-500 text-white p-1 rounded-full">
-                    <FaStar size={12} />
-                  </div>
-                )}
-              </div>
-
               {/* Pin ID Tag */}
               <div className="absolute top-2 right-2 z-10 bg-gray-800 bg-opacity-75 text-white text-xs px-1.5 py-0.5 rounded">
                 {pin.pinId || 'No ID'}
@@ -254,7 +232,7 @@ export default function PinGrid({
                   } ${flashingButtons[`${pin.id}-collected`] ? 'animate-pulse-green' : ''}`}
                   title="Mark as Collected"
                 >
-                  <div className="bg-green-600 w-3 h-3 mx-auto rounded-full"></div>
+                  <FaCheck className="mx-auto" />
                 </button>
                 <button
                   onClick={(e) => handleStatusChange(e, pin, 'wishlist')}
@@ -272,7 +250,7 @@ export default function PinGrid({
                   } ${flashingButtons[`${pin.id}-uncollected`] ? 'animate-pulse-yellow' : ''}`}
                   title="Mark as Uncollected"
                 >
-                  <div className="bg-yellow-600 w-3 h-3 mx-auto rounded-full"></div>
+                  <FaTimes className="mx-auto" />
                 </button>
                 <button
                   onClick={(e) => handleStatusChange(e, pin, 'underReview')}

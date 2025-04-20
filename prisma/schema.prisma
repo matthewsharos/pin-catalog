@@ -11,8 +11,9 @@ model Pin {
   id               Int         @id @default(autoincrement())
   pinName          String
   imageUrl         String?
-  series           String?
-  origin           String?
+  series           String[]    @default([])
+  origins          String[]    @default([])
+  categories       String[]    @default([])
   edition          String?
   releaseDate      DateTime?
   tags             String[]
