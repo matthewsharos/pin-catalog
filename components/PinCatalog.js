@@ -58,6 +58,7 @@ export default function PinCatalog() {
   const searchInputRef = useRef(null);
   const observer = useRef(null);
   const abortControllerRef = useRef(null);
+  const searchDebounceTimerRef = useRef(null);
   
   const lastPinElementRef = useCallback(node => {
     if (loading) return;
@@ -129,7 +130,7 @@ export default function PinCatalog() {
         }
       });
       
-      // If request was aborted, just return
+      // If request was aborted, just return without updating state
       if (signal.aborted) {
         console.log('Request was aborted');
         return;
@@ -142,6 +143,13 @@ export default function PinCatalog() {
       }
       
       const data = await response.json();
+      
+      // If request was aborted during the json parsing, just return without updating state
+      if (signal.aborted) {
+        console.log('Request was aborted during JSON parsing');
+        return;
+      }
+      
       console.log('Received data from API:', {
         totalCount: data.totalCount,
         pinsLength: data.pins?.length,
@@ -180,6 +188,8 @@ export default function PinCatalog() {
     } catch (error) {
       if (error.name === 'AbortError') {
         console.log('Fetch aborted');
+        // Don't update loading state here, as a new request might be in progress
+        return;
       } else {
         console.error('Error fetching pins:', error);
         toast.error('Failed to load pins');
@@ -190,9 +200,14 @@ export default function PinCatalog() {
         }
       }
     } finally {
-      // Always set loading to false when the request completes, regardless of abort status
-      setLoading(false);
-      console.log('Setting loading to false');
+      // Only set loading to false if this request wasn't aborted
+      // This prevents flickering when rapidly typing in the search box
+      if (!abortControllerRef.current?.signal.aborted) {
+        setLoading(false);
+        console.log('Setting loading to false');
+      } else {
+        console.log('Not setting loading to false because request was aborted');
+      }
     }
     
     return () => {
@@ -584,23 +599,47 @@ export default function PinCatalog() {
   }, []);
 
   const handleSearchChange = useCallback((value) => {
-    // Cancel any in-flight requests
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    // Update the search query immediately for UI feedback
+    setSearchQuery(value);
+    
+    // Clear any existing debounce timer
+    if (searchDebounceTimerRef.current) {
+      clearTimeout(searchDebounceTimerRef.current);
     }
     
-    // Clear the current pins and show loading state immediately
-    setPins([]);
-    setLoading(true);
-    
-    setSearchQuery(value);
-    setPage(1);
-    
-    // Fetch pins with the new search query after a short delay
-    // to ensure the state is updated
-    setTimeout(() => {
+    // If search is empty, fetch immediately
+    if (!value.trim()) {
+      // Cancel any in-flight requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      // Clear pins and show loading
+      setPins([]);
+      setLoading(true);
+      setPage(1);
+      
+      // Fetch pins with empty search
       fetchPins(1, false);
-    }, 10);
+      return;
+    }
+    
+    // For non-empty searches, debounce the API call to prevent rapid consecutive requests
+    // Only show loading state and clear pins when we're actually going to make the request
+    searchDebounceTimerRef.current = setTimeout(() => {
+      // Cancel any in-flight requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      // Clear pins and show loading
+      setPins([]);
+      setLoading(true);
+      setPage(1);
+      
+      // Fetch pins with the new search query
+      fetchPins(1, false);
+    }, 300); // 300ms debounce time
   }, [fetchPins]);
 
   const handleYearChange = useCallback((year) => {
