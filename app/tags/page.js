@@ -69,7 +69,8 @@ export default function TagsPage() {
       const params = new URLSearchParams();
       params.set('page', pageNum.toString());
       params.set('pageSize', batchSize.toString());
-      params.set('collected', 'true');
+      params.set('status', 'collected'); 
+      params.set('tag', 'No Tags'); 
       
       const response = await axios.get(`/api/pins?${params.toString()}`);
       
