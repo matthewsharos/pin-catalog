@@ -21,11 +21,8 @@ const defaultStatusFilters = {
 
 export default function PinCatalog() {
   // State
-  const [pins, setPins] = useState([]);
-  const [total, setTotal] = useState(0);
+  const [pins, setPins] = useState({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('Recently Updated');
   const [yearFilters, setYearFilters] = useState([]);
@@ -64,12 +61,12 @@ export default function PinCatalog() {
     if (loading) return;
     if (observer.current) observer.current.disconnect();
     observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        setPage(prevPage => prevPage + 1);
+      if (entries[0].isIntersecting && pins.pagination.hasMore) {
+        setPage(pins.pagination.page + 1);
       }
     });
     if (node) observer.current.observe(node);
-  }, [loading, hasMore]);
+  }, [loading, pins.pagination.hasMore]);
 
   // Fetch pins with abort controller
   const fetchPins = useCallback(async (pageNum = 1, append = false) => {
@@ -165,25 +162,14 @@ export default function PinCatalog() {
         return;
       }
       
-      setTotal(data.totalCount || 0);
-      setHasMore(pageNum < data.totalPages);
-      
-      // Only update pins if the request wasn't aborted during the await
-      if (!signal.aborted) {
-        console.log('Updating pins state:', {
-          append,
-          currentLength: pins.length,
-          newLength: append ? pins.length + data.pins.length : data.pins.length
+      setPins(prevPins => {
+        const newPins = append ? { ...prevPins, data: [...prevPins.data, ...data.pins] } : { data: data.pins, pagination: { page: data.currentPage, totalPages: data.totalPages, total: data.totalCount } };
+        console.log('New pins state:', {
+          length: newPins.data.length,
+          firstPin: newPins.data[0]
         });
-        setPins(prevPins => {
-          const newPins = append ? [...prevPins, ...data.pins] : data.pins;
-          console.log('New pins state:', {
-            length: newPins.length,
-            firstPin: newPins[0]
-          });
-          return newPins;
-        });
-      }
+        return newPins;
+      });
       
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -196,7 +182,7 @@ export default function PinCatalog() {
         
         // If there was an error and we're not appending, set pins to empty array
         if (!append) {
-          setPins([]);
+          setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
         }
       }
     } finally {
@@ -304,14 +290,12 @@ export default function PinCatalog() {
     if (!initialized) return;
     
     console.log('PinCatalog initial data fetch:', {
-      pinsLength: pins.length,
-      total,
-      hasMore,
+      pinsLength: pins.data.length,
+      total: pins.pagination.total,
+      hasMore: pins.pagination.hasMore,
       loading,
       statusFilters
     });
-    
-    setPage(1);
     
     // Use a local abort controller that won't be affected by other fetches
     const localController = new AbortController();
@@ -379,9 +363,7 @@ export default function PinCatalog() {
           return;
         }
         
-        setTotal(data.totalCount || 0);
-        setHasMore(1 < data.totalPages);
-        setPins(data.pins);
+        setPins({ data: data.pins, pagination: { page: data.currentPage, totalPages: data.totalPages, total: data.totalCount } });
       } catch (error) {
         if (error.name === 'AbortError') {
           console.log('Initial fetch aborted');
@@ -407,7 +389,7 @@ export default function PinCatalog() {
     
     // Skip the initial render
     const timer = setTimeout(() => {
-      setPage(1);
+      setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
       fetchPins(1, false);
     }, 100);
     
@@ -455,10 +437,10 @@ export default function PinCatalog() {
 
   // Load more pins when page changes
   useEffect(() => {
-    if (page > 1) {
-      fetchPins(page, true);
+    if (pins.pagination.page > 1) {
+      fetchPins(pins.pagination.page, true);
     }
-  }, [page, fetchPins]);
+  }, [pins.pagination.page, fetchPins]);
 
   // Add click outside listener for dropdowns
   useEffect(() => {
@@ -496,7 +478,7 @@ export default function PinCatalog() {
     setFilterIsMystery(false);
     setYearFilters([]);
     setSelectedTag(null);
-    setPage(1);
+    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
     
     // Force an immediate fetch with the cleared filters
     fetchPins(1, false);
@@ -509,7 +491,7 @@ export default function PinCatalog() {
     }
     
     // Clear the current pins and show loading state immediately
-    setPins([]);
+    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
     setLoading(true);
     
     // Update status filters
@@ -562,7 +544,7 @@ export default function PinCatalog() {
     });
     
     // Reset page to 1 when changing filters
-    setPage(1);
+    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
     
     // Directly fetch fresh data from the server with a very short delay
     // to ensure state updates have been processed
@@ -595,7 +577,7 @@ export default function PinCatalog() {
         setFilterSeries(value || []);
         break;
     }
-    setPage(1);
+    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
   }, []);
 
   const handleSearchChange = useCallback((value) => {
@@ -615,9 +597,8 @@ export default function PinCatalog() {
       }
       
       // Clear pins and show loading
-      setPins([]);
+      setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
       setLoading(true);
-      setPage(1);
       
       // Fetch pins with empty search
       fetchPins(1, false);
@@ -633,9 +614,8 @@ export default function PinCatalog() {
       }
       
       // Clear pins and show loading
-      setPins([]);
+      setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
       setLoading(true);
-      setPage(1);
       
       // Fetch pins with the new search query
       fetchPins(1, false);
@@ -656,8 +636,7 @@ export default function PinCatalog() {
       // Otherwise, add it to the array
       return [...prev, year];
     });
-    
-    setPage(1);
+    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
   }, []);
 
   const handleSortChange = useCallback((option) => {
@@ -668,18 +647,18 @@ export default function PinCatalog() {
     
     setSortOption(option);
     setShowSortDropdown(false);
-    setPage(1);
+    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
   }, []);
 
   const handlePinUpdate = useCallback((updatedPin, currentIndex) => {
     // Update the pin in the current view
     setPins(prevPins => {
       // Create a copy of the pins array
-      const newPins = [...prevPins];
+      const newPins = [...prevPins.data];
       
       // Find the pin index
       const pinIndex = newPins.findIndex(pin => pin.id === updatedPin.id);
-      if (pinIndex === -1) return newPins; // Pin not found
+      if (pinIndex === -1) return { data: newPins, pagination: prevPins.pagination }; // Pin not found
       
       // Check if the pin should remain visible based on current filters
       const shouldRemovePin = (() => {
@@ -713,14 +692,14 @@ export default function PinCatalog() {
         
         // Update total count
         setTimeout(() => {
-          setTotal(prev => prev - 1);
+          setPins(prev => ({ data: newPins, pagination: { ...prev.pagination, total: prev.pagination.total - 1 } }));
         }, 300);
         
         // Force a complete refresh after a short delay
         // This ensures the grid layout is properly updated
         setTimeout(() => {
           // Make a shallow copy of the pins array to force a re-render
-          setPins(current => [...current]);
+          setPins(prev => ({ data: [...newPins], pagination: prev.pagination }));
         }, 350);
       } else {
         // Otherwise, update the pin in the array
@@ -745,7 +724,7 @@ export default function PinCatalog() {
         }
       }
       
-      return newPins;
+      return { data: newPins, pagination: prevPins.pagination };
     });
     
     // If this is a status change or tag update, update the pin in the database
@@ -797,12 +776,12 @@ export default function PinCatalog() {
       
       // Update the pin in the local state with the refresh key
       setPins(prevPins => {
-        return prevPins.map(p => {
+        return { data: prevPins.data.map(p => {
           if (p.id === updatedPin.id) {
             return { ...p, ...updatedPin };
           }
           return p;
-        });
+        }), pagination: prevPins.pagination };
       });
       
       // No need to refresh pins immediately since we've already updated the pin
@@ -814,13 +793,11 @@ export default function PinCatalog() {
   };
 
   const handlePinDelete = useCallback((deletedPinId) => {
-    setPins(prevPins => prevPins.filter(pin => pin.id !== deletedPinId));
-    setTotal(prev => prev - 1);
+    setPins(prevPins => ({ data: prevPins.data.filter(pin => pin.id !== deletedPinId), pagination: { ...prevPins.pagination, total: prevPins.pagination.total - 1 } }));
   }, []);
 
   const handleAddPin = useCallback((newPin) => {
-    setPins(prevPins => [newPin, ...prevPins]);
-    setTotal(prev => prev + 1);
+    setPins(prevPins => ({ data: [newPin, ...prevPins.data], pagination: { ...prevPins.pagination, total: prevPins.pagination.total + 1 } }));
   }, []);
 
   const handleScrollToTop = useCallback(() => {
@@ -828,18 +805,18 @@ export default function PinCatalog() {
   }, []);
 
   const handlePinNavigation = useCallback((direction, currentPin) => {
-    const currentIndex = pins.findIndex(p => p.id === currentPin.id);
-    if (currentIndex === -1 || pins.length <= 1) return;
+    const currentIndex = pins.data.findIndex(p => p.id === currentPin.id);
+    if (currentIndex === -1 || pins.data.length <= 1) return;
     
     let newIndex;
     if (direction === 'next') {
-      newIndex = (currentIndex + 1) % pins.length;
+      newIndex = (currentIndex + 1) % pins.data.length;
     } else {
-      newIndex = (currentIndex - 1 + pins.length) % pins.length;
+      newIndex = (currentIndex - 1 + pins.data.length) % pins.data.length;
     }
     
-    setSelectedPin(pins[newIndex]);
-  }, [pins]);
+    setSelectedPin(pins.data[newIndex]);
+  }, [pins.data]);
 
   const handleAddPinClick = useCallback(() => {
     console.log("Add Pin button clicked");
@@ -875,7 +852,7 @@ export default function PinCatalog() {
         statusFilters={statusFilters}
         onStatusClick={handleStatusClick}
         onClearAllFilters={handleClearAllFilters}
-        total={total}
+        total={pins.pagination.total}
         onScrollToTop={handleScrollToTop}
         searchInputRef={searchInputRef}
         onMoreFiltersClick={() => setShowFilterModal(true)}
@@ -900,7 +877,7 @@ export default function PinCatalog() {
                   }
                   
                   // Reset to page 1 and fetch pins with cleared tag filter
-                  setPage(1);
+                  setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
                   setTimeout(() => {
                     fetchPins(1, false);
                   }, 0);
@@ -1038,7 +1015,7 @@ export default function PinCatalog() {
         </div>
 
         <PinGrid
-          pins={pins}
+          pins={pins.data}
           onPinClick={(pin) => setSelectedPin(pin)}
           loading={loading}
           contentRef={contentRef}
@@ -1073,8 +1050,8 @@ export default function PinCatalog() {
           onClose={() => setSelectedPin(null)}
           onUpdate={(updatedPin, currentIndex) => handlePinUpdate(updatedPin, currentIndex)}
           onDelete={handlePinDelete}
-          pins={pins}
-          currentIndex={pins.findIndex(p => p.id === selectedPin.id)}
+          pins={pins.data}
+          currentIndex={pins.data.findIndex(p => p.id === selectedPin.id)}
           onNavigate={handlePinNavigation}
           setSelectedTag={setSelectedTag}
         />
@@ -1092,7 +1069,7 @@ export default function PinCatalog() {
         <ExportModal
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
-          pins={pins}
+          pins={pins.data}
           filters={{
             statusFilters,
             filterCategories,

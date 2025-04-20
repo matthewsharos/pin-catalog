@@ -104,12 +104,13 @@ export async function GET(req) {
       if (underReview) statusConditions.push({ isUnderReview: true });
       
       if (statusConditions.length > 0) {
-        // Use OR for status conditions
+        // Convert the existing where clause to an AND condition
         where = {
-          ...where,
-          OR: [
-            ...(where.OR || []),
-            ...statusConditions
+          AND: [
+            // If we have a search, include it as one condition
+            ...(where.OR ? [{ OR: where.OR }] : []),
+            // Add the status conditions as an OR group
+            { OR: statusConditions }
           ]
         };
       }
@@ -118,11 +119,16 @@ export async function GET(req) {
       // When 'all' is selected, we want pins that don't have any status set
       // Show pins where all status flags are false
       where = {
-        ...where,
-        isCollected: false,
-        isWishlist: false,
-        isDeleted: false,
-        isUnderReview: false
+        AND: [
+          // If we have a search, include it as one condition
+          ...(where.OR ? [{ OR: where.OR }] : []),
+          {
+            isCollected: false,
+            isWishlist: false,
+            isDeleted: false,
+            isUnderReview: false
+          }
+        ]
       };
       console.log('Status filter - ALL filter applied (pins without status)');
     }
