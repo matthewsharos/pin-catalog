@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { FaCamera, FaSort, FaCalendarAlt, FaSearchMinus, FaSearchPlus, FaTimes } from 'react-icons/fa';
 import HeaderNavigation from './HeaderNavigation';
@@ -64,7 +64,35 @@ export default function PinCatalog() {
   const observer = useRef(null);
   const abortControllerRef = useRef(null);
   const searchDebounceTimerRef = useRef(null);
-  
+  const filterTimerRef = useRef(null);
+  const loadingTimerRef = useRef(null);
+
+  // Memoized filter state
+  const filterState = useMemo(() => ({
+    search: searchQuery,
+    sort: sortOption,
+    tag: selectedTag,
+    years: yearFilters,
+    categories: filterCategories,
+    origins: filterOrigins,
+    series: filterSeries,
+    isLimitedEdition: filterIsLimitedEdition,
+    isMystery: filterIsMystery,
+    ...statusFilters
+  }), [
+    searchQuery,
+    sortOption,
+    selectedTag,
+    yearFilters,
+    filterCategories,
+    filterOrigins,
+    filterSeries,
+    filterIsLimitedEdition,
+    filterIsMystery,
+    statusFilters
+  ]);
+
+  // Memoized intersection observer callback
   const lastPinElementRef = useCallback(node => {
     if (loading) return;
     if (observer.current) observer.current.disconnect();
@@ -82,328 +110,145 @@ export default function PinCatalog() {
     if (node) observer.current.observe(node);
   }, [loading, pins.pagination.hasMore]);
 
-  // Fetch pins with abort controller
+  // Optimized fetch pins function
   const fetchPins = useCallback(async (pageNum = 1, append = false) => {
     if (!initialized) return;
 
-    // Only set loading true if this is not an append operation
-    if (!append) {
-      setLoading(true);
+    // Clear any existing loading timer
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
     }
 
-    try {
-      // Create a new abort controller for this request
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      const signal = controller.signal;
-      
-      const params = new URLSearchParams();
-      params.set('page', pageNum.toString());
-      params.set('sort', sortOption);
-      params.set('pageSize', '100');
-      
-      if (searchQuery) params.set('search', searchQuery);
-      
-      // Handle status filters
-      if (statusFilters) {
-        if (statusFilters.all) {
-          params.set('all', 'true');
-        } else {
-          // Only add specific status filters if 'all' is not selected
-          if (statusFilters.collected) params.set('collected', 'true');
-          if (statusFilters.uncollected) params.set('uncollected', 'true');
-          if (statusFilters.wishlist) params.set('wishlist', 'true');
-          if (statusFilters.underReview) params.set('underReview', 'true');
-        }
-      }
-      
-      // Add filter parameters
-      if (filterCategories.length) params.set('categories', filterCategories.join(','));
-      if (filterOrigins.length) params.set('origins', filterOrigins.join(','));
-      if (filterSeries.length) params.set('series', filterSeries.join(','));
-      if (filterIsLimitedEdition) params.set('isLimitedEdition', 'true');
-      if (filterIsMystery) params.set('isMystery', 'true');
-      if (yearFilters.length) params.set('years', yearFilters.join(','));
-      
-      // Add tag filter
-      if (selectedTag !== null) {
-        params.set('tag', selectedTag);
-      }
-      
-      const response = await fetch(`/api/pins?${params.toString()}`, { 
-        signal,
-        headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
-        }
-      });
-      
-      // If request was aborted, just return without updating state
-      if (signal.aborted) return;
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch pins');
-      }
-      
-      const data = await response.json();
-      
-      // If request was aborted during the json parsing, just return without updating state
-      if (signal.aborted) return;
-      
-      // Batch state updates
-      setPins(prevPins => {
-        const newPins = append 
-          ? { 
-              data: [...prevPins.data, ...data.pins],
-              pagination: {
-                page: data.currentPage,
-                totalPages: data.totalPages,
-                total: data.totalCount,
-                hasMore: data.currentPage < data.totalPages
-              }
-            }
-          : { 
-              data: data.pins,
-              pagination: {
-                page: data.currentPage,
-                totalPages: data.totalPages,
-                total: data.totalCount,
-                hasMore: data.currentPage < data.totalPages
-              }
-            };
-        return newPins;
-      });
-
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        // Don't show error for aborted requests
-        return;
-      }
-      console.error('Error fetching pins:', error);
-      toast.error('Failed to load pins');
-    } finally {
-      // Only set loading false if this is not an append operation or if there was an error
+    // Set loading after a short delay to prevent flashing
+    loadingTimerRef.current = setTimeout(() => {
       if (!append) {
-        setLoading(false);
+        setLoading(true);
       }
-    }
-  }, [initialized, sortOption, searchQuery, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, selectedTag]);
-
-  // Fetch available filters with abort controller
-  const fetchAvailableFilters = useCallback(async () => {
-    if (!initialized) return;
+    }, 150);
 
     try {
-      // Cancel any in-flight requests
+      // Cancel any ongoing requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      
-      // Create a new abort controller for this request
+
+      // Create a new abort controller
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const signal = controller.signal;
       
+      // Build query params
       const params = new URLSearchParams();
-      params.append('filtersOnly', 'true');
-      
-      // Handle status filters
-      if (statusFilters) {
-        if (statusFilters.all) {
-          params.append('all', 'true');
-        } else {
-          // Only add specific status filters if 'all' is not selected
-          if (statusFilters.collected) params.append('collected', 'true');
-          if (statusFilters.uncollected) params.append('uncollected', 'true');
-          if (statusFilters.wishlist) params.append('wishlist', 'true');
-          if (statusFilters.underReview) params.append('underReview', 'true');
+      params.set('page', pageNum.toString());
+      params.set('pageSize', '100');
+
+      // Add filter params
+      Object.entries(filterState).forEach(([key, value]) => {
+        if (Array.isArray(value) && value.length > 0) {
+          params.set(key, value.join(','));
+        } else if (value !== null && value !== undefined && value !== '') {
+          params.set(key, value.toString());
         }
-      }
-      
-      // Add current search query
-      if (searchQuery) params.append('search', searchQuery);
-      
-      // Add current filter selections to get dynamic filter options
-      if (filterCategories.length) params.append('categories', filterCategories.join(','));
-      if (filterOrigins.length) params.append('origins', filterOrigins.join(','));
-      if (filterSeries.length) params.append('series', filterSeries.join(','));
-      if (filterIsLimitedEdition) params.append('isLimitedEdition', 'true');
-      if (filterIsMystery) params.append('isMystery', 'true');
-      if (yearFilters.length) params.append('years', yearFilters.join(','));
+      });
 
-      const response = await fetch(`/api/pins?${params.toString()}`, { signal });
-      
-      // If request was aborted, just return
-      if (signal.aborted) return;
-      
+      // Fetch data with timeout
+      const response = await Promise.race([
+        fetch(`/api/pins?${params.toString()}`, { signal: controller.signal }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), 10000)
+        )
+      ]);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API error:', errorData);
-        throw new Error(errorData.error || 'Failed to fetch filters');
+        throw new Error('Failed to fetch pins');
       }
-      
-      const filters = await response.json();
-      
-      // Only update state if the request wasn't aborted
-      if (!signal.aborted) {
-        setAvailableCategories(filters.tags || []);
-        setAvailableOrigins(filters.origins || []);
-        setAvailableSeries(filters.series || []);
-        setAvailableYears(filters.years || []);
-      }
-    } catch (error) {
-      // Ignore abort errors as they're expected
-      if (error.name !== 'AbortError') {
-        console.error('Error fetching filters:', error);
-        toast.error('Failed to load filter options');
-        setAvailableCategories([]);
-        setAvailableOrigins([]);
-        setAvailableSeries([]);
-        setAvailableYears([]);
-      }
-    }
-  }, [statusFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, initialized]);
 
-  // Effects
-  // Initialize component
+      const data = await response.json();
+
+      // Update pins state
+      setPins(prevPins => ({
+        data: append ? [...prevPins.data, ...data.data] : data.data,
+        pagination: data.pagination
+      }));
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      console.error('Error fetching pins:', error);
+      toast.error('Failed to load pins');
+    } finally {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
+      setLoading(false);
+    }
+  }, [initialized, filterState]);
+
+  // Debounced filter update
+  const updateFilters = useCallback(() => {
+    if (filterTimerRef.current) {
+      clearTimeout(filterTimerRef.current);
+    }
+
+    filterTimerRef.current = setTimeout(() => {
+      setPins(prev => ({
+        ...prev,
+        pagination: { ...prev.pagination, page: 1 }
+      }));
+      fetchPins(1, false);
+    }, 300);
+  }, [fetchPins]);
+
+  // Effect for filter changes
   useEffect(() => {
-    console.log('Initializing PinCatalog with default filters');
-    setStatusFilters(defaultStatusFilters);
-    setInitialized(true);
+    updateFilters();
+    return () => {
+      if (filterTimerRef.current) {
+        clearTimeout(filterTimerRef.current);
+      }
+    };
+  }, [filterState, updateFilters]);
+
+  // Effect for pagination
+  useEffect(() => {
+    if (pins.pagination.page > 1) {
+      fetchPins(pins.pagination.page, true);
+    }
+  }, [pins.pagination.page, fetchPins]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (filterTimerRef.current) {
+        clearTimeout(filterTimerRef.current);
+      }
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
+    };
   }, []);
 
-  // Initial data fetch
+  // Initialize filters
   useEffect(() => {
-    if (!initialized) return;
-    
-    console.log('PinCatalog initial data fetch:', {
-      pinsLength: pins.data.length,
-      total: pins.pagination.total,
-      hasMore: pins.pagination.hasMore,
-      loading,
-      statusFilters
-    });
-    
-    // Use a local abort controller that won't be affected by other fetches
-    const localController = new AbortController();
-    const fetchData = async () => {
+    const initFilters = async () => {
       try {
-        setLoading(true);
+        const response = await fetch('/api/pins?filtersOnly=true');
+        if (!response.ok) throw new Error('Failed to fetch filters');
         
-        const params = new URLSearchParams();
-        params.set('page', '1');
-        params.set('sort', sortOption);
-        params.set('pageSize', '100');
-        
-        if (searchQuery) params.set('search', searchQuery);
-        
-        // Handle status filters
-        if (statusFilters) {
-          if (statusFilters.all) {
-            params.set('all', 'true');
-          } else {
-            // Only add specific status filters if 'all' is not selected
-            if (statusFilters.collected) params.set('collected', 'true');
-            if (statusFilters.uncollected) params.set('uncollected', 'true');
-            if (statusFilters.wishlist) params.set('wishlist', 'true');
-            if (statusFilters.underReview) params.set('underReview', 'true');
-          }
-        }
-        
-        // Add filter parameters
-        if (filterCategories.length) params.set('categories', filterCategories.join(','));
-        if (filterOrigins.length) params.set('origins', filterOrigins.join(','));
-        if (filterSeries.length) params.set('series', filterSeries.join(','));
-        if (filterIsLimitedEdition) params.set('isLimitedEdition', 'true');
-        if (filterIsMystery) params.set('isMystery', 'true');
-        if (yearFilters.length) params.set('years', yearFilters.join(','));
-        
-        // Add tag filter
-        if (selectedTag !== null) {
-          params.set('tag', selectedTag);
-        }
-        
-        console.log('Initial fetch with URL:', `/api/pins?${params.toString()}`);
-        
-        const response = await fetch(`/api/pins?${params.toString()}`, { 
-          signal: localController.signal,
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        
-        if (localController.signal.aborted) {
-          console.log('Initial fetch aborted');
-          return;
-        }
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('API error:', errorData);
-          throw new Error(errorData.error || 'Failed to fetch pins');
-        }
-        
-        const data = await response.json();
-        console.log('Initial fetch received data:', {
-          totalCount: data.totalCount,
-          pinsLength: data.pins?.length,
-        });
-        
-        if (!data.pins) {
-          console.error('No pins array in API response:', data);
-          toast.error('Error loading pins: Invalid data format');
-          return;
-        }
-        
-        setPins({ 
-          data: data.pins,
-          pagination: {
-            page: data.currentPage,
-            totalPages: data.totalPages,
-            total: data.totalCount,
-            hasMore: data.currentPage < data.totalPages
-          }
-        });
+        const filters = await response.json();
+        setAvailableCategories(filters.categories);
+        setAvailableOrigins(filters.origins);
+        setAvailableSeries(filters.series);
+        setAvailableYears(filters.years);
+        setInitialized(true);
       } catch (error) {
-        if (error.name === 'AbortError') {
-          console.log('Initial fetch aborted');
-        } else {
-          console.error('Error in initial fetch:', error);
-          toast.error('Failed to load pins');
-        }
-      } finally {
-        setLoading(false);
+        console.error('Error fetching filters:', error);
+        toast.error('Failed to load filters');
       }
     };
-    
-    fetchData();
-    
-    return () => {
-      localController.abort();
-    };
-  }, [initialized]);
 
-  // Refresh pins when filters change - use fetchPins for subsequent fetches
-  useEffect(() => {
-    if (!initialized) return;
-    
-    // Skip the initial render
-    const timer = setTimeout(() => {
-      setPins({ 
-        data: [], 
-        pagination: { 
-          page: 1, 
-          totalPages: 1, 
-          total: 0,
-          hasMore: true 
-        } 
-      });
-      fetchPins(1, false);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [statusFilters, sortOption, yearFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, initialized]);
+    initFilters();
+  }, []);
 
   // Fetch available filters when modal is opened
   useEffect(() => {
@@ -444,33 +289,6 @@ export default function PinCatalog() {
       } 
     });
   };
-
-  // Load more pins when page changes
-  useEffect(() => {
-    if (pins.pagination.page > 1) {
-      fetchPins(pins.pagination.page, true);
-    }
-  }, [pins.pagination.page, fetchPins]);
-
-  // Add click outside listener for dropdowns
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      // Close year dropdown if clicking outside
-      if (showYearDropdown && !event.target.closest('[data-dropdown="year"]')) {
-        setShowYearDropdown(false);
-      }
-      
-      // Close sort dropdown if clicking outside
-      if (showSortDropdown && !event.target.closest('[data-dropdown="sort"]')) {
-        setShowSortDropdown(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showYearDropdown, showSortDropdown]);
 
   // Handlers
   const handleClearAllFilters = useCallback(() => {

@@ -50,3 +50,9 @@ model Comment {
   createdAt DateTime @default(now())
   pin       Pin      @relation(fields: [pinId], references: [id])
 }
+
+model FilterCache {
+  id        String   @id
+  data      String   @db.Text
+  updatedAt DateTime @default(now()) @updatedAt
+}

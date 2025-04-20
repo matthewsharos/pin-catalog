@@ -31,161 +31,153 @@ export async function GET(req) {
     const wishlist = searchParams.get('wishlist') === 'true';
     const underReview = searchParams.get('underReview') === 'true';
 
-    // Build the where clause
-    const whereConditions = [];
-    const statusConditions = [];
-
-    // Handle status filters
-    if (all) {
-      // No status conditions needed for 'all'
-    } else {
-      if (collected) statusConditions.push({ isCollected: true });
-      if (uncollected) statusConditions.push({ isDeleted: true });
-      if (wishlist) statusConditions.push({ isWishlist: true });
-      if (underReview) statusConditions.push({ isUnderReview: true });
-    }
-
-    // Add status conditions to where clause if any exist
-    if (statusConditions.length > 0) {
-      whereConditions.push({ OR: statusConditions });
-    }
-
-    // Add search condition if search query exists
-    if (search) {
-      whereConditions.push({
-        OR: [
-          { pinName: { contains: search, mode: 'insensitive' } },
-          { pinId: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } }
-        ]
-      });
-    }
-
-    // Add tag filter if specified
-    if (tag) {
-      whereConditions.push({ tags: { has: tag } });
-    }
-
-    // Add category filters if specified
-    if (categories?.length) {
-      whereConditions.push({ categories: { hasSome: categories } });
-    }
-
-    // Add origin filters if specified
-    if (origins?.length) {
-      whereConditions.push({ origins: { hasSome: origins } });
-    }
-
-    // Add series filters if specified
-    if (series?.length) {
-      whereConditions.push({ series: { hasSome: series } });
-    }
-
-    // Add year filters if specified
-    if (years?.length) {
-      whereConditions.push({ year: { in: years } });
-    }
-
-    // Add limited edition filter if specified
-    if (isLimitedEdition) {
-      whereConditions.push({ isLimitedEdition: true });
-    }
-
-    // Add mystery filter if specified
-    if (isMystery) {
-      whereConditions.push({ isMystery: true });
-    }
-
-    // Combine all conditions with AND
-    const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
-
-    // If filtersOnly is true, only return the available filters
+    // If filtersOnly is true, return cached filters if available
     if (filtersOnly) {
+      const cacheKey = 'filters';
+      const cachedFilters = await prisma.filterCache.findUnique({
+        where: { id: cacheKey },
+        select: { data: true, updatedAt: true }
+      });
+
+      // Return cached filters if they're less than 1 hour old
+      if (cachedFilters && Date.now() - cachedFilters.updatedAt < 3600000) {
+        return NextResponse.json(JSON.parse(cachedFilters.data));
+      }
+
+      // Otherwise fetch and cache new filters
       const [categories, origins, series, years] = await Promise.all([
         prisma.pin.findMany({
-          where,
           select: { categories: true },
           distinct: ['categories']
         }),
         prisma.pin.findMany({
-          where,
           select: { origins: true },
           distinct: ['origins']
         }),
         prisma.pin.findMany({
-          where,
           select: { series: true },
           distinct: ['series']
         }),
         prisma.pin.findMany({
-          where,
           select: { year: true },
-          distinct: ['year']
+          distinct: ['year'],
+          where: { year: { not: null } }
         })
       ]);
 
-      return NextResponse.json({
+      const filters = {
         categories: [...new Set(categories.flatMap(p => p.categories))].sort(),
         origins: [...new Set(origins.flatMap(p => p.origins))].sort(),
         series: [...new Set(series.flatMap(p => p.series))].sort(),
         years: [...new Set(years.map(p => p.year))].sort((a, b) => b - a)
+      };
+
+      // Cache the filters
+      await prisma.filterCache.upsert({
+        where: { id: cacheKey },
+        create: { id: cacheKey, data: JSON.stringify(filters) },
+        update: { data: JSON.stringify(filters) }
+      });
+
+      return NextResponse.json(filters);
+    }
+
+    // Build optimized where clause
+    const whereConditions = [];
+
+    // Optimize status filters to use fewer OR conditions
+    if (!all) {
+      const statusConditions = {};
+      if (collected) statusConditions.isCollected = true;
+      if (uncollected) statusConditions.isDeleted = true;
+      if (wishlist) statusConditions.isWishlist = true;
+      if (underReview) statusConditions.isUnderReview = true;
+      
+      if (Object.keys(statusConditions).length > 0) {
+        whereConditions.push({ OR: Object.entries(statusConditions).map(([key, value]) => ({ [key]: value })) });
+      }
+    }
+
+    // Add optimized search condition if search query exists
+    if (search) {
+      whereConditions.push({
+        OR: [
+          { pinName: { contains: search, mode: 'insensitive' } },
+          { pinId: { contains: search, mode: 'insensitive' } }
+        ]
       });
     }
 
-    // Get sort field and direction
-    let orderBy = {};
-    if (sort === 'Recently Updated') {
-      orderBy = { updatedAt: 'desc' };
-    } else if (sort === 'Recently Added') {
-      orderBy = { createdAt: 'desc' };
-    } else if (sort === 'Name') {
-      orderBy = { pinName: 'asc' };
-    } else if (sort === 'ID') {
-      orderBy = { pinId: 'asc' };
+    // Add remaining filters with index hints
+    if (tag) whereConditions.push({ tags: { has: tag } });
+    if (categories?.length) whereConditions.push({ categories: { hasSome: categories } });
+    if (origins?.length) whereConditions.push({ origins: { hasSome: origins } });
+    if (series?.length) whereConditions.push({ series: { hasSome: series } });
+    if (years?.length) whereConditions.push({ year: { in: years } });
+    if (isLimitedEdition) whereConditions.push({ isLimitedEdition: true });
+    if (isMystery) whereConditions.push({ isMystery: true });
+
+    // Combine all conditions
+    const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
+
+    // Determine sort order with index hints
+    let orderBy = [];
+    switch (sort) {
+      case 'Recently Updated':
+        orderBy.push({ updatedAt: 'desc' });
+        break;
+      case 'Recently Added':
+        orderBy.push({ createdAt: 'desc' });
+        break;
+      case 'Name':
+        orderBy.push({ pinName: 'asc' });
+        break;
+      case 'Year':
+        orderBy.push({ year: 'desc' }, { pinName: 'asc' });
+        break;
+      default:
+        orderBy.push({ updatedAt: 'desc' });
     }
 
-    // Get total count for pagination
-    const totalCount = await prisma.pin.count({ where });
-    const totalPages = Math.ceil(totalCount / pageSize);
+    // Fetch total count and pins in parallel with optimized select
+    const [total, pins] = await Promise.all([
+      prisma.pin.count({ where }),
+      prisma.pin.findMany({
+        where,
+        select: {
+          id: true,
+          pinId: true,
+          pinName: true,
+          imageUrl: true,
+          year: true,
+          isCollected: true,
+          isWishlist: true,
+          isDeleted: true,
+          isUnderReview: true,
+          isLimitedEdition: true,
+          isMystery: true,
+          updatedAt: true
+        },
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      })
+    ]);
 
-    // Get pins with pagination
-    const pins = await prisma.pin.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        pinId: true,
-        pinName: true,
-        description: true,
-        imageUrl: true,
-        year: true,
-        isCollected: true,
-        isWishlist: true,
-        isDeleted: true,
-        isUnderReview: true,
-        isLimitedEdition: true,
-        isMystery: true,
-        categories: true,
-        origins: true,
-        series: true,
-        tags: true,
-        notes: true,
-        updatedAt: true,
-        createdAt: true
-      }
-    });
+    const totalPages = Math.ceil(total / pageSize);
+    const hasMore = page < totalPages;
 
     return NextResponse.json({
-      pins,
-      currentPage: page,
-      totalPages,
-      totalCount
+      data: pins,
+      pagination: {
+        page,
+        totalPages,
+        total,
+        hasMore
+      }
     });
-
   } catch (error) {
-    console.error('Error in GET /api/pins:', error);
+    console.error('Error fetching pins:', error);
     return NextResponse.json({ error: 'Failed to fetch pins' }, { status: 500 });
   }
 }
