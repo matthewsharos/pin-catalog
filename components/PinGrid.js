@@ -108,10 +108,7 @@ export default function PinGrid({
   };
 
   return (
-    <div 
-      className={`grid gap-4 ${getGridColumnsClass()} auto-rows-max w-full`}
-      ref={contentRef}
-    >
+    <div ref={contentRef} className={`grid ${getGridColumnsClass()} gap-4 px-2 md:px-4 lg:px-6`}>
       {pins && pins.length > 0 ? (
         pins.map((pin, index) => {
           // Skip rendering pins that are being animated out
@@ -121,107 +118,139 @@ export default function PinGrid({
           const isLastElement = index === pins.length - 1;
           const ref = isLastElement ? lastPinElementRef : null;
           
-          const imageUrl = pin.imageUrl ? 
-            `/api/image-proxy?url=${encodeURIComponent(pin.imageUrl)}${pin.imageRefreshKey ? `&t=${pin.imageRefreshKey}` : ''}` : 
-            '/placeholder.png';
-          
           return (
             <div
-              key={`${pin.id}-${pin.updatedAt || ''}`}
+              key={`${pin.id}-${pin.pinId}-${index}`}
               ref={ref}
-              className={`relative bg-gray-800 rounded-lg overflow-hidden shadow-md transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-xl cursor-pointer ${
-                animatingPins[pin.id] ? 'scale-0 opacity-0' : 'scale-100 opacity-100'
+              className={`relative bg-gray-900 rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 ${
+                animatingPins[pin.id] ? 'opacity-0 scale-95 translate-y-4' : 'opacity-100 hover:scale-105 md:hover:shadow-xl'
               }`}
-              onClick={() => onPinClick(pin, index)}
-              style={{ minHeight: '100px' }}
             >
-              {/* Pin ID Badge */}
-              <div className="absolute top-0 left-0 bg-black bg-opacity-70 text-white text-xs px-2 py-1 z-10 rounded-br-lg">
+              {/* Status Indicator */}
+              <div className="absolute top-2 left-2 z-10">
+                {pin.isCollected && (
+                  <div className="bg-green-600 text-white p-1 rounded-full">
+                    <FaCheck size={12} />
+                  </div>
+                )}
+                {!pin.isCollected && pin.isWishlist && (
+                  <div className="bg-blue-400 text-white p-1 rounded-full">
+                    <FaHeart size={12} />
+                  </div>
+                )}
+                {!pin.isCollected && !pin.isWishlist && pin.isDeleted && (
+                  <div className="bg-yellow-600 text-white p-1 rounded-full">
+                    <FaTimes size={12} />
+                  </div>
+                )}
+                {pin.isUnderReview && !pin.isCollected && !pin.isWishlist && !pin.isDeleted && (
+                  <div className="bg-amber-500 text-white p-1 rounded-full">
+                    <FaStar size={12} />
+                  </div>
+                )}
+              </div>
+
+              {/* Pin ID Tag */}
+              <div className="absolute top-2 right-2 z-10 bg-gray-800 bg-opacity-75 text-white text-xs px-1.5 py-0.5 rounded">
                 {pin.pinId || 'No ID'}
               </div>
-              
-              {/* Status Indicators */}
-              <div className="absolute top-0 right-0 flex flex-row-reverse z-10">
-                {pin.isCollected && (
-                  <div className="bg-green-600 text-white p-1 rounded-bl-lg">
-                    <FaCheck size={16} />
-                  </div>
-                )}
-                {pin.isWishlist && (
-                  <div className="bg-red-600 text-white p-1 rounded-bl-lg">
-                    <FaHeart size={16} />
-                  </div>
-                )}
-                {pin.isUnderReview && (
-                  <div className="bg-yellow-600 text-white p-1 rounded-bl-lg">
-                    <FaStar size={16} />
-                  </div>
-                )}
-                {pin.isDeleted && (
-                  <div className="bg-gray-600 text-white p-1 rounded-bl-lg">
-                    <FaTimes size={16} />
-                  </div>
-                )}
-              </div>
-              
+
               {/* Pin Image */}
-              <div className="relative pt-[100%]">
-                <img
-                  src={imageUrl}
-                  alt={pin.name || 'Pin Image'}
-                  className="absolute top-0 left-0 w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    console.error(`Error loading image for pin ${pin.id}:`, e);
-                    e.target.src = '/placeholder.png';
-                  }}
-                />
+              <div 
+                className="aspect-square bg-gray-800 cursor-pointer p-1 md:p-2"
+                onClick={() => onPinClick(pin, index)}
+              >
+                {pin.imageUrl ? (
+                  <img
+                    src={`/api/image-proxy?url=${encodeURIComponent(pin.imageUrl)}${pin.imageRefreshKey ? `&t=${pin.imageRefreshKey}` : ''}`}
+                    alt={pin.pinName}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      console.error(`Error loading image for pin ${pin.id}:`, e);
+                      e.target.src = '/placeholder.png';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                    <span className="text-gray-600">No Image</span>
+                  </div>
+                )}
               </div>
-              
+
               {/* Pin Info */}
-              <div className="p-2 bg-gray-900 text-white">
-                <h3 className="text-sm font-semibold truncate">{pin.name || 'Unnamed Pin'}</h3>
-                <div className="flex flex-wrap mt-1 gap-1">
-                  {pin.tags && pin.tags.map(tag => (
-                    <span 
-                      key={tag} 
-                      className="text-xs bg-blue-700 px-1 rounded cursor-pointer hover:bg-blue-600"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (setSelectedTag) setSelectedTag(tag);
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+              <div className="p-3">
+                <h3 className="text-sm font-medium text-white truncate">
+                  {pin.pinName || 'Unnamed Pin'}
+                </h3>
+                {pin.series && (
+                  <p className="text-xs text-gray-500 truncate mt-0.5">
+                    {pin.series}
+                  </p>
+                )}
+                
+                {/* Display tags if available */}
+                {pin.tags && pin.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {pin.tags.slice(0, 2).map((tag, index) => (
+                      <span 
+                        key={index} 
+                        className="bg-purple-900 text-white text-xs px-1.5 py-0.5 rounded-full cursor-pointer hover:bg-purple-700 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent opening the pin modal
+                          if (typeof setSelectedTag === 'function') {
+                            setSelectedTag(tag);
+                          }
+                        }}
+                        title={`Filter by tag: ${tag}`}
+                      >
+                        {tag.length > 10 ? `${tag.substring(0, 8)}...` : tag}
+                      </span>
+                    ))}
+                    {pin.tags.length > 2 && (
+                      <span className="text-xs text-gray-500">+{pin.tags.length - 2}</span>
+                    )}
+                  </div>
+                )}
               </div>
-              
-              {/* Status Change Buttons */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-between bg-black bg-opacity-70 text-white">
-                <button 
-                  className={`flex-1 p-1 text-xs ${flashingButtons[`${pin.id}-collected`] ? 'bg-green-600' : 'hover:bg-green-700'}`}
+
+              {/* Status Action Buttons */}
+              <div className="flex border-t border-gray-800">
+                <button
                   onClick={(e) => handleStatusChange(e, pin, 'collected')}
+                  className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                    pin.isCollected ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  } ${flashingButtons[`${pin.id}-collected`] ? 'animate-pulse-green' : ''}`}
+                  title="Mark as Collected"
                 >
-                  <FaCheck size={12} className="mx-auto" />
+                  <FaCheck className="mx-auto" />
                 </button>
-                <button 
-                  className={`flex-1 p-1 text-xs ${flashingButtons[`${pin.id}-wishlist`] ? 'bg-red-600' : 'hover:bg-red-700'}`}
+                <button
                   onClick={(e) => handleStatusChange(e, pin, 'wishlist')}
+                  className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                    pin.isWishlist ? 'bg-blue-400 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  } ${flashingButtons[`${pin.id}-wishlist`] ? 'animate-pulse-blue' : ''}`}
+                  title="Add to Wishlist"
                 >
-                  <FaHeart size={12} className="mx-auto" />
+                  <FaHeart className="mx-auto" />
                 </button>
-                <button 
-                  className={`flex-1 p-1 text-xs ${flashingButtons[`${pin.id}-deleted`] ? 'bg-gray-600' : 'hover:bg-gray-700'}`}
-                  onClick={(e) => handleStatusChange(e, pin, 'deleted')}
+                <button
+                  onClick={(e) => handleStatusChange(e, pin, 'uncollected')}
+                  className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                    pin.isDeleted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  } ${flashingButtons[`${pin.id}-uncollected`] ? 'animate-pulse-yellow' : ''}`}
+                  title="Mark as Uncollected"
                 >
-                  <FaTimes size={12} className="mx-auto" />
+                  <FaTimes className="mx-auto" />
                 </button>
-                <button 
-                  className={`flex-1 p-1 text-xs ${flashingButtons[`${pin.id}-underReview`] ? 'bg-yellow-600' : 'hover:bg-yellow-700'}`}
+                <button
                   onClick={(e) => handleStatusChange(e, pin, 'underReview')}
+                  className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                    pin.isUnderReview ? 'bg-amber-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  } ${flashingButtons[`${pin.id}-underReview`] ? 'animate-pulse-amber' : ''}`}
+                  title="Mark for Review"
                 >
-                  <FaStar size={12} className="mx-auto" />
+                  <FaStar className="mx-auto" />
                 </button>
               </div>
             </div>
@@ -229,7 +258,11 @@ export default function PinGrid({
         })
       ) : (
         <div className="col-span-full flex justify-center items-center py-10 text-gray-400">
-          {loading ? 'Loading pins...' : 'No pins found matching your criteria'}
+          {loading ? (
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+          ) : (
+            'No pins found matching your criteria'
+          )}
         </div>
       )}
     </div>
