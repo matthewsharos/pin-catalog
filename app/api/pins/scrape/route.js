@@ -5,7 +5,13 @@ import { scrapePinDetails } from '../../../../lib/scraper';
 export async function POST(req) {
   try {
     const body = await req.json();
-    const pinIds = body.pinId.split(',').map(id => id.trim()).filter(Boolean);
+    
+    // Handle multiple pin IDs separated by commas or new lines
+    const pinIds = body.pinId
+      .split(/[\n,]/) // Split by newlines or commas
+      .map(id => id.trim())
+      .filter(Boolean)
+      .map(id => id.replace(/\D/g, '')); // Remove any non-digit characters
 
     if (pinIds.length === 0) {
       return NextResponse.json({ error: 'Please enter at least one Pin&Pop ID' }, { status: 400 });
@@ -19,12 +25,13 @@ export async function POST(req) {
 
     for (const pinId of pinIds) {
       try {
-        // Check if pin already exists
-        const existingPin = await prisma.pin.findFirst({
+        // First check if pin already exists
+        const existingPin = await prisma.pin.findUnique({
           where: { pinId: pinId }
         });
 
         if (existingPin) {
+          // If pin already exists, add to existing results and skip
           results.existing.push({
             pinId,
             pin: existingPin
@@ -32,29 +39,39 @@ export async function POST(req) {
           continue;
         }
 
-        // Scrape pin details
+        // Scrape pin details only if pin doesn't exist
         const pinDetails = await scrapePinDetails(pinId);
-        const newPin = await prisma.pin.create({
-          data: {
-            pinId: pinId,
-            pinName: pinDetails.pinName,
-            imageUrl: pinDetails.imageUrl,
-            series: pinDetails.series,
-            origin: pinDetails.origin,
-            year: pinDetails.year,
-            tags: pinDetails.tags,
-            isCollected: false,
-            isDeleted: false,
-            isWishlist: false,
-            isLimitedEdition: pinDetails.isLimitedEdition,
-            isMystery: pinDetails.isMystery
-          }
-        });
-
-        results.added.push({
-          pinId,
-          pin: newPin
-        });
+        
+        try {
+          // Use Prisma's create method with skipDuplicates option
+          const newPin = await prisma.pin.create({
+            data: {
+              pinId: pinId,
+              pinName: pinDetails.pinName || 'Unknown Pin',
+              imageUrl: pinDetails.imageUrl || '',
+              series: pinDetails.series || '',
+              origin: pinDetails.origin || '',
+              year: pinDetails.year || null,
+              tags: pinDetails.tags || [],
+              isCollected: false,
+              isDeleted: false,
+              isWishlist: false,
+              isLimitedEdition: pinDetails.isLimitedEdition || false,
+              isMystery: pinDetails.isMystery || false
+            }
+          });
+          
+          results.added.push({
+            pinId,
+            pin: newPin
+          });
+        } catch (error) {
+          console.error(`Error processing pin ${pinId}:`, error);
+          results.failed.push({
+            pinId,
+            error: error.message
+          });
+        }
       } catch (error) {
         console.error(`Error processing pin ${pinId}:`, error);
         results.failed.push({

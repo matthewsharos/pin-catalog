@@ -8,18 +8,20 @@ export const dynamic = 'force-dynamic';
 export async function GET(req) {
   try {
     console.log('API: Starting GET request');
-    const searchParams = new URL(req.url).searchParams;
+    const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page')) || 1;
+    const search = searchParams.get('search') || '';
+    const sort = searchParams.get('sort') || 'Recently Updated';
+    const tag = searchParams.get('tag');
+    const years = searchParams.get('years')?.split(',').map(Number) || [];
     const pageSize = parseInt(searchParams.get('pageSize')) || 30;
-    const collected = searchParams.get('collected');
-    const wishlist = searchParams.get('wishlist');
-    const uncollected = searchParams.get('uncollected');
-    const underReview = searchParams.get('underReview');
-    const searchQuery = searchParams.get('search');
-    const sort = searchParams.get('sort');
-    let sortField = 'updatedAt';
-    let sortOrder = 'desc';
-    
+    const collected = searchParams.get('collected') === 'true';
+    const wishlist = searchParams.get('wishlist') === 'true';
+    const uncollected = searchParams.get('uncollected') === 'true';
+    const underReview = searchParams.get('underReview') === 'true';
+    const all = searchParams.get('all') === 'true';
+    const getFiltersOnly = searchParams.get('filtersOnly') === 'true';
+
     // Log initial query parameters
     console.log('API: Query params:', {
       page,
@@ -28,78 +30,143 @@ export async function GET(req) {
       wishlist,
       uncollected,
       underReview,
-      all: searchParams.get('all')
+      all
     });
 
     // Process sort option
-    if (sort) {
-      switch (sort) {
-        case 'Recently Updated':
-          sortField = 'updatedAt';
-          sortOrder = 'desc';
-          break;
-        case 'Name (A-Z)':
-          sortField = 'pinName';
-          sortOrder = 'asc';
-          break;
-        case 'Name (Z-A)':
-          sortField = 'pinName';
-          sortOrder = 'desc';
-          break;
-        case 'Newest First':
-          sortField = 'releaseDate';
-          sortOrder = 'desc';
-          break;
-        case 'Oldest First':
-          sortField = 'releaseDate';
-          sortOrder = 'asc';
-          break;
-        default:
-          // Default to recently updated
-          sortField = 'updatedAt';
-          sortOrder = 'desc';
-      }
+    let sortField = 'updatedAt';
+    let sortOrder = 'desc';
+    
+    // Add additional filters for dynamic dropdowns
+    // Series filter
+    const series = searchParams.get('series');
+    // Origin filter
+    const origin = searchParams.get('origin');
+    // Categories filter
+    const categories = searchParams.get('categories')?.split(',').filter(Boolean);
+    // Origins filter from params
+    const origins = searchParams.get('origins')?.split(',').filter(Boolean);
+    // Series filter from params
+    const seriesArray = searchParams.get('series')?.split(',').filter(Boolean);
+    // Limited Edition filter
+    const isLimitedEdition = searchParams.get('isLimitedEdition') === 'true';
+    // Mystery filter
+    const isMystery = searchParams.get('isMystery') === 'true';
+
+    switch (sort) {
+      case 'Recently Updated':
+        sortField = 'updatedAt';
+        sortOrder = 'desc';
+        break;
+      case 'Name (A-Z)':
+        sortField = 'pinName';
+        sortOrder = 'asc';
+        break;
+      case 'Name (Z-A)':
+        sortField = 'pinName';
+        sortOrder = 'desc';
+        break;
+      case 'Newest First':
+        sortField = 'releaseDate';
+        sortOrder = 'desc';
+        break;
+      case 'Oldest First':
+        sortField = 'releaseDate';
+        sortOrder = 'asc';
+        break;
+      default:
+        // Default to recently updated
+        sortField = 'updatedAt';
+        sortOrder = 'desc';
     }
     
-    const year = searchParams.get('year');
-    const years = searchParams.get('years')?.split(',').filter(Boolean).map(Number);
-    const series = searchParams.get('series');
-    const origin = searchParams.get('origin');
-    const edition = searchParams.get('edition');
-    const tags = searchParams.get('tags')?.split(',').filter(Boolean);
-    const categories = searchParams.get('categories')?.split(',').filter(Boolean);
-    const isLimitedEdition = searchParams.get('isLimitedEdition') === 'true';
-    const isMystery = searchParams.get('isMystery') === 'true';
-    const getFiltersOnly = searchParams.get('filtersOnly') === 'true';
-
-    let where = {
-      AND: []
-    };
-
-    // Status filters
-    if (collected === 'true' || wishlist === 'true' || uncollected === 'true' || underReview === 'true' || searchParams.get('all') === 'true') {
-      // Only add one status condition since they should be mutually exclusive
-      if (collected === 'true') {
-        where.AND.push({ isCollected: true });
-      } else if (uncollected === 'true') {
-        where.AND.push({ isDeleted: true });
-      } else if (wishlist === 'true') {
-        where.AND.push({ isWishlist: true });
-      } else if (underReview === 'true') {
-        where.AND.push({ isUnderReview: true });
-      } else if (searchParams.get('all') === 'true') {
-        where.AND.push({ 
-          AND: [
-            { isCollected: false },
-            { isDeleted: false },
-            { isWishlist: false },
-            { isUnderReview: false }
-          ]
-        });
+    let where = {};
+    
+    // Add search filter
+    if (search) {
+      where.OR = [
+        { pinName: { contains: search, mode: 'insensitive' } },
+        { series: { contains: search, mode: 'insensitive' } },
+        { origin: { contains: search, mode: 'insensitive' } },
+        { edition: { contains: search, mode: 'insensitive' } },
+        { pinId: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+    
+    // Add status filters
+    if (!all) {
+      const statusConditions = [];
+      if (collected) statusConditions.push({ isCollected: true });
+      if (uncollected) statusConditions.push({ isDeleted: true });
+      if (wishlist) statusConditions.push({ isWishlist: true });
+      if (underReview) statusConditions.push({ isUnderReview: true });
+      if (statusConditions.length > 0) {
+        where.OR = [...(where.OR || []), ...statusConditions];
       }
     } else {
       // If no status filters are provided, show non-deleted pins by default
-      where.AND.push({ isDeleted: false });
+      where.isDeleted = false;
+    }
+    
+    // Add tag filter
+    if (tag) {
+      where.tags = {
+        has: tag
+      };
+    }
+    
+    // Add year filter
+    if (years.length > 0) {
+      where.year = {
+        in: years
+      };
+    }
+
+    // Series filter
+    if (series) {
+      where.series = { equals: series, mode: 'insensitive' };
+    }
+
+    // Origin filter
+    if (origin) {
+      where.origin = { equals: origin, mode: 'insensitive' };
+    }
+
+    // Edition filter
+    const edition = searchParams.get('edition');
+    if (edition) {
+      where.edition = { equals: edition, mode: 'insensitive' };
+    }
+
+    // Categories filter
+    if (categories && categories.length > 0) {
+      where.tags = {
+        hasSome: categories
+      };
+    }
+
+    // Origins filter from params
+    if (origins && origins.length > 0) {
+      where.origin = {
+        in: origins
+      };
+    }
+
+    // Series filter from params
+    if (seriesArray && seriesArray.length > 0) {
+      where.series = {
+        in: seriesArray
+      };
+    }
+    
+    // Limited Edition filter
+    if (isLimitedEdition) {
+      where.isLimitedEdition = true;
+    }
+    
+    // Mystery filter
+    if (isMystery) {
+      where.isMystery = true;
     }
 
     console.log('API Query where clause:', JSON.stringify(where, null, 2));
@@ -108,58 +175,8 @@ export async function GET(req) {
     if (getFiltersOnly) {
       try {
         // If no where conditions, don't apply any filters
-        if (where.AND.length === 0) {
+        if (Object.keys(where).length === 0) {
           where = {};
-        }
-
-        // Add additional filters for dynamic dropdowns
-        // Series filter
-        if (series) {
-          where.AND.push({ series: { equals: series, mode: 'insensitive' } });
-        }
-
-        // Origin filter
-        if (origin) {
-          where.AND.push({ origin: { equals: origin, mode: 'insensitive' } });
-        }
-
-        // Categories filter
-        if (categories && categories.length > 0) {
-          where.AND.push({
-            tags: {
-              hasSome: categories
-            }
-          });
-        }
-
-        // Origins filter from params
-        const origins = searchParams.get('origins')?.split(',').filter(Boolean);
-        if (origins && origins.length > 0) {
-          where.AND.push({ 
-            origin: { 
-              in: origins 
-            } 
-          });
-        }
-
-        // Series filter from params
-        const seriesArray = searchParams.get('series')?.split(',').filter(Boolean);
-        if (seriesArray && seriesArray.length > 0) {
-          where.AND.push({ 
-            series: { 
-              in: seriesArray 
-            } 
-          });
-        }
-        
-        // Limited Edition filter
-        if (isLimitedEdition) {
-          where.AND.push({ isLimitedEdition: true });
-        }
-        
-        // Mystery filter
-        if (isMystery) {
-          where.AND.push({ isMystery: true });
         }
 
         console.log('Fetching filters with where:', JSON.stringify(where, null, 2)); // Debug log
@@ -198,76 +215,6 @@ export async function GET(req) {
         console.error('Error in filter processing:', error);
         return NextResponse.json({ error: 'Failed to process filters' }, { status: 500 });
       }
-    }
-
-    // Search filter
-    if (searchQuery) {
-      where.AND.push({
-        OR: [
-          { pinName: { contains: searchQuery, mode: 'insensitive' } },
-          { series: { contains: searchQuery, mode: 'insensitive' } },
-          { origin: { contains: searchQuery, mode: 'insensitive' } },
-          { edition: { contains: searchQuery, mode: 'insensitive' } },
-          { pinId: { contains: searchQuery, mode: 'insensitive' } }
-        ]
-      });
-    }
-
-    // Year filter
-    if (year) {
-      where.AND.push({ year: parseInt(year) });
-    }
-    
-    // Multiple years filter
-    if (years && years.length > 0) {
-      where.AND.push({ 
-        year: {
-          in: years
-        }
-      });
-    }
-
-    // Series filter
-    if (series) {
-      where.AND.push({ series: { equals: series, mode: 'insensitive' } });
-    }
-
-    // Origin filter
-    if (origin) {
-      where.AND.push({ origin: { equals: origin, mode: 'insensitive' } });
-    }
-
-    // Edition filter
-    if (edition) {
-      where.AND.push({ edition: { equals: edition, mode: 'insensitive' } });
-    }
-
-    // Tags filter
-    if (tags && tags.length > 0) {
-      where.AND.push({
-        tags: {
-          hasSome: tags
-        }
-      });
-    }
-    
-    // Categories filter
-    if (categories && categories.length > 0) {
-      where.AND.push({
-        tags: {
-          hasSome: categories
-        }
-      });
-    }
-    
-    // Limited Edition filter
-    if (isLimitedEdition) {
-      where.AND.push({ isLimitedEdition: true });
-    }
-    
-    // Mystery filter
-    if (isMystery) {
-      where.AND.push({ isMystery: true });
     }
 
     // Execute the query with pagination

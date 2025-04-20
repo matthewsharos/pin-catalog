@@ -1,52 +1,52 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://neondb_owner:npg_kxZDhdAeE35y@ep-delicate-block-a4wdwtzv-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
+}
+
 model Pin {
-  id                Int       @id @default(autoincrement())
-  pinId             String?   @unique  // Pin&Pop numerical ID
-  pinName           String
-  imageUrl          String?
-  series            String?
-  origin            String?
-  edition           String?
-  releaseDate       DateTime?
-  tags              String[]
-  isCollected       Boolean   @default(false)
-  isMystery         Boolean   @default(false)
-  isLimitedEdition  Boolean   @default(false)
-  isUnderReview     Boolean   @default(false)
-  rarity            String?
-  year              Int?
-  pinpopUrl         String?
-  userPhotos        UserPhoto[]
-  comments          Comment[]
-  isDeleted         Boolean   @default(false)
-  isWishlist        Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id               Int         @id @default(autoincrement())
+  pinName          String
+  imageUrl         String?
+  series           String?
+  origin           String?
+  edition          String?
+  releaseDate      DateTime?
+  tags             String[]
+  isCollected      Boolean     @default(false)
+  isMystery        Boolean     @default(false)
+  isLimitedEdition Boolean     @default(false)
+  isDeleted        Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  isWishlist       Boolean     @default(false)
+  pinId            String?     @unique
+  rarity           String?
+  year             Int?
+  pinpopUrl        String?
+  isUnderReview    Boolean     @default(false)
+  comments         Comment[]
+  userPhotos       UserPhoto[]
 }
 
 model UserPhoto {
-  id           Int      @id @default(autoincrement())
-  url          String?
-  filename     String
-  contentType  String  // e.g., "image/jpeg", "image/png"
-  data         Bytes    // Binary image data (for smaller images)
-  pin          Pin      @relation(fields: [pinId], references: [id])
-  pinId        Int
-  createdAt    DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  url         String?
+  filename    String
+  contentType String
+  data        Bytes
+  pinId       Int
+  createdAt   DateTime @default(now())
+  pin         Pin      @relation(fields: [pinId], references: [id])
 }
 
 model Comment {
   id        Int      @id @default(autoincrement())
   content   String
-  pin       Pin      @relation(fields: [pinId], references: [id])
   pinId     Int
   createdAt DateTime @default(now())
+  pin       Pin      @relation(fields: [pinId], references: [id])
 }

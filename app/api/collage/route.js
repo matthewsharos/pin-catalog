@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../../lib/prisma';
 import { put } from '@vercel/blob';
 import { createCanvas, loadImage } from 'canvas';
-
-const prisma = new PrismaClient();
 
 export async function POST(request) {
   try {

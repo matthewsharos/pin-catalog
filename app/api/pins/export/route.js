@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../../../../lib/prisma';
 
 // GET - Fetch all pins matching filters for export (no pagination)
 export async function GET(req) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { FaCamera, FaSort, FaCalendarAlt, FaSearchMinus, FaSearchPlus } from 'react-icons/fa';
+import { FaCamera, FaSort, FaCalendarAlt, FaSearchMinus, FaSearchPlus, FaTimes } from 'react-icons/fa';
 import HeaderNavigation from './HeaderNavigation';
 import StatusFilters from './StatusFilters';
 import FilterModal from './FilterModal';
@@ -24,6 +24,7 @@ export default function PinCatalog() {
   const [availableYears, setAvailableYears] = useState([]);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const [selectedTag, setSelectedTag] = useState(null);
   const [statusFilters, setStatusFilters] = useState({
     all: true,
     collected: false,
@@ -88,6 +89,11 @@ export default function PinCatalog() {
         });
       } else {
         params.set('all', 'true');
+      }
+      
+      // Add tag filter
+      if (selectedTag) {
+        params.set('tag', selectedTag);
       }
       
       // Add filter parameters
@@ -164,7 +170,7 @@ export default function PinCatalog() {
     return () => {
       controller.abort();
     };
-  }, [searchQuery, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, sortOption]);
+  }, [searchQuery, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, sortOption, selectedTag]);
 
   // Fetch available filters with abort controller
   const fetchAvailableFilters = useCallback(async () => {
@@ -326,6 +332,7 @@ export default function PinCatalog() {
     setFilterIsLimitedEdition(false);
     setFilterIsMystery(false);
     setYearFilters([]);
+    setSelectedTag(null);
     setPage(1);
     
     // Force an immediate fetch with the cleared filters
@@ -558,21 +565,47 @@ export default function PinCatalog() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-800 text-white">
+    <div className="min-h-screen bg-gray-900 text-white">
       <HeaderNavigation
-        total={total}
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
-        onAddPinClick={handleAddPinClick}
-        onScrollToTop={handleScrollToTop}
-        searchInputRef={searchInputRef}
-        onClearAllFilters={handleClearAllFilters}
-        statusFilters={statusFilters}
-        onStatusClick={handleStatusClick}
-        onMoreFiltersClick={() => setShowFilterModal(true)}
+        sortOption={sortOption}
+        showSortDropdown={showSortDropdown}
+        setShowSortDropdown={setShowSortDropdown}
+        onSortChange={handleSortChange}
+        yearFilters={yearFilters}
+        availableYears={availableYears}
+        showYearDropdown={showYearDropdown}
+        setShowYearDropdown={setShowYearDropdown}
+        onYearChange={handleYearChange}
+        onAddPinClick={() => setShowAddPinModal(true)}
+        onExportClick={() => setShowExportModal(true)}
       />
-
-      <div className="px-2 sm:px-6 py-4">
+      <div className="container mx-auto px-4 py-4">
+        <div className="mb-4">
+          <StatusFilters
+            statusFilters={statusFilters}
+            onStatusClick={handleStatusClick}
+            onTagSelect={(tag) => {
+              setSelectedTag(selectedTag === tag ? null : tag);
+              setPage(1);
+            }}
+          />
+        </div>
+        {selectedTag && (
+          <div className="mb-4 flex items-center">
+            <span className="text-sm text-gray-400 mr-2">Filtering by tag:</span>
+            <div className="bg-purple-900 text-white text-xs px-3 py-1 rounded-full flex items-center">
+              {selectedTag}
+              <button
+                onClick={() => setSelectedTag(null)}
+                className="ml-2 hover:text-gray-300"
+              >
+                <FaTimes size={12} />
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-center mb-4">
           {/* Zoom Slider - Left Side */}
           <div className="flex items-center space-x-2">

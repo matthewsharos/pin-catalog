@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { scrapePinDetails } from '../../../../lib/scraper';
+import prisma from '../../../../lib/prisma';
 
 // Create a fresh Prisma client for this API route
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 export async function POST(req) {
   try {
@@ -122,6 +121,6 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Failed to process pins' }, { status: 500 });
   } finally {
     // Disconnect Prisma client to prevent connection leaks
-    await prisma.$disconnect();
+    // await prisma.$disconnect();
   }
 }

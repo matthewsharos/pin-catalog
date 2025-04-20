@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../../../../lib/prisma';
 
 // POST - Bulk update pins (for tags, collection status, and other fields)
 export async function POST(req) {
