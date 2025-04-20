@@ -184,24 +184,21 @@ export default function TagsPage() {
             tags: updatedTags
           });
           
-          // Update local state
-          setPins(prevPins => 
-            prevPins.map(p => 
-              p.id === pin.id ? { ...p, tags: updatedTags } : p
-            )
-          );
-          
           successCount++;
         } catch (error) {
           console.error(`Error updating pin ${pin.id}:`, error);
         }
       }
       
+      // Remove tagged pins from the display since they now have tags
+      setPins(prevPins => prevPins.filter(pin => !selectedPins[pin.id]));
+      
       // Update tag counts
       fetchTags();
       
-      // Clear selection after tagging
+      // Clear selection and tags to apply
       setSelectedPins({});
+      setTagsToApply([]);
       
       toast.success(`Applied tags to ${successCount} pins`);
     } catch (err) {
