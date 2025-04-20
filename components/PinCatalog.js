@@ -666,6 +666,13 @@ export default function PinCatalog() {
         setTimeout(() => {
           setTotal(prev => prev - 1);
         }, 300);
+        
+        // Force a complete refresh after a short delay
+        // This ensures the grid layout is properly updated
+        setTimeout(() => {
+          // Make a shallow copy of the pins array to force a re-render
+          setPins(current => [...current]);
+        }, 350);
       } else {
         // Otherwise, update the pin in the array
         newPins[pinIndex] = updatedPin;
