@@ -690,12 +690,6 @@ export default function PinCatalog() {
       // Add current timestamp to the update
       const now = new Date();
       
-      // Add a timestamp to the pin for image refresh
-      const pinWithRefreshKey = {
-        ...pin,
-        imageRefreshKey: now.getTime()
-      };
-      
       const response = await fetch(`/api/pins/${pin.id}`, {
         method: 'PUT',
         headers: {
@@ -708,8 +702,7 @@ export default function PinCatalog() {
           isDeleted: pin.isDeleted,
           isUnderReview: pin.isUnderReview,
           tags: pin.tags || [],
-          updatedAt: now.toISOString(), // Update the timestamp
-          imageRefreshKey: now.getTime() // Add refresh key
+          updatedAt: now.toISOString() // Update the timestamp
         }),
       });
       
@@ -721,6 +714,19 @@ export default function PinCatalog() {
       
       const updatedPin = await response.json();
       console.log('Pin status updated successfully:', updatedPin);
+      
+      // Add imageRefreshKey to the local state only (not stored in database)
+      updatedPin.imageRefreshKey = now.getTime();
+      
+      // Update the pin in the local state with the refresh key
+      setPins(prevPins => {
+        return prevPins.map(p => {
+          if (p.id === updatedPin.id) {
+            return { ...p, ...updatedPin };
+          }
+          return p;
+        });
+      });
       
       // No need to refresh pins immediately since we've already updated the pin
       // in the view and we'll refresh the list after this.
