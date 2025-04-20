@@ -443,12 +443,18 @@ export default function PinCatalog() {
   }, [fetchPins]);
 
   const handlePinUpdate = useCallback((updatedPin, currentIndex) => {
-    // Remove the updated pin from the current view
+    // Update the pin in the current view
     setPins(prevPins => {
-      // Create a copy of the pins array without the updated pin
-      const newPins = prevPins.filter(pin => pin.id !== updatedPin.id);
+      // Create a copy of the pins array
+      const newPins = [...prevPins];
       
-      // If we have a currentIndex, navigate to the next pin in the list
+      // Find and update the pin
+      const pinIndex = newPins.findIndex(pin => pin.id === updatedPin.id);
+      if (pinIndex !== -1) {
+        newPins[pinIndex] = updatedPin;
+      }
+      
+      // If we have a currentIndex and this is the selected pin
       if (currentIndex !== undefined && selectedPin && selectedPin.id === updatedPin.id) {
         // If there are pins left in the list
         if (newPins.length > 0) {
@@ -469,8 +475,10 @@ export default function PinCatalog() {
       return newPins;
     });
     
-    // Send update to the server
-    updatePinStatus(updatedPin);
+    // Send update to the server if it's a status change
+    if ('isCollected' in updatedPin || 'isWishlist' in updatedPin || 'isDeleted' in updatedPin || 'isUnderReview' in updatedPin) {
+      updatePinStatus(updatedPin);
+    }
   }, [selectedPin]);
 
   const updatePinStatus = async (pin) => {
