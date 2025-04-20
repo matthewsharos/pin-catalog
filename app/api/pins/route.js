@@ -323,7 +323,7 @@ export async function POST(req) {
       pinData.tags = validTags;
     }
 
-    // Create the pin without pinId first
+    // Create the pin
     const pin = await prisma.pin.create({
       data: {
         pinName: pinData.pinName,
@@ -340,19 +340,23 @@ export async function POST(req) {
         isUnderReview: false,
         tags: pinData.tags || [],
         year: pinData.year || null,
+        pinId: pinData.pinId || null, // Allow external pinId if provided
       },
     });
 
-    // Update the pin to set pinId equal to id for manually added pins
-    const updatedPin = await prisma.pin.update({
-      where: { id: pin.id },
-      data: { pinId: pin.id.toString() }
-    });
+    // If no pinId was provided, use the pin's id as the pinId
+    if (!pin.pinId) {
+      const updatedPin = await prisma.pin.update({
+        where: { id: pin.id },
+        data: { pinId: pin.id.toString() }
+      });
+      return NextResponse.json(updatedPin);
+    }
 
-    return NextResponse.json(updatedPin, { status: 201 });
+    return NextResponse.json(pin);
   } catch (error) {
-    console.error('Error creating pin:', error);
-    return NextResponse.json({ error: 'Failed to create pin' }, { status: 500 });
+    console.error('Error in POST /api/pins:', error);
+    return NextResponse.json({ error: error.message || 'Failed to create pin' }, { status: 400 });
   }
 }
 

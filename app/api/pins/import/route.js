@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
-
-// Create a fresh Prisma client for this API route
-// const prisma = new PrismaClient();
+import { scrapePinDetails } from '../../../../lib/scraper';
 
 export async function POST(req) {
   try {
@@ -28,16 +26,16 @@ export async function POST(req) {
     // Process each pin ID
     for (const pinId of pinIds) {
       try {
-        // First check if pin already exists using a direct database query
-        const existingPins = await prisma.$queryRaw`
-          SELECT * FROM "Pin" WHERE "pinId" = ${pinId} LIMIT 1
-        `;
+        // First check if pin already exists
+        const existingPin = await prisma.pin.findUnique({
+          where: { pinId }
+        });
         
-        if (existingPins && existingPins.length > 0) {
+        if (existingPin) {
           // If pin already exists, add to existing results and skip
           results.existing.push({
             pinId,
-            pin: existingPins[0]
+            pin: existingPin
           });
           continue;
         }
@@ -46,48 +44,43 @@ export async function POST(req) {
         const pinDetails = await scrapePinDetails(pinId);
         
         // Create the new pin
-        const newPin = await prisma.$executeRaw`
-          INSERT INTO "Pin" (
-            "pinName", "imageUrl", "series", "origin", "year", 
-            "tags", "isCollected", "isDeleted", "isWishlist", 
-            "isLimitedEdition", "isMystery", "createdAt", "updatedAt", "pinId"
-          ) 
-          VALUES (
-            ${pinDetails.pinName || 'Unknown Pin'}, 
-            ${pinDetails.imageUrl || ''}, 
-            ${pinDetails.series || ''}, 
-            ${pinDetails.origin || ''}, 
-            ${pinDetails.year || null}, 
-            ${pinDetails.tags || []}, 
-            false, false, false, 
-            ${pinDetails.isLimitedEdition || false}, 
-            ${pinDetails.isMystery || false}, 
-            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-            ${pinId}
-          )
-        `;
+        const newPin = await prisma.pin.create({
+          data: {
+            pinName: pinDetails.pinName || 'Unknown Pin',
+            imageUrl: pinDetails.imageUrl || '',
+            series: pinDetails.series || '',
+            origin: pinDetails.origin || '',
+            year: pinDetails.year || null,
+            tags: pinDetails.tags || [],
+            isCollected: false,
+            isDeleted: false,
+            isWishlist: false,
+            isLimitedEdition: pinDetails.isLimitedEdition || false,
+            isMystery: pinDetails.isMystery || false,
+            pinId
+          }
+        });
         
-        // Fetch the newly created pin
-        const newPins = await prisma.$queryRaw`
-          SELECT * FROM "Pin" WHERE "pinId" = ${pinId} LIMIT 1
-        `;
-        
-        if (newPins && newPins.length > 0) {
-          results.added.push({
-            pinId,
-            pin: newPins[0]
-          });
-        } else {
-          throw new Error('Failed to create pin');
-        }
+        results.added.push({
+          pinId,
+          pin: newPin
+        });
       } catch (error) {
         console.error(`Error processing pin ${pinId}:`, error);
         results.failed.push({
           pinId,
-          error: error.message
+          error: error.message || 'Failed to create pin'
         });
       }
     }
+
+    // Calculate summary
+    const summary = {
+      total: pinIds.length,
+      added: results.added.length,
+      existing: results.existing.length,
+      failed: results.failed.length
+    };
 
     // If only one pin was processed, maintain backward compatibility
     if (pinIds.length === 1) {
@@ -99,28 +92,21 @@ export async function POST(req) {
       }
       if (results.failed.length > 0) {
         return NextResponse.json({ 
-          error: results.failed[0].error 
+          error: results.failed[0].error || 'Failed to create pin'
         }, { status: 400 });
       }
-      return NextResponse.json(results.added[0].pin);
+      if (results.added.length > 0) {
+        return NextResponse.json(results.added[0].pin);
+      }
     }
 
-    // For multiple pins, return summary
+    // Return full results for multiple pins
     return NextResponse.json({
-      summary: {
-        total: pinIds.length,
-        added: results.added.length,
-        existing: results.existing.length,
-        failed: results.failed.length
-      },
+      summary,
       results
     });
-
   } catch (error) {
-    console.error('Error in pin importing:', error);
-    return NextResponse.json({ error: 'Failed to process pins' }, { status: 500 });
-  } finally {
-    // Disconnect Prisma client to prevent connection leaks
-    // await prisma.$disconnect();
+    console.error('Error in POST /api/pins/import:', error);
+    return NextResponse.json({ error: error.message || 'Failed to process pins' }, { status: 500 });
   }
 }
