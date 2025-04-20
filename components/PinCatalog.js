@@ -32,7 +32,7 @@ export default function PinCatalog() {
     wishlist: false,
     underReview: false
   });
-  // Add zoom level state (default: 3 = current view)
+  const [initialized, setInitialized] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(3);
 
   // Filter state
@@ -68,32 +68,33 @@ export default function PinCatalog() {
     if (node) observer.current.observe(node);
   }, [loading, hasMore]);
 
-  // Fetch pins with abort controller to cancel previous requests
+  // Fetch pins with abort controller
   const fetchPins = useCallback(async (pageNum = 1, append = false) => {
-    const controller = new AbortController();
-    const { signal } = controller;
-    
+    if (!initialized) return;
+
     try {
-      setLoading(true);
-      
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.set('page', pageNum);
-      params.set('search', searchQuery);
-      params.set('sort', sortOption);
-      
-      // Add status filters
-      if (Object.values(statusFilters).some(v => v)) {
-        Object.entries(statusFilters).forEach(([key, value]) => {
-          if (value) params.set(key, 'true');
-        });
-      } else {
-        params.set('all', 'true');
+      // Cancel any in-flight requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
       
-      // Add tag filter
-      if (selectedTag) {
-        params.set('tag', selectedTag);
+      // Create a new abort controller for this request
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
+      
+      const params = new URLSearchParams();
+      params.set('page', pageNum.toString());
+      params.set('sort', sortOption);
+      
+      if (searchQuery) params.set('search', searchQuery);
+      if (selectedTag) params.set('tag', selectedTag);
+      
+      // Only add status filters if they're not in the default state
+      if (!statusFilters.all) {
+        if (statusFilters.collected) params.set('collected', 'true');
+        if (statusFilters.uncollected) params.set('uncollected', 'true');
+        if (statusFilters.wishlist) params.set('wishlist', 'true');
+        if (statusFilters.underReview) params.set('underReview', 'true');
       }
       
       // Add filter parameters
@@ -170,10 +171,12 @@ export default function PinCatalog() {
     return () => {
       controller.abort();
     };
-  }, [searchQuery, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, sortOption, selectedTag]);
+  }, [searchQuery, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, sortOption, selectedTag, initialized]);
 
   // Fetch available filters with abort controller
   const fetchAvailableFilters = useCallback(async () => {
+    if (!initialized) return;
+
     try {
       // Cancel any in-flight requests
       if (abortControllerRef.current) {
@@ -186,6 +189,14 @@ export default function PinCatalog() {
       
       const params = new URLSearchParams();
       params.append('filtersOnly', 'true');
+      
+      // Only add status filters if they're not in the default state
+      if (!statusFilters.all) {
+        if (statusFilters.collected) params.append('collected', 'true');
+        if (statusFilters.uncollected) params.append('uncollected', 'true');
+        if (statusFilters.wishlist) params.append('wishlist', 'true');
+        if (statusFilters.underReview) params.append('underReview', 'true');
+      }
       
       // Add all current filter states to get dynamic filter options
       if (statusFilters.collected) params.append('collected', 'true');
@@ -236,7 +247,7 @@ export default function PinCatalog() {
         setAvailableYears([]);
       }
     }
-  }, [statusFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters]);
+  }, [statusFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, initialized]);
 
   // Effects
   // Initial load
@@ -249,6 +260,7 @@ export default function PinCatalog() {
       statusFilters
     });
     setPage(1);
+    setInitialized(true);
     fetchPins(1, false);
     
     // Cleanup function to abort any pending requests when component unmounts
