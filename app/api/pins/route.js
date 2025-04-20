@@ -15,7 +15,7 @@ export async function GET(req) {
     const sort = searchParams.get('sort') || 'Recently Updated';
     const tag = searchParams.get('tag');
     const years = searchParams.get('years')?.split(',').map(Number) || [];
-    const pageSize = parseInt(searchParams.get('pageSize')) || 30;
+    const pageSize = parseInt(searchParams.get('pageSize')) || 100;
     const collected = searchParams.get('collected') === 'true';
     const wishlist = searchParams.get('wishlist') === 'true';
     const uncollected = searchParams.get('uncollected') === 'true';

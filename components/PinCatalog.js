@@ -21,7 +21,15 @@ const defaultStatusFilters = {
 
 export default function PinCatalog() {
   // State
-  const [pins, setPins] = useState({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+  const [pins, setPins] = useState({ 
+    data: [], 
+    pagination: { 
+      page: 1, 
+      totalPages: 1, 
+      total: 0,
+      hasMore: true 
+    } 
+  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('Recently Updated');
@@ -62,7 +70,13 @@ export default function PinCatalog() {
     if (observer.current) observer.current.disconnect();
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && pins.pagination.hasMore) {
-        setPage(pins.pagination.page + 1);
+        setPins(prevPins => ({
+          ...prevPins,
+          pagination: {
+            ...prevPins.pagination,
+            page: prevPins.pagination.page + 1
+          }
+        }));
       }
     });
     if (node) observer.current.observe(node);
@@ -91,6 +105,7 @@ export default function PinCatalog() {
       const params = new URLSearchParams();
       params.set('page', pageNum.toString());
       params.set('sort', sortOption);
+      params.set('pageSize', '100');
       
       if (searchQuery) params.set('search', searchQuery);
       if (selectedTag !== null) params.set('tag', selectedTag);
@@ -147,61 +162,64 @@ export default function PinCatalog() {
         return;
       }
       
-      console.log('Received data from API:', {
-        totalCount: data.totalCount,
-        pinsLength: data.pins?.length,
-        firstPin: data.pins?.[0],
-        currentPage: data.currentPage,
-        totalPages: data.totalPages
-      });
-      
-      // Check if data.pins exists before updating state
-      if (!data.pins) {
-        console.error('No pins array in API response:', data);
-        toast.error('Error loading pins: Invalid data format');
-        return;
-      }
-      
       setPins(prevPins => {
-        const newPins = append ? { ...prevPins, data: [...prevPins.data, ...data.pins] } : { data: data.pins, pagination: { page: data.currentPage, totalPages: data.totalPages, total: data.totalCount } };
+        const newPins = append 
+          ? { 
+              data: [...prevPins.data, ...data.pins],
+              pagination: {
+                page: data.currentPage,
+                totalPages: data.totalPages,
+                total: data.totalCount,
+                hasMore: data.currentPage < data.totalPages
+              }
+            }
+          : { 
+              data: data.pins,
+              pagination: {
+                page: data.currentPage,
+                totalPages: data.totalPages,
+                total: data.totalCount,
+                hasMore: data.currentPage < data.totalPages
+              }
+            };
+        
         console.log('New pins state:', {
           length: newPins.data.length,
-          firstPin: newPins.data[0]
+          firstPin: newPins.data[0],
+          pagination: newPins.pagination
         });
+        
         return newPins;
       });
-      
+
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('Fetch aborted');
-        // Don't update loading state here, as a new request might be in progress
-        return;
+        console.log('Request aborted:', error);
       } else {
         console.error('Error fetching pins:', error);
-        toast.error('Failed to load pins');
+        toast.error('Failed to fetch pins');
         
         // If there was an error and we're not appending, set pins to empty array
         if (!append) {
-          setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+          setPins({ 
+            data: [], 
+            pagination: { 
+              page: 1, 
+              totalPages: 1, 
+              total: 0,
+              hasMore: false 
+            } 
+          });
         }
       }
     } finally {
-      // Only set loading to false if this request wasn't aborted
-      // This prevents flickering when rapidly typing in the search box
+      // Only set loading to false if this wasn't aborted
       if (!abortControllerRef.current?.signal.aborted) {
         setLoading(false);
         console.log('Setting loading to false');
-      } else {
-        console.log('Not setting loading to false because request was aborted');
       }
     }
-    
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [searchQuery, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, sortOption, selectedTag, initialized]);
+  }, [initialized, sortOption, searchQuery, selectedTag, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters]);
 
   // Fetch available filters with abort controller
   const fetchAvailableFilters = useCallback(async () => {
@@ -306,6 +324,7 @@ export default function PinCatalog() {
         const params = new URLSearchParams();
         params.set('page', '1');
         params.set('sort', sortOption);
+        params.set('pageSize', '100');
         
         if (searchQuery) params.set('search', searchQuery);
         if (selectedTag) params.set('tag', selectedTag);
@@ -363,7 +382,15 @@ export default function PinCatalog() {
           return;
         }
         
-        setPins({ data: data.pins, pagination: { page: data.currentPage, totalPages: data.totalPages, total: data.totalCount } });
+        setPins({ 
+          data: data.pins,
+          pagination: {
+            page: data.currentPage,
+            totalPages: data.totalPages,
+            total: data.totalCount,
+            hasMore: data.currentPage < data.totalPages
+          }
+        });
       } catch (error) {
         if (error.name === 'AbortError') {
           console.log('Initial fetch aborted');
@@ -389,7 +416,15 @@ export default function PinCatalog() {
     
     // Skip the initial render
     const timer = setTimeout(() => {
-      setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+      setPins({ 
+        data: [], 
+        pagination: { 
+          page: 1, 
+          totalPages: 1, 
+          total: 0,
+          hasMore: true 
+        } 
+      });
       fetchPins(1, false);
     }, 100);
     
@@ -478,7 +513,15 @@ export default function PinCatalog() {
     setFilterIsMystery(false);
     setYearFilters([]);
     setSelectedTag(null);
-    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+    setPins({ 
+      data: [], 
+      pagination: { 
+        page: 1, 
+        totalPages: 1, 
+        total: 0,
+        hasMore: true 
+      } 
+    });
     
     // Force an immediate fetch with the cleared filters
     fetchPins(1, false);
@@ -491,7 +534,15 @@ export default function PinCatalog() {
     }
     
     // Clear the current pins and show loading state immediately
-    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+    setPins({ 
+      data: [], 
+      pagination: { 
+        page: 1, 
+        totalPages: 1, 
+        total: 0,
+        hasMore: true 
+      } 
+    });
     setLoading(true);
     
     // Update status filters
@@ -544,7 +595,15 @@ export default function PinCatalog() {
     });
     
     // Reset page to 1 when changing filters
-    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+    setPins({ 
+      data: [], 
+      pagination: { 
+        page: 1, 
+        totalPages: 1, 
+        total: 0,
+        hasMore: true 
+      } 
+    });
     
     // Directly fetch fresh data from the server with a very short delay
     // to ensure state updates have been processed
@@ -577,7 +636,15 @@ export default function PinCatalog() {
         setFilterSeries(value || []);
         break;
     }
-    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+    setPins({ 
+      data: [], 
+      pagination: { 
+        page: 1, 
+        totalPages: 1, 
+        total: 0,
+        hasMore: true 
+      } 
+    });
   }, []);
 
   const handleSearchChange = useCallback((value) => {
@@ -597,7 +664,15 @@ export default function PinCatalog() {
       }
       
       // Clear pins and show loading
-      setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+      setPins({ 
+        data: [], 
+        pagination: { 
+          page: 1, 
+          totalPages: 1, 
+          total: 0,
+          hasMore: true 
+        } 
+      });
       setLoading(true);
       
       // Fetch pins with empty search
@@ -614,7 +689,15 @@ export default function PinCatalog() {
       }
       
       // Clear pins and show loading
-      setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+      setPins({ 
+        data: [], 
+        pagination: { 
+          page: 1, 
+          totalPages: 1, 
+          total: 0,
+          hasMore: true 
+        } 
+      });
       setLoading(true);
       
       // Fetch pins with the new search query
@@ -636,7 +719,15 @@ export default function PinCatalog() {
       // Otherwise, add it to the array
       return [...prev, year];
     });
-    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+    setPins({ 
+      data: [], 
+      pagination: { 
+        page: 1, 
+        totalPages: 1, 
+        total: 0,
+        hasMore: true 
+      } 
+    });
   }, []);
 
   const handleSortChange = useCallback((option) => {
@@ -647,7 +738,15 @@ export default function PinCatalog() {
     
     setSortOption(option);
     setShowSortDropdown(false);
-    setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+    setPins({ 
+      data: [], 
+      pagination: { 
+        page: 1, 
+        totalPages: 1, 
+        total: 0,
+        hasMore: true 
+      } 
+    });
   }, []);
 
   const handlePinUpdate = useCallback((updatedPin, currentIndex) => {
@@ -877,7 +976,15 @@ export default function PinCatalog() {
                   }
                   
                   // Reset to page 1 and fetch pins with cleared tag filter
-                  setPins({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
+                  setPins({ 
+                    data: [], 
+                    pagination: { 
+                      page: 1, 
+                      totalPages: 1, 
+                      total: 0,
+                      hasMore: true 
+                    } 
+                  });
                   setTimeout(() => {
                     fetchPins(1, false);
                   }, 0);
