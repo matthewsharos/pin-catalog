@@ -96,11 +96,9 @@ export default function TagsPage() {
   const handleDeleteAllTags = async () => {
     try {
       setLoading(true);
-      // Get all tag names
-      const allTagNames = tags.map(tag => tag.name);
       
-      // Delete all tags using the existing API endpoint
-      await axios.delete('/api/tags', { data: { tags: allTagNames } });
+      // Pass an empty array to delete all tags from all pins
+      await axios.delete('/api/tags', { data: { tags: [] } });
       
       // Clear the tags list
       setTags([]);

@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../../../lib/prisma';
 
 // GET - Fetch all unique tags from non-deleted pins with counts
 export async function GET(req) {
@@ -87,16 +85,18 @@ export async function DELETE(req) {
   try {
     const { tags } = await req.json();
     
-    if (!tags || !Array.isArray(tags) || tags.length === 0) {
+    if (!tags || !Array.isArray(tags)) {
       return NextResponse.json({ error: 'Tags array is required' }, { status: 400 });
     }
 
     // Extract tag names from the request
     const tagNames = tags.map(tag => typeof tag === 'string' ? tag : tag.name);
 
-    // Get all pins that have any of the tags
+    // Get all pins that have any tags if tagNames is empty, or pins with specific tags
     const pins = await prisma.pin.findMany({
-      where: {
+      where: tagNames.length === 0 ? {
+        tags: { isEmpty: false }
+      } : {
         tags: {
           hasSome: tagNames
         }
@@ -109,9 +109,9 @@ export async function DELETE(req) {
 
     console.log(`Found ${pins.length} pins with tags to remove`);
 
-    // Update each pin to remove the specified tags
+    // Update each pin to remove either all tags or specific tags
     const updatePromises = pins.map(pin => {
-      const updatedTags = pin.tags.filter(tag => !tagNames.includes(tag));
+      const updatedTags = tagNames.length === 0 ? [] : pin.tags.filter(tag => !tagNames.includes(tag));
       return prisma.pin.update({
         where: { id: pin.id },
         data: { tags: updatedTags }
@@ -121,8 +121,8 @@ export async function DELETE(req) {
     await Promise.all(updatePromises);
 
     return NextResponse.json({ 
-      message: `Removed tags from ${pins.length} pins`,
-      tagsRemoved: tagNames
+      message: `Removed ${tagNames.length === 0 ? 'all' : 'specified'} tags from ${pins.length} pins`,
+      tagsRemoved: tagNames.length === 0 ? 'all' : tagNames
     });
   } catch (error) {
     console.error('Error removing tags:', error);
