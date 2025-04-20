@@ -103,6 +103,8 @@ export default function PinCatalog() {
         if (statusFilters.uncollected) params.set('uncollected', 'true');
         if (statusFilters.wishlist) params.set('wishlist', 'true');
         if (statusFilters.underReview) params.set('underReview', 'true');
+      } else if (statusFilters && statusFilters.all) {
+        params.set('all', 'true');
       }
       
       // Add filter parameters
@@ -309,6 +311,8 @@ export default function PinCatalog() {
           if (statusFilters.uncollected) params.set('uncollected', 'true');
           if (statusFilters.wishlist) params.set('wishlist', 'true');
           if (statusFilters.underReview) params.set('underReview', 'true');
+        } else if (statusFilters && statusFilters.all) {
+          params.set('all', 'true');
         }
         
         // Add filter parameters

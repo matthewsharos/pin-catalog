@@ -31,7 +31,8 @@ export async function GET(req) {
       wishlist,
       uncollected,
       underReview,
-      all
+      all,
+      search: search.length > 0 ? `${search.substring(0, 20)}...` : '',
     });
 
     // Process sort option
@@ -104,14 +105,17 @@ export async function GET(req) {
       if (statusConditions.length > 0) {
         where.OR = [...(where.OR || []), ...statusConditions];
       }
+      console.log('Status filter - specific statuses:', { statusConditions });
     } else {
-      // When 'all' is true, only show pins that don't have any status set
+      // When 'all' is true, only show pins where all status flags are false (AND condition)
+      // This means that pins with any of the status flags set to true will be excluded
       where.AND = [
         { isCollected: false },
         { isWishlist: false },
         { isDeleted: false },
         { isUnderReview: false }
       ];
+      console.log('Status filter - ALL filter applied with AND condition');
     }
 
     // Add tag filter
