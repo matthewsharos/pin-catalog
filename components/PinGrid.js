@@ -13,7 +13,6 @@ export default function PinGrid({
   zoomLevel = 3, // Default to 3 which is the current layout
   setSelectedTag // Add this prop to handle tag selection
 }) {
-  const [imageErrors, setImageErrors] = useState({});
   const [animatingPins, setAnimatingPins] = useState({});
   const [flashingButtons, setFlashingButtons] = useState({});
 
@@ -24,11 +23,6 @@ export default function PinGrid({
       loading
     });
   }, [pins, loading]);
-
-  // Reset image errors when pins change
-  useEffect(() => {
-    setImageErrors({});
-  }, [pins]);
 
   // Function to get grid columns class based on zoom level
   const getGridColumnsClass = () => {
@@ -159,39 +153,14 @@ export default function PinGrid({
           >
             {pin.imageUrl ? (
               <img
-                src={`${pin.imageUrl}${pin.imageUrl.includes('?') ? '&' : '?'}cache=${new Date().getTime()}`}
+                src={pin.imageUrl}
                 alt={pin.pinName}
                 className="w-full h-full object-cover"
                 loading="lazy"
-                onError={(e) => {
-                  // If this is the first error for this image, try reloading it
-                  if (!imageErrors[pin.id]) {
-                    console.log(`Retrying image load for pin ${pin.id}`);
-                    setImageErrors(prev => ({
-                      ...prev,
-                      [pin.id]: true
-                    }));
-                    
-                    // Add a slight delay before retrying
-                    setTimeout(() => {
-                      e.target.src = `${pin.imageUrl}${pin.imageUrl.includes('?') ? '&' : '?'}cache=${new Date().getTime()}`;
-                    }, 500);
-                  } else {
-                    // If we've already tried once, show the fallback
-                    e.target.style.display = 'none';
-                    e.target.onerror = null;
-                  }
-                }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-800">
                 <span className="text-gray-600">No Image</span>
-              </div>
-            )}
-            {/* Fallback for images that fail to load even after retry */}
-            {imageErrors[pin.id] && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                <span className="text-gray-600">Image Error</span>
               </div>
             )}
           </div>

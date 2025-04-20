@@ -48,9 +48,7 @@ export async function GET(request) {
       headers: {
         'Content-Type': contentType,
         'Content-Length': contentLength || String(imageData.byteLength),
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400', // 24 hour cache
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
