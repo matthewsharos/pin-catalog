@@ -43,7 +43,7 @@ export async function POST(req) {
         // Scrape pin details only if pin doesn't exist
         const pinDetails = await scrapePinDetails(pinId);
         
-        // Create the new pin
+        // Create the new pin with the Pin&Pop URL
         const newPin = await prisma.pin.create({
           data: {
             pinName: pinDetails.pinName || 'Unknown Pin',
@@ -57,7 +57,8 @@ export async function POST(req) {
             isWishlist: false,
             isLimitedEdition: pinDetails.isLimitedEdition || false,
             isMystery: pinDetails.isMystery || false,
-            pinId
+            pinId,
+            pinpopUrl: `https://pinandpop.com/pins/${pinId}/`
           }
         });
         
