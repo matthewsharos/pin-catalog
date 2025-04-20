@@ -129,3 +129,77 @@ export async function DELETE(req) {
     return NextResponse.json({ error: 'Failed to remove tags' }, { status: 500 });
   }
 }
+
+// PUT - Update a tag name across all pins
+export async function PUT(req) {
+  try {
+    const { oldTag, newTag } = await req.json();
+    
+    if (!oldTag || !newTag || typeof oldTag !== 'string' || typeof newTag !== 'string') {
+      return NextResponse.json({ error: 'Old tag and new tag are required and must be strings' }, { status: 400 });
+    }
+
+    if (oldTag === newTag) {
+      return NextResponse.json({ error: 'Old tag and new tag cannot be the same' }, { status: 400 });
+    }
+
+    // Get all pins that have the old tag
+    const pins = await prisma.pin.findMany({
+      where: {
+        tags: {
+          has: oldTag
+        }
+      },
+      select: {
+        id: true,
+        tags: true
+      }
+    });
+
+    console.log(`Found ${pins.length} pins with tag "${oldTag}" to update`);
+
+    // Check if new tag already exists in the system
+    const allPins = await prisma.pin.findMany({
+      select: {
+        tags: true
+      }
+    });
+
+    // Extract and flatten all tags
+    const allTags = allPins.reduce((acc, pin) => {
+      if (pin.tags && Array.isArray(pin.tags)) {
+        return [...acc, ...pin.tags];
+      }
+      return acc;
+    }, []);
+
+    // Get unique tags
+    const uniqueTags = [...new Set(allTags)];
+    
+    // If new tag already exists, we'll merge the old tag into it
+    // If not, we'll simply rename the old tag to the new tag
+    
+    // Update each pin to replace the old tag with the new tag
+    const updatePromises = pins.map(pin => {
+      const updatedTags = pin.tags.map(tag => tag === oldTag ? newTag : tag);
+      
+      // Remove duplicates that might occur if the pin already had the new tag
+      const uniqueUpdatedTags = [...new Set(updatedTags)];
+      
+      return prisma.pin.update({
+        where: { id: pin.id },
+        data: { tags: uniqueUpdatedTags }
+      });
+    });
+
+    await Promise.all(updatePromises);
+
+    return NextResponse.json({ 
+      message: `Updated tag "${oldTag}" to "${newTag}" in ${pins.length} pins`,
+      pinsUpdated: pins.length
+    });
+  } catch (error) {
+    console.error('Error updating tag:', error);
+    return NextResponse.json({ error: 'Failed to update tag' }, { status: 500 });
+  }
+}
