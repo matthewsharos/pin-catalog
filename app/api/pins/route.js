@@ -34,36 +34,32 @@ export async function GET(req) {
     // If filtersOnly is true, fetch available filters
     if (filtersOnly) {
       try {
-        // Fetch new filters
-        const [categories, origins, series, years] = await Promise.all([
-          prisma.pin.findMany({
-            select: { categories: true }
-          }),
-          prisma.pin.findMany({
-            select: { origins: true }
-          }),
-          prisma.pin.findMany({
-            select: { series: true }
-          }),
-          prisma.pin.findMany({
-            select: { year: true },
-            where: { year: { not: null } },
-            orderBy: { year: 'desc' }
-          })
+        // Fetch distinct values for each filter type
+        const [categoriesResult, originsResult, seriesResult, yearsResult] = await Promise.all([
+          prisma.$queryRaw`SELECT DISTINCT unnest(categories) as value FROM "Pin" WHERE categories IS NOT NULL ORDER BY value`,
+          prisma.$queryRaw`SELECT DISTINCT unnest(origins) as value FROM "Pin" WHERE origins IS NOT NULL ORDER BY value`,
+          prisma.$queryRaw`SELECT DISTINCT unnest(series) as value FROM "Pin" WHERE series IS NOT NULL ORDER BY value`,
+          prisma.$queryRaw`SELECT DISTINCT year FROM "Pin" WHERE year IS NOT NULL ORDER BY year DESC`
         ]);
 
-        // Process the filters safely
+        // Process the results safely
         const filters = {
-          categories: [...new Set(categories.flatMap(p => p.categories || []))].filter(Boolean).sort(),
-          origins: [...new Set(origins.flatMap(p => p.origins || []))].filter(Boolean).sort(),
-          series: [...new Set(series.flatMap(p => p.series || []))].filter(Boolean).sort(),
-          years: [...new Set(years.map(p => p.year).filter(Boolean))].sort((a, b) => b - a)
+          categories: categoriesResult.map(r => r.value).filter(Boolean),
+          origins: originsResult.map(r => r.value).filter(Boolean),
+          series: seriesResult.map(r => r.value).filter(Boolean),
+          years: yearsResult.map(r => r.year).filter(Boolean)
         };
 
         return NextResponse.json(filters);
       } catch (error) {
         console.error('Error fetching filters:', error);
-        return NextResponse.json({ error: 'Failed to fetch filters' }, { status: 500 });
+        // Return empty filters as fallback
+        return NextResponse.json({
+          categories: [],
+          origins: [],
+          series: [],
+          years: []
+        });
       }
     }
 
