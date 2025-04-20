@@ -31,55 +31,66 @@ export async function GET(req) {
     const wishlist = searchParams.get('wishlist') === 'true';
     const underReview = searchParams.get('underReview') === 'true';
 
-    // If filtersOnly is true, return cached filters if available
+    // If filtersOnly is true, fetch available filters
     if (filtersOnly) {
-      const cacheKey = 'filters';
-      const cachedFilters = await prisma.filterCache.findUnique({
-        where: { id: cacheKey },
-        select: { data: true, updatedAt: true }
-      });
+      try {
+        // Try to get cached filters first
+        const cacheKey = 'filters';
+        const cachedFilters = await prisma.filterCache.findUnique({
+          where: { id: cacheKey },
+          select: { data: true, updatedAt: true }
+        }).catch(() => null); // Handle case where table doesn't exist yet
 
-      // Return cached filters if they're less than 1 hour old
-      if (cachedFilters && Date.now() - cachedFilters.updatedAt < 3600000) {
-        return NextResponse.json(JSON.parse(cachedFilters.data));
+        // Return cached filters if they're less than 1 hour old
+        if (cachedFilters && 
+            cachedFilters.updatedAt && 
+            Date.now() - new Date(cachedFilters.updatedAt).getTime() < 3600000) {
+          return NextResponse.json(JSON.parse(cachedFilters.data));
+        }
+
+        // Otherwise fetch new filters
+        const [categories, origins, series, years] = await Promise.all([
+          prisma.pin.findMany({
+            select: { categories: true },
+          }),
+          prisma.pin.findMany({
+            select: { origins: true },
+          }),
+          prisma.pin.findMany({
+            select: { series: true },
+          }),
+          prisma.pin.findMany({
+            select: { year: true },
+            where: { year: { not: null } },
+            orderBy: { year: 'desc' }
+          })
+        ]);
+
+        // Process the filters safely
+        const filters = {
+          categories: [...new Set(categories.flatMap(p => p.categories || []))].filter(Boolean).sort(),
+          origins: [...new Set(origins.flatMap(p => p.origins || []))].filter(Boolean).sort(),
+          series: [...new Set(series.flatMap(p => p.series || []))].filter(Boolean).sort(),
+          years: [...new Set(years.map(p => p.year).filter(Boolean))].sort((a, b) => b - a)
+        };
+
+        // Try to cache the filters, but don't block on failure
+        try {
+          await prisma.filterCache.upsert({
+            where: { id: cacheKey },
+            create: { id: cacheKey, data: JSON.stringify(filters) },
+            update: { data: JSON.stringify(filters) }
+          });
+        } catch (cacheError) {
+          console.error('Failed to cache filters:', cacheError);
+          // Continue without caching
+        }
+
+        return NextResponse.json(filters);
+      } catch (error) {
+        console.error('Error fetching filters:', error);
+        return NextResponse.json({ error: 'Failed to fetch filters' }, { status: 500 });
       }
-
-      // Otherwise fetch and cache new filters
-      const [categories, origins, series, years] = await Promise.all([
-        prisma.pin.findMany({
-          select: { categories: true },
-          distinct: ['categories']
-        }),
-        prisma.pin.findMany({
-          select: { origins: true },
-          distinct: ['origins']
-        }),
-        prisma.pin.findMany({
-          select: { series: true },
-          distinct: ['series']
-        }),
-        prisma.pin.findMany({
-          select: { year: true },
-          distinct: ['year'],
-          where: { year: { not: null } }
-        })
-      ]);
-
-      const filters = {
-        categories: [...new Set(categories.flatMap(p => p.categories))].sort(),
-        origins: [...new Set(origins.flatMap(p => p.origins))].sort(),
-        series: [...new Set(series.flatMap(p => p.series))].sort(),
-        years: [...new Set(years.map(p => p.year))].sort((a, b) => b - a)
-      };
-
-      // Cache the filters
-      await prisma.filterCache.upsert({
-        where: { id: cacheKey },
-        create: { id: cacheKey, data: JSON.stringify(filters) },
-        update: { data: JSON.stringify(filters) }
-      });
-
-      return NextResponse.json(filters);
     }
 
     // Build optimized where clause
@@ -87,14 +98,14 @@ export async function GET(req) {
 
     // Optimize status filters to use fewer OR conditions
     if (!all) {
-      const statusConditions = {};
-      if (collected) statusConditions.isCollected = true;
-      if (uncollected) statusConditions.isDeleted = true;
-      if (wishlist) statusConditions.isWishlist = true;
-      if (underReview) statusConditions.isUnderReview = true;
+      const statusConditions = [];
+      if (collected) statusConditions.push({ isCollected: true });
+      if (uncollected) statusConditions.push({ isDeleted: true });
+      if (wishlist) statusConditions.push({ isWishlist: true });
+      if (underReview) statusConditions.push({ isUnderReview: true });
       
-      if (Object.keys(statusConditions).length > 0) {
-        whereConditions.push({ OR: Object.entries(statusConditions).map(([key, value]) => ({ [key]: value })) });
+      if (statusConditions.length > 0) {
+        whereConditions.push({ OR: statusConditions });
       }
     }
 
@@ -108,7 +119,7 @@ export async function GET(req) {
       });
     }
 
-    // Add remaining filters with index hints
+    // Add remaining filters
     if (tag) whereConditions.push({ tags: { has: tag } });
     if (categories?.length) whereConditions.push({ categories: { hasSome: categories } });
     if (origins?.length) whereConditions.push({ origins: { hasSome: origins } });
@@ -120,65 +131,65 @@ export async function GET(req) {
     // Combine all conditions
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
-    // Determine sort order with index hints
-    let orderBy = [];
+    // Determine sort order
+    let orderBy = [{ updatedAt: 'desc' }];
     switch (sort) {
-      case 'Recently Updated':
-        orderBy.push({ updatedAt: 'desc' });
-        break;
       case 'Recently Added':
-        orderBy.push({ createdAt: 'desc' });
+        orderBy = [{ createdAt: 'desc' }];
         break;
       case 'Name':
-        orderBy.push({ pinName: 'asc' });
+        orderBy = [{ pinName: 'asc' }];
         break;
       case 'Year':
-        orderBy.push({ year: 'desc' }, { pinName: 'asc' });
+        orderBy = [{ year: 'desc' }, { pinName: 'asc' }];
         break;
-      default:
-        orderBy.push({ updatedAt: 'desc' });
     }
 
-    // Fetch total count and pins in parallel with optimized select
-    const [total, pins] = await Promise.all([
-      prisma.pin.count({ where }),
-      prisma.pin.findMany({
-        where,
-        select: {
-          id: true,
-          pinId: true,
-          pinName: true,
-          imageUrl: true,
-          year: true,
-          isCollected: true,
-          isWishlist: true,
-          isDeleted: true,
-          isUnderReview: true,
-          isLimitedEdition: true,
-          isMystery: true,
-          updatedAt: true
-        },
-        orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize
-      })
-    ]);
+    // Fetch total count and pins in parallel
+    try {
+      const [total, pins] = await Promise.all([
+        prisma.pin.count({ where }),
+        prisma.pin.findMany({
+          where,
+          select: {
+            id: true,
+            pinId: true,
+            pinName: true,
+            imageUrl: true,
+            year: true,
+            isCollected: true,
+            isWishlist: true,
+            isDeleted: true,
+            isUnderReview: true,
+            isLimitedEdition: true,
+            isMystery: true,
+            updatedAt: true
+          },
+          orderBy,
+          skip: (page - 1) * pageSize,
+          take: pageSize
+        })
+      ]);
 
-    const totalPages = Math.ceil(total / pageSize);
-    const hasMore = page < totalPages;
+      const totalPages = Math.ceil(total / pageSize);
+      const hasMore = page < totalPages;
 
-    return NextResponse.json({
-      data: pins,
-      pagination: {
-        page,
-        totalPages,
-        total,
-        hasMore
-      }
-    });
+      return NextResponse.json({
+        data: pins,
+        pagination: {
+          page,
+          totalPages,
+          total,
+          hasMore
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching pins:', error);
+      return NextResponse.json({ error: 'Failed to fetch pins' }, { status: 500 });
+    }
   } catch (error) {
-    console.error('Error fetching pins:', error);
-    return NextResponse.json({ error: 'Failed to fetch pins' }, { status: 500 });
+    console.error('Error in GET /api/pins:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
