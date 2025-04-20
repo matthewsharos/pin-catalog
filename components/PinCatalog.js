@@ -108,7 +108,6 @@ export default function PinCatalog() {
       params.set('pageSize', '100');
       
       if (searchQuery) params.set('search', searchQuery);
-      if (selectedTag !== null) params.set('tag', selectedTag);
       
       // Handle status filters
       if (statusFilters) {
@@ -131,13 +130,9 @@ export default function PinCatalog() {
       if (filterIsMystery) params.set('isMystery', 'true');
       if (yearFilters.length) params.set('years', yearFilters.join(','));
       
-      // Add tag filter, but don't add it to categories if it's "No Tags"
+      // Add tag filter
       if (selectedTag !== null) {
         params.set('tag', selectedTag);
-        // Only add to categories if it's a real tag, not "No Tags"
-        if (selectedTag !== 'No Tags' && filterCategories.length === 0) {
-          params.set('categories', selectedTag);
-        }
       }
       
       // Log the API request URL for debugging
@@ -336,7 +331,6 @@ export default function PinCatalog() {
         params.set('pageSize', '100');
         
         if (searchQuery) params.set('search', searchQuery);
-        if (selectedTag) params.set('tag', selectedTag);
         
         // Handle status filters
         if (statusFilters) {
@@ -359,13 +353,9 @@ export default function PinCatalog() {
         if (filterIsMystery) params.set('isMystery', 'true');
         if (yearFilters.length) params.set('years', yearFilters.join(','));
         
-        // Add tag filter, but don't add it to categories if it's "No Tags"
+        // Add tag filter
         if (selectedTag !== null) {
           params.set('tag', selectedTag);
-          // Only add to categories if it's a real tag, not "No Tags"
-          if (selectedTag !== 'No Tags' && filterCategories.length === 0) {
-            params.set('categories', selectedTag);
-          }
         }
         
         console.log('Initial fetch with URL:', `/api/pins?${params.toString()}`);
@@ -474,19 +464,20 @@ export default function PinCatalog() {
     return () => clearTimeout(timer);
   }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, initialized]);
 
-  // Update filterCategories when selectedTag changes
-  useEffect(() => {
-    if (selectedTag) {
-      // Only update if filterCategories doesn't already include this tag
-      if (!filterCategories.includes(selectedTag)) {
-        // Use a functional update to avoid dependency on filterCategories
-        setFilterCategories([selectedTag]);
-      }
-    } else if (!selectedTag && filterCategories.length > 0) {
-      // Only clear filterCategories if selectedTag is null and there are categories
-      setFilterCategories([]);
-    }
-  }, [selectedTag, filterCategories]);
+  // Handle tag selection
+  const handleTagSelect = (tag) => {
+    setSelectedTag(tag);
+    // Reset pagination when changing tag filter
+    setPins({ 
+      data: [], 
+      pagination: { 
+        page: 1, 
+        totalPages: 1, 
+        total: 0,
+        hasMore: true 
+      } 
+    });
+  };
 
   // Load more pins when page changes
   useEffect(() => {
@@ -542,7 +533,24 @@ export default function PinCatalog() {
     });
     
     // Force an immediate fetch with the cleared filters
-    fetchPins(1, false);
+    // Cancel any in-flight requests first
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Reset to page 1 and fetch pins with cleared tag filter
+    setPins({ 
+      data: [], 
+      pagination: { 
+        page: 1, 
+        totalPages: 1, 
+        total: 0,
+        hasMore: true 
+      } 
+    });
+    setTimeout(() => {
+      fetchPins(1, false);
+    }, 0);
   }, [fetchPins]);
 
   const handleStatusClick = useCallback((status, event) => {
@@ -639,13 +647,6 @@ export default function PinCatalog() {
     switch (type) {
       case 'categories':
         setFilterCategories(value || []);
-        // If a single category is selected, also set it as the selectedTag for consistency
-        if (value && value.length === 1) {
-          setSelectedTag(value[0]);
-        } else if (!value || value.length === 0) {
-          // Clear selectedTag if no category is selected
-          setSelectedTag(null);
-        }
         break;
       case 'origins':
         setFilterOrigins(value || []);
@@ -973,7 +974,7 @@ export default function PinCatalog() {
         onScrollToTop={handleScrollToTop}
         searchInputRef={searchInputRef}
         onMoreFiltersClick={() => setShowFilterModal(true)}
-        onTagSelect={setSelectedTag}
+        onTagSelect={handleTagSelect}
       />
       <div className="container mx-auto px-4 py-4">
         {selectedTag && (
