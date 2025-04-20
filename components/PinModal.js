@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import { FaCheck, FaTimes, FaHeart, FaStar, FaTag, FaCandyCane, FaTrash, FaCalendarAlt } from 'react-icons/fa';
 import EditTagsModal from './EditTagsModal';
 
-export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, currentIndex, onNavigate }) {
+export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, currentIndex, onNavigate, setSelectedTag }) {
   const [formData, setFormData] = useState(pin || {});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comments, setComments] = useState(pin?.comments || []);
@@ -289,7 +289,17 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
               {formData.tags && formData.tags.length > 0 && (
                 <div className="ml-2 flex flex-wrap gap-1">
                   {formData.tags.map((tag, index) => (
-                    <span key={index} className="bg-purple-900 text-white text-xs px-2 py-0.5 rounded-full">
+                    <span 
+                      key={index} 
+                      className="bg-purple-900 text-white text-xs px-2 py-0.5 rounded-full cursor-pointer hover:bg-purple-700 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Close the modal and filter by this tag
+                        onClose();
+                        setSelectedTag(tag);
+                      }}
+                      title={`Filter by tag: ${tag}`}
+                    >
                       {tag}
                     </span>
                   ))}

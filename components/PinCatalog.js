@@ -836,12 +836,13 @@ export default function PinCatalog() {
 
         <PinGrid
           pins={pins}
-          onPinClick={setSelectedPin}
+          onPinClick={(pin) => setSelectedPin(pin)}
           loading={loading}
           contentRef={contentRef}
-          onStatusChange={(updatedPin, currentIndex) => handlePinUpdate(updatedPin, currentIndex)}
+          onStatusChange={handlePinUpdate}
           lastPinElementRef={lastPinElementRef}
           zoomLevel={zoomLevel}
+          setSelectedTag={setSelectedTag}
         />
       </div>
 
@@ -872,6 +873,7 @@ export default function PinCatalog() {
           pins={pins}
           currentIndex={pins.findIndex(p => p.id === selectedPin.id)}
           onNavigate={handlePinNavigation}
+          setSelectedTag={setSelectedTag}
         />
       )}
 

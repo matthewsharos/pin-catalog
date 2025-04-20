@@ -10,7 +10,8 @@ export default function PinGrid({
   contentRef,
   onStatusChange,
   lastPinElementRef,
-  zoomLevel = 3 // Default to 3 which is the current layout
+  zoomLevel = 3, // Default to 3 which is the current layout
+  setSelectedTag // Add this prop to handle tag selection
 }) {
   const [animatingPins, setAnimatingPins] = useState({});
   const [flashingButtons, setFlashingButtons] = useState({});
@@ -176,6 +177,28 @@ export default function PinGrid({
               <p className="text-xs text-gray-500 truncate mt-0.5">
                 {pin.series}
               </p>
+            )}
+            
+            {/* Display tags if available */}
+            {pin.tags && pin.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {pin.tags.slice(0, 2).map((tag, index) => (
+                  <span 
+                    key={index} 
+                    className="bg-purple-900 text-white text-xs px-1.5 py-0.5 rounded-full cursor-pointer hover:bg-purple-700 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent opening the pin modal
+                      setSelectedTag(tag);
+                    }}
+                    title={`Filter by tag: ${tag}`}
+                  >
+                    {tag.length > 10 ? `${tag.substring(0, 8)}...` : tag}
+                  </span>
+                ))}
+                {pin.tags.length > 2 && (
+                  <span className="text-xs text-gray-500">+{pin.tags.length - 2}</span>
+                )}
+              </div>
             )}
           </div>
 
