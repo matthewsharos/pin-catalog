@@ -34,30 +34,16 @@ export async function GET(req) {
     // If filtersOnly is true, fetch available filters
     if (filtersOnly) {
       try {
-        // Try to get cached filters first
-        const cacheKey = 'filters';
-        const cachedFilters = await prisma.filterCache.findUnique({
-          where: { id: cacheKey },
-          select: { data: true, updatedAt: true }
-        }).catch(() => null); // Handle case where table doesn't exist yet
-
-        // Return cached filters if they're less than 1 hour old
-        if (cachedFilters && 
-            cachedFilters.updatedAt && 
-            Date.now() - new Date(cachedFilters.updatedAt).getTime() < 3600000) {
-          return NextResponse.json(JSON.parse(cachedFilters.data));
-        }
-
-        // Otherwise fetch new filters
+        // Fetch new filters
         const [categories, origins, series, years] = await Promise.all([
           prisma.pin.findMany({
-            select: { categories: true },
+            select: { categories: true }
           }),
           prisma.pin.findMany({
-            select: { origins: true },
+            select: { origins: true }
           }),
           prisma.pin.findMany({
-            select: { series: true },
+            select: { series: true }
           }),
           prisma.pin.findMany({
             select: { year: true },
@@ -73,18 +59,6 @@ export async function GET(req) {
           series: [...new Set(series.flatMap(p => p.series || []))].filter(Boolean).sort(),
           years: [...new Set(years.map(p => p.year).filter(Boolean))].sort((a, b) => b - a)
         };
-
-        // Try to cache the filters, but don't block on failure
-        try {
-          await prisma.filterCache.upsert({
-            where: { id: cacheKey },
-            create: { id: cacheKey, data: JSON.stringify(filters) },
-            update: { data: JSON.stringify(filters) }
-          });
-        } catch (cacheError) {
-          console.error('Failed to cache filters:', cacheError);
-          // Continue without caching
-        }
 
         return NextResponse.json(filters);
       } catch (error) {
