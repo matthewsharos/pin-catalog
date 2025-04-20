@@ -76,7 +76,7 @@ export async function GET(req) {
         statusConditions.push({ 
           AND: [
             { isCollected: false },
-            { isDeleted: true },
+            { isDeleted: false },
             { isWishlist: false },
             { isUnderReview: false }
           ]
