@@ -21,47 +21,59 @@ export async function GET(req) {
     // If filtersOnly is true, fetch available filters
     if (filtersOnly) {
       try {
-        // Use Prisma's groupBy to get distinct values efficiently
-        const [categories, origins, series, years] = await Promise.all([
-          prisma.pin.findMany({
-            where: { categories: { isEmpty: false } },
-            select: { categories: true },
-            distinct: ['categories']
-          }),
-          prisma.pin.findMany({
-            where: { origins: { isEmpty: false } },
-            select: { origins: true },
-            distinct: ['origins']
-          }),
-          prisma.pin.findMany({
-            where: { series: { isEmpty: false } },
-            select: { series: true },
-            distinct: ['series']
-          }),
-          prisma.pin.findMany({
-            where: { year: { not: null } },
-            select: { year: true },
-            distinct: ['year'],
-            orderBy: { year: 'desc' }
-          })
-        ]);
+        // First check database connection
+        await prisma.$connect();
 
-        // Process the results to get unique values
+        // Use simpler queries first to debug
+        const categoriesResult = await prisma.pin.findMany({
+          select: {
+            categories: true
+          },
+          where: {
+            categories: {
+              isEmpty: false
+            }
+          }
+        });
+
+        console.log('Categories query result:', categoriesResult);
+
         const filters = {
-          categories: [...new Set(categories.flatMap(p => p.categories))].filter(Boolean).sort(),
-          origins: [...new Set(origins.flatMap(p => p.origins))].filter(Boolean).sort(),
-          series: [...new Set(series.flatMap(p => p.series))].filter(Boolean).sort(),
-          years: [...new Set(years.map(p => p.year))].filter(Boolean).sort((a, b) => b - a)
+          categories: [...new Set(categoriesResult.flatMap(p => p.categories || []))].filter(Boolean).sort(),
+          origins: [],
+          series: [],
+          years: []
         };
+
+        // Log the processed filters
+        console.log('Processed filters:', filters);
 
         return NextResponse.json(filters);
       } catch (error) {
-        console.error('Error fetching filters:', error);
-        return NextResponse.json({ 
-          error: 'Failed to fetch filters',
-          details: error.message,
-          timestamp: new Date().toISOString()
-        }, { status: 500 });
+        // Log the full error object
+        console.error('Full error object:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        
+        if (error instanceof Error) {
+          return NextResponse.json({ 
+            error: 'Failed to fetch filters',
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString(),
+            path: '/api/pins?filtersOnly=true'
+          }, { status: 500 });
+        } else {
+          return NextResponse.json({ 
+            error: 'Failed to fetch filters',
+            details: 'Unknown error type',
+            value: String(error),
+            timestamp: new Date().toISOString(),
+            path: '/api/pins?filtersOnly=true'
+          }, { status: 500 });
+        }
       }
     }
     
