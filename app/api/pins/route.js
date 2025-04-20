@@ -66,8 +66,11 @@ export async function GET(req) {
     // Build optimized where clause
     const whereConditions = [];
 
-    // Optimize status filters to use fewer OR conditions
-    if (!all) {
+    // Handle status filters
+    if (all) {
+      // No status filter needed, show everything
+    } else if (collected || uncollected || wishlist || underReview) {
+      // If any specific status is selected, filter by those statuses
       const statusConditions = [];
       if (collected) statusConditions.push({ isCollected: true });
       if (uncollected) statusConditions.push({ isDeleted: true });
@@ -78,7 +81,7 @@ export async function GET(req) {
         whereConditions.push({ OR: statusConditions });
       }
     } else {
-      // When "No Status" is selected, show pins that have no true status flags
+      // If no status is selected and all=false, show pins with no status
       whereConditions.push({
         AND: [
           { isCollected: false },
@@ -105,8 +108,8 @@ export async function GET(req) {
     if (origins?.length) whereConditions.push({ origins: { hasSome: origins } });
     if (series?.length) whereConditions.push({ series: { hasSome: series } });
     if (years?.length) whereConditions.push({ year: { in: years } });
-    if (isLimitedEdition) whereConditions.push({ isLimitedEdition: true });
-    if (isMystery) whereConditions.push({ isMystery: true });
+    if (isLimitedEdition === 'true') whereConditions.push({ isLimitedEdition: true });
+    if (isMystery === 'true') whereConditions.push({ isMystery: true });
 
     // Combine all conditions
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
@@ -155,12 +158,18 @@ export async function GET(req) {
           skip: (page - 1) * pageSize,
           take: pageSize
         })
-      ]);
+      ]).catch(error => {
+        console.error('Database query error:', error);
+        throw new Error(`Database error: ${error.message}`);
+      });
 
       // Ensure tags are always an array
       const processedPins = pins.map(pin => ({
         ...pin,
-        tags: Array.isArray(pin.tags) ? pin.tags : []
+        tags: Array.isArray(pin.tags) ? pin.tags : [],
+        categories: Array.isArray(pin.categories) ? pin.categories : [],
+        origins: Array.isArray(pin.origins) ? pin.origins : [],
+        series: Array.isArray(pin.series) ? [pin.series] : []
       }));
 
       const totalPages = Math.ceil(total / pageSize);
@@ -176,8 +185,12 @@ export async function GET(req) {
         }
       });
     } catch (error) {
-      console.error('Error fetching pins:', error);
-      return NextResponse.json({ error: 'Failed to fetch pins' }, { status: 500 });
+      console.error('Error in pins query:', error);
+      return NextResponse.json({ 
+        error: 'Failed to fetch pins',
+        details: error.message,
+        timestamp: new Date().toISOString()
+      }, { status: 500 });
     }
   } catch (error) {
     console.error('Error in GET /api/pins:', error);
