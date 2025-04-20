@@ -720,7 +720,10 @@ export default function PinCatalog() {
             <div className="bg-purple-900 text-white text-xs px-3 py-1 rounded-full flex items-center">
               {selectedTag}
               <button
-                onClick={() => setSelectedTag(null)}
+                onClick={() => {
+                  setSelectedTag(null);
+                  setFilterCategories([]);
+                }}
                 className="ml-2 hover:text-gray-300"
               >
                 <FaTimes size={12} />
