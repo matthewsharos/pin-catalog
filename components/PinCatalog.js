@@ -409,6 +409,16 @@ export default function PinCatalog() {
     fetchAvailableFilters();
   }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, fetchAvailableFilters]);
 
+  // Update filterCategories when selectedTag changes
+  useEffect(() => {
+    if (selectedTag) {
+      // Only update if filterCategories doesn't already include this tag
+      if (!filterCategories.includes(selectedTag)) {
+        setFilterCategories([selectedTag]);
+      }
+    }
+  }, [selectedTag, filterCategories]);
+
   // Load more pins when page changes
   useEffect(() => {
     if (page > 1) {
@@ -506,6 +516,13 @@ export default function PinCatalog() {
     switch (type) {
       case 'categories':
         setFilterCategories(value || []);
+        // If a single category is selected, also set it as the selectedTag for consistency
+        if (value && value.length === 1) {
+          setSelectedTag(value[0]);
+        } else if (!value || value.length === 0) {
+          // Clear selectedTag if no category is selected
+          setSelectedTag(null);
+        }
         break;
       case 'origins':
         setFilterOrigins(value || []);
@@ -694,6 +711,7 @@ export default function PinCatalog() {
         onScrollToTop={handleScrollToTop}
         searchInputRef={searchInputRef}
         onMoreFiltersClick={() => setShowFilterModal(true)}
+        onTagSelect={setSelectedTag}
       />
       <div className="container mx-auto px-4 py-4">
         {selectedTag && (

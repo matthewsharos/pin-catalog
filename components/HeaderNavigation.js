@@ -17,7 +17,8 @@ export default function HeaderNavigation({
   onClearAllFilters,
   statusFilters,
   onStatusClick,
-  onMoreFiltersClick
+  onMoreFiltersClick,
+  onTagSelect
 }) {
   return (
     <div className="sticky top-0 z-50 bg-gray-900 shadow-lg">
@@ -94,6 +95,7 @@ export default function HeaderNavigation({
           statusFilters={statusFilters}
           onStatusClick={onStatusClick}
           onMoreFiltersClick={onMoreFiltersClick}
+          onTagSelect={onTagSelect}
         />
       </div>
     </div>

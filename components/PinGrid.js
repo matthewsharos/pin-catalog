@@ -188,7 +188,9 @@ export default function PinGrid({
                     className="bg-purple-900 text-white text-xs px-1.5 py-0.5 rounded-full cursor-pointer hover:bg-purple-700 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation(); // Prevent opening the pin modal
-                      setSelectedTag(tag);
+                      if (typeof setSelectedTag === 'function') {
+                        setSelectedTag(tag);
+                      }
                     }}
                     title={`Filter by tag: ${tag}`}
                   >

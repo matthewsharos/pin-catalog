@@ -296,7 +296,9 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
                         e.stopPropagation();
                         // Close the modal and filter by this tag
                         onClose();
-                        setSelectedTag(tag);
+                        if (typeof setSelectedTag === 'function') {
+                          setSelectedTag(tag);
+                        }
                       }}
                       title={`Filter by tag: ${tag}`}
                     >
