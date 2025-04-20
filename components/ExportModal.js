@@ -111,6 +111,47 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
     }
   };
 
+  // Cache for loaded images
+  const imageCache = new Map();
+
+  // Load image with proxy fallback
+  const loadImage = (url) => {
+    return new Promise((resolve, reject) => {
+      // Check cache first
+      if (imageCache.has(url)) {
+        resolve(imageCache.get(url));
+        return;
+      }
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        imageCache.set(url, img);
+        resolve(img);
+      };
+
+      img.onerror = () => {
+        // Try with proxy if direct load fails
+        const proxyImg = new Image();
+        proxyImg.crossOrigin = 'anonymous';
+        
+        proxyImg.onload = () => {
+          imageCache.set(url, proxyImg);
+          resolve(proxyImg);
+        };
+        
+        proxyImg.onerror = () => reject(new Error('Failed to load image'));
+        
+        // Use proxy endpoint for CORS issues
+        proxyImg.src = `/api/image-proxy?url=${encodeURIComponent(url)}`;
+      };
+
+      // Start loading the image
+      img.src = url;
+    });
+  };
+
   const generateImage = async (pinsToExport) => {
     const pinsArray = pinsToExport || exportPins;
     
@@ -138,7 +179,7 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       const pinSize = width / pinsPerRow;
       
       // Calculate number of rows needed
-      const rows = Math.ceil(Math.min(pinsArray.length, 250) / pinsPerRow);
+      const rows = Math.ceil(pinsArray.length / pinsPerRow);
       
       // Calculate height (pins + 100px for filter info)
       const height = (pinSize * rows) + 100;
@@ -153,283 +194,114 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, width, height);
 
-      // Preload all images in parallel to improve performance
-      setLoadingMessage('Preloading images...');
+      // Preload all images in parallel
+      setLoadingMessage('Loading images...');
+      const imagePromises = pinsArray.map(pin => loadImage(pin.imageUrl));
+      const loadedImages = await Promise.allSettled(imagePromises);
       
-      // Create an array to hold all image loading promises
-      const imagePromises = pinsArray.slice(0, 250).map((pin, index) => {
-        return new Promise((resolve) => {
-          loadImage(pin.imageUrl)
-            .then(img => {
-              resolve({ img, pin, index });
-            })
-            .catch(error => {
-              console.error(`Error loading image for pin ${pin.pinId}:`, error);
-              resolve({ error, pin, index });
-            });
-        });
-      });
-      
-      // Update loading message with progress
-      let loadedCount = 0;
-      const totalPins = Math.min(pinsArray.length, 250);
-      
-      // Create a progress tracker for image loading
-      const updateProgress = () => {
-        loadedCount++;
-        if (loadedCount % 10 === 0 || loadedCount === totalPins) {
-          setLoadingMessage(`Preloading images... ${loadedCount}/${totalPins}`);
+      // Draw pins
+      setLoadingMessage('Drawing pins...');
+      loadedImages.forEach((result, index) => {
+        if (result.status !== 'fulfilled') {
+          console.error(`Failed to load image for pin ${pinsArray[index].id}:`, result.reason);
+          return;
         }
-      };
-      
-      // Process images in batches for better UI responsiveness
-      const batchSize = 10;
-      const batches = Math.ceil(imagePromises.length / batchSize);
-      
-      let loadedImages = [];
-      
-      for (let i = 0; i < batches; i++) {
-        const start = i * batchSize;
-        const end = Math.min(start + batchSize, imagePromises.length);
-        const batchPromises = imagePromises.slice(start, end);
-        
-        const batchResults = await Promise.all(batchPromises);
-        loadedImages = [...loadedImages, ...batchResults];
-        
-        // Update progress after each batch
-        loadedCount = loadedImages.length;
-        setLoadingMessage(`Preloading images... ${loadedCount}/${totalPins}`);
-        
-        // Give the UI a chance to update
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
-      
-      // Now draw all images to canvas
-      setLoadingMessage('Rendering image...');
-      
-      // Process in batches to keep UI responsive
-      const renderBatchSize = 10; // Smaller batch size to prevent freezing
-      const renderBatches = Math.ceil(loadedImages.length / renderBatchSize);
-      
-      let processedCount = 0;
-      
-      for (let batchIndex = 0; batchIndex < renderBatches; batchIndex++) {
-        const start = batchIndex * renderBatchSize;
-        const end = Math.min(start + renderBatchSize, loadedImages.length);
-        const batch = loadedImages.slice(start, end);
-        
-        // Process this batch
-        for (const { img, pin, index, error } of batch) {
-          try {
-            const row = Math.floor(index / pinsPerRow);
-            const col = index % pinsPerRow;
-            const x = col * pinSize;
-            const y = row * pinSize;
-            
-            if (error || !img) {
-              // Draw error placeholder
-              ctx.fillStyle = '#f0f0f0';
-              ctx.fillRect(x, y, pinSize, pinSize);
-              ctx.fillStyle = 'red';
-              ctx.font = '20px Arial';
-              ctx.textAlign = 'center';
-              ctx.fillText('Image Error', x + pinSize/2, y + pinSize/2);
-              ctx.fillText(`#${pin.pinId || 'Unknown'}`, x + pinSize/2, y + pinSize/2 + 30);
-              processedCount++;
-              continue;
-            }
-            
-            // Calculate dimensions to maintain aspect ratio within square
-            let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
-            
-            if (img.width > img.height) {
-              // Landscape image
-              drawWidth = pinSize;
-              drawHeight = (img.height / img.width) * pinSize;
-              offsetY = (pinSize - drawHeight) / 2;
-            } else {
-              // Portrait image
-              drawHeight = pinSize;
-              drawWidth = (img.width / img.height) * pinSize;
-              offsetX = (pinSize - drawWidth) / 2;
-            }
-            
-            // Draw image centered in its square
-            ctx.drawImage(img, x + offsetX, y + offsetY, drawWidth, drawHeight);
-            
-            // Draw pin info background
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(x, y + pinSize - 60, pinSize, 60);
-            
-            // Draw pin name
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(truncateText(pin.pinName || 'Unknown', 20), x + pinSize/2, y + pinSize - 35);
-            
-            // Draw pin ID and status
-            ctx.font = '16px Arial';
-            
-            // Determine status text
-            let statusText = '';
-            if (pin.isCollected) statusText = 'Collected';
-            else if (pin.isWishlist) statusText = 'Wishlist';
-            else if (pin.isDeleted) statusText = 'Uncollected';
-            else if (pin.isUnderReview) statusText = 'Under Review';
-            
-            ctx.fillText(`#${pin.pinId} - ${statusText}`, x + pinSize/2, y + pinSize - 10);
-            
-            // Increment processed count
-            processedCount++;
-          } catch (err) {
-            console.error(`Error rendering pin ${pin.pinId}:`, err);
-            // Continue with next pin even if one fails
-            processedCount++;
-          }
-        }
-        
-        // Update progress message only once per batch
-        setLoadingMessage(`Rendering image... ${processedCount}/${totalPins}`);
-        
-        // Give the UI a chance to update between batches with longer timeout for later batches
-        // This helps prevent the browser from freezing on the final batches
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
 
-      // Draw filter information at bottom
-      setLoadingMessage('Adding filter information...');
-      const filterY = height - 80;
+        const img = result.value;
+        const row = Math.floor(index / pinsPerRow);
+        const col = index % pinsPerRow;
+        const x = col * pinSize;
+        const y = row * pinSize;
+
+        // Center image in its square
+        let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+        
+        if (img.width > img.height) {
+          // Landscape image
+          drawWidth = pinSize;
+          drawHeight = (img.height / img.width) * pinSize;
+          offsetY = (pinSize - drawHeight) / 2;
+        } else {
+          // Portrait image
+          drawHeight = pinSize;
+          drawWidth = (img.width / img.height) * pinSize;
+          offsetX = (pinSize - drawWidth) / 2;
+        }
+        
+        // Draw image
+        ctx.drawImage(img, x + offsetX, y + offsetY, drawWidth, drawHeight);
+        
+        // Draw pin info
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(x, y + pinSize - 60, pinSize, 60);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'left';
+        
+        // Draw pin name and ID
+        const pinName = truncateText(pinsArray[index].pinName, 30);
+        const pinId = pinsArray[index].pinId || '';
+        ctx.fillText(pinName, x + 10, y + pinSize - 35);
+        ctx.fillText(pinId, x + 10, y + pinSize - 15);
+
+        // Draw status indicators
+        if (pinsArray[index].isCollected) {
+          ctx.fillStyle = '#4CAF50';
+          ctx.fillRect(x + pinSize - 30, y + pinSize - 30, 20, 20);
+        }
+        if (pinsArray[index].isWishlist) {
+          ctx.fillStyle = '#FFC107';
+          ctx.fillRect(x + pinSize - 60, y + pinSize - 30, 20, 20);
+        }
+      });
+
+      // Draw filter info at bottom
+      const filterY = height - 90;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(0, filterY, width, 80);
+      ctx.fillRect(0, filterY, width, 90);
       
       ctx.fillStyle = 'white';
-      ctx.font = '24px Arial';
+      ctx.font = '20px Arial';
       ctx.textAlign = 'left';
       
       // Create filter text
-      let filterTexts = [];
-      
-      // Add status filters
+      const filterInfo = [];
       if (filters?.statusFilters) {
         const activeStatuses = Object.entries(filters.statusFilters)
-          .filter(([key, value]) => value && key !== 'all')
+          .filter(([_, value]) => value)
           .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1));
-          
-        if (activeStatuses.length > 0) {
-          filterTexts.push(`Status: ${activeStatuses.join(', ')}`);
+        if (activeStatuses.length) {
+          filterInfo.push(`Status: ${activeStatuses.join(', ')}`);
         }
       }
-      
-      // Add year filters
-      if (filters?.yearFilters && filters.yearFilters.length > 0) {
-        filterTexts.push(`Year: ${filters.yearFilters.join(', ')}`);
-      }
-      
-      // Add category filters
-      if (filters?.filterCategories && filters.filterCategories.length > 0) {
-        filterTexts.push(`Categories: ${filters.filterCategories.join(', ')}`);
-      }
-      
-      // Add origin filters
-      if (filters?.filterOrigins && filters.filterOrigins.length > 0) {
-        filterTexts.push(`Origins: ${filters.filterOrigins.join(', ')}`);
-      }
-      
-      // Add series filters
-      if (filters?.filterSeries && filters.filterSeries.length > 0) {
-        filterTexts.push(`Series: ${filters.filterSeries.join(', ')}`);
-      }
-      
-      // Add special filters
-      if (filters?.filterIsLimitedEdition) {
-        filterTexts.push('Limited Edition');
-      }
-      
-      if (filters?.filterIsMystery) {
-        filterTexts.push('Mystery');
-      }
-      
-      // Add search query
       if (filters?.searchQuery) {
-        filterTexts.push(`Search: "${filters.searchQuery}"`);
+        filterInfo.push(`Search: ${filters.searchQuery}`);
+      }
+      if (filters?.tag) {
+        filterInfo.push(`Tag: ${filters.tag}`);
+      }
+      if (filters?.year) {
+        filterInfo.push(`Year: ${filters.year}`);
       }
       
-      // Add sort option
-      if (filters?.sortOption) {
-        filterTexts.push(`Sort: ${filters.sortOption}`);
-      }
+      // Draw filter info
+      const filterText = filterInfo.length ? filterInfo.join(' | ') : 'No filters applied';
+      ctx.fillText(filterText, 20, filterY + 40);
       
-      // Add pin count
-      filterTexts.push(`Total: ${pinsArray.length} pins`);
-      
-      // Draw filter text
-      const filterText = filterTexts.join(' | ');
-      ctx.fillText(truncateText(filterText, 120), 20, filterY + 45);
-
       // Convert to data URL and set
       setLoadingMessage('Finalizing image...');
       const dataUrl = canvas.toDataURL('image/png');
       setImageUrl(dataUrl);
-      setLoadingMessage('');
       
     } catch (error) {
       console.error('Error generating image:', error);
       toast.error('Failed to generate image');
-      setLoadingMessage('Error generating image. Please try again.');
     } finally {
       setIsGenerating(false);
+      setLoadingMessage('');
     }
   };
-
-  // Helper function to truncate text
-  const truncateText = (text, maxLength) => {
-    if (!text) return '';
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-  };
-
-  // Helper function to load images with CORS handling and caching
-  const loadImage = (() => {
-    // Create a cache for loaded images
-    const imageCache = new Map();
-    
-    return (url) => {
-      // Check if image is already in cache
-      if (imageCache.has(url)) {
-        return Promise.resolve(imageCache.get(url));
-      }
-      
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        
-        img.onload = () => {
-          // Store in cache
-          imageCache.set(url, img);
-          resolve(img);
-        };
-        
-        img.onerror = (e) => {
-          console.error('Image load error:', e);
-          // Try with proxy if direct load fails
-          const proxyImg = new Image();
-          proxyImg.crossOrigin = 'anonymous';
-          
-          proxyImg.onload = () => {
-            // Store in cache
-            imageCache.set(url, proxyImg);
-            resolve(proxyImg);
-          };
-          
-          proxyImg.onerror = () => reject(new Error('Failed to load image even with proxy'));
-          
-          // Use a proxy to handle CORS issues
-          proxyImg.src = `/api/image-proxy?url=${encodeURIComponent(url)}`;
-        };
-        
-        img.src = url;
-      });
-    };
-  })();
 
   const handleDownload = () => {
     if (!imageUrl) return;
@@ -441,6 +313,11 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
     link.click();
     document.body.removeChild(link);
     toast.success('Image downloaded successfully');
+  };
+
+  const truncateText = (text, maxLength) => {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
   return (
