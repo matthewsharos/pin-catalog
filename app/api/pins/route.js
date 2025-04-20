@@ -145,7 +145,11 @@ export async function GET(req) {
             isMystery: true,
             updatedAt: true,
             tags: true,
-            series: true
+            series: true,
+            origin: true,
+            categories: true,
+            releaseDate: true,
+            pinpopUrl: true
           },
           orderBy,
           skip: (page - 1) * pageSize,
@@ -153,11 +157,17 @@ export async function GET(req) {
         })
       ]);
 
+      // Ensure tags are always an array
+      const processedPins = pins.map(pin => ({
+        ...pin,
+        tags: Array.isArray(pin.tags) ? pin.tags : []
+      }));
+
       const totalPages = Math.ceil(total / pageSize);
       const hasMore = page < totalPages;
 
       return NextResponse.json({
-        data: pins,
+        data: processedPins,
         pagination: {
           page,
           totalPages,
