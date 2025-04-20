@@ -589,9 +589,19 @@ export default function PinCatalog() {
       abortControllerRef.current.abort();
     }
     
+    // Clear the current pins and show loading state immediately
+    setPins([]);
+    setLoading(true);
+    
     setSearchQuery(value);
     setPage(1);
-  }, []);
+    
+    // Fetch pins with the new search query after a short delay
+    // to ensure the state is updated
+    setTimeout(() => {
+      fetchPins(1, false);
+    }, 10);
+  }, [fetchPins]);
 
   const handleYearChange = useCallback((year) => {
     // Cancel any in-flight requests
