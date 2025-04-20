@@ -131,6 +131,15 @@ export default function PinCatalog() {
       if (filterIsMystery) params.set('isMystery', 'true');
       if (yearFilters.length) params.set('years', yearFilters.join(','));
       
+      // Add tag filter, but don't add it to categories if it's "No Tags"
+      if (selectedTag !== null) {
+        params.set('tag', selectedTag);
+        // Only add to categories if it's a real tag, not "No Tags"
+        if (selectedTag !== 'No Tags' && filterCategories.length === 0) {
+          params.set('categories', selectedTag);
+        }
+      }
+      
       // Log the API request URL for debugging
       console.log('Fetching pins with URL:', `/api/pins?${params.toString()}`);
       
@@ -349,6 +358,15 @@ export default function PinCatalog() {
         if (filterIsLimitedEdition) params.set('isLimitedEdition', 'true');
         if (filterIsMystery) params.set('isMystery', 'true');
         if (yearFilters.length) params.set('years', yearFilters.join(','));
+        
+        // Add tag filter, but don't add it to categories if it's "No Tags"
+        if (selectedTag !== null) {
+          params.set('tag', selectedTag);
+          // Only add to categories if it's a real tag, not "No Tags"
+          if (selectedTag !== 'No Tags' && filterCategories.length === 0) {
+            params.set('categories', selectedTag);
+          }
+        }
         
         console.log('Initial fetch with URL:', `/api/pins?${params.toString()}`);
         
@@ -634,7 +652,7 @@ export default function PinCatalog() {
         break;
       case 'series':
         setFilterSeries(value || []);
-        break;
+        break
     }
     setPins({ 
       data: [], 
