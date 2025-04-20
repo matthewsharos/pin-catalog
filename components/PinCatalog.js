@@ -86,21 +86,16 @@ export default function PinCatalog() {
   const fetchPins = useCallback(async (pageNum = 1, append = false) => {
     if (!initialized) return;
 
-    // Set loading state at the beginning of the fetch operation
+    // Only set loading true if this is not an append operation
     if (!append) {
       setLoading(true);
-      console.log('Setting loading to true');
     }
 
     try {
-      // Cancel any in-flight requests
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      
       // Create a new abort controller for this request
-      abortControllerRef.current = new AbortController();
-      const signal = abortControllerRef.current.signal;
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const signal = controller.signal;
       
       const params = new URLSearchParams();
       params.set('page', pageNum.toString());
@@ -135,9 +130,6 @@ export default function PinCatalog() {
         params.set('tag', selectedTag);
       }
       
-      // Log the API request URL for debugging
-      console.log('Fetching pins with URL:', `/api/pins?${params.toString()}`);
-      
       const response = await fetch(`/api/pins?${params.toString()}`, { 
         signal,
         headers: {
@@ -147,25 +139,19 @@ export default function PinCatalog() {
       });
       
       // If request was aborted, just return without updating state
-      if (signal.aborted) {
-        console.log('Request was aborted');
-        return;
-      }
+      if (signal.aborted) return;
       
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('API error:', errorData);
         throw new Error(errorData.error || 'Failed to fetch pins');
       }
       
       const data = await response.json();
       
       // If request was aborted during the json parsing, just return without updating state
-      if (signal.aborted) {
-        console.log('Request was aborted during JSON parsing');
-        return;
-      }
+      if (signal.aborted) return;
       
+      // Batch state updates
       setPins(prevPins => {
         const newPins = append 
           ? { 
@@ -186,44 +172,23 @@ export default function PinCatalog() {
                 hasMore: data.currentPage < data.totalPages
               }
             };
-        
-        console.log('New pins state:', {
-          length: newPins.data.length,
-          firstPin: newPins.data[0],
-          pagination: newPins.pagination
-        });
-        
         return newPins;
       });
 
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('Request aborted:', error);
-      } else {
-        console.error('Error fetching pins:', error);
-        toast.error('Failed to fetch pins');
-        
-        // If there was an error and we're not appending, set pins to empty array
-        if (!append) {
-          setPins({ 
-            data: [], 
-            pagination: { 
-              page: 1, 
-              totalPages: 1, 
-              total: 0,
-              hasMore: false 
-            } 
-          });
-        }
+        // Don't show error for aborted requests
+        return;
       }
+      console.error('Error fetching pins:', error);
+      toast.error('Failed to load pins');
     } finally {
-      // Only set loading to false if this wasn't aborted
-      if (!abortControllerRef.current?.signal.aborted) {
+      // Only set loading false if this is not an append operation or if there was an error
+      if (!append) {
         setLoading(false);
-        console.log('Setting loading to false');
       }
     }
-  }, [initialized, sortOption, searchQuery, selectedTag, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters]);
+  }, [initialized, sortOption, searchQuery, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, selectedTag]);
 
   // Fetch available filters with abort controller
   const fetchAvailableFilters = useCallback(async () => {
@@ -236,8 +201,9 @@ export default function PinCatalog() {
       }
       
       // Create a new abort controller for this request
-      abortControllerRef.current = new AbortController();
-      const signal = abortControllerRef.current.signal;
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const signal = controller.signal;
       
       const params = new URLSearchParams();
       params.append('filtersOnly', 'true');

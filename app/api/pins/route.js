@@ -8,284 +8,185 @@ export const fetchCache = 'force-no-store';
 // Also used to fetch top 10 pins for verification
 export async function GET(req) {
   try {
-    const url = new URL(req.url);
-    const searchParams = url.searchParams;
+    const { searchParams } = new URL(req.url);
+
+    // Extract query parameters
     const page = parseInt(searchParams.get('page')) || 1;
-    const search = searchParams.get('search') || '';
-    const sort = searchParams.get('sort') || 'Recently Updated';
-    const tag = searchParams.get('tag');
-    const years = searchParams.get('years')?.split(',').map(Number) || [];
     const pageSize = parseInt(searchParams.get('pageSize')) || 100;
-    const collected = searchParams.get('collected') === 'true';
-    const wishlist = searchParams.get('wishlist') === 'true';
-    const uncollected = searchParams.get('uncollected') === 'true';
-    const underReview = searchParams.get('underReview') === 'true';
-    const all = searchParams.get('all') === 'true';
-    const getFiltersOnly = searchParams.get('filtersOnly') === 'true';
-
-    // Log initial query parameters
-    console.log('API: Query params:', {
-      page,
-      pageSize,
-      collected,
-      wishlist,
-      uncollected,
-      underReview,
-      all,
-      search: search.length > 0 ? `${search.substring(0, 20)}...` : '',
-    });
-
-    // Process sort option
-    let sortField = 'updatedAt';
-    let sortOrder = 'desc';
-    
-    // Add additional filters for dynamic dropdowns
-    // Series filter
-    const series = searchParams.get('series');
-    // Origin filter
-    const origin = searchParams.get('origin');
-    // Categories filter
+    const search = searchParams.get('search');
+    const sort = searchParams.get('sort');
+    const tag = searchParams.get('tag');
+    const filtersOnly = searchParams.get('filtersOnly') === 'true';
     const categories = searchParams.get('categories')?.split(',').filter(Boolean);
-    // Origins filter from params
     const origins = searchParams.get('origins')?.split(',').filter(Boolean);
-    // Series filter from params
-    const seriesArray = searchParams.get('series')?.split(',').filter(Boolean);
-    // Limited Edition filter
+    const series = searchParams.get('series')?.split(',').filter(Boolean);
+    const years = searchParams.get('years')?.split(',').map(Number).filter(Boolean);
     const isLimitedEdition = searchParams.get('isLimitedEdition') === 'true';
-    // Mystery filter
     const isMystery = searchParams.get('isMystery') === 'true';
 
-    switch (sort) {
-      case 'Recently Updated':
-        sortField = 'updatedAt';
-        sortOrder = 'desc';
-        break;
-      case 'Name (A-Z)':
-        sortField = 'pinName';
-        sortOrder = 'asc';
-        break;
-      case 'Name (Z-A)':
-        sortField = 'pinName';
-        sortOrder = 'desc';
-        break;
-      case 'Newest First':
-        sortField = 'releaseDate';
-        sortOrder = 'desc';
-        break;
-      case 'Oldest First':
-        sortField = 'releaseDate';
-        sortOrder = 'asc';
-        break;
-      default:
-        // Default to recently updated
-        sortField = 'updatedAt';
-        sortOrder = 'desc';
-    }
-    
-    let where = {};
-    
-    // Add search filter
-    if (search) {
-      where.OR = [
-        { pinName: { contains: search, mode: 'insensitive' } },
-        { series: { contains: search, mode: 'insensitive' } },
-        { origin: { contains: search, mode: 'insensitive' } },
-        { edition: { contains: search, mode: 'insensitive' } },
-        { pinId: { contains: search, mode: 'insensitive' } }
-      ];
-    }
-    
-    // Add status filters
-    if (!all) {
-      const statusConditions = [];
+    // Status filters
+    const all = searchParams.get('all') === 'true';
+    const collected = searchParams.get('collected') === 'true';
+    const uncollected = searchParams.get('uncollected') === 'true';
+    const wishlist = searchParams.get('wishlist') === 'true';
+    const underReview = searchParams.get('underReview') === 'true';
+
+    // Build the where clause
+    const whereConditions = [];
+    const statusConditions = [];
+
+    // Handle status filters
+    if (all) {
+      // No status conditions needed for 'all'
+    } else {
       if (collected) statusConditions.push({ isCollected: true });
       if (uncollected) statusConditions.push({ isDeleted: true });
       if (wishlist) statusConditions.push({ isWishlist: true });
       if (underReview) statusConditions.push({ isUnderReview: true });
-      
-      if (statusConditions.length > 0) {
-        // Convert the existing where clause to an AND condition
-        where = {
-          AND: [
-            // If we have a search, include it as one condition
-            ...(where.OR ? [{ OR: where.OR }] : []),
-            // Add the status conditions as an OR group
-            { OR: statusConditions }
-          ]
-        };
-      }
-      console.log('Status filter - specific statuses:', { statusConditions });
-    } else {
-      // When 'all' is selected, we want pins that don't have any status set
-      // Show pins where all status flags are false
-      where = {
-        AND: [
-          // If we have a search, include it as one condition
-          ...(where.OR ? [{ OR: where.OR }] : []),
-          {
-            isCollected: false,
-            isWishlist: false,
-            isDeleted: false,
-            isUnderReview: false
-          }
+    }
+
+    // Add status conditions to where clause if any exist
+    if (statusConditions.length > 0) {
+      whereConditions.push({ OR: statusConditions });
+    }
+
+    // Add search condition if search query exists
+    if (search) {
+      whereConditions.push({
+        OR: [
+          { pinName: { contains: search, mode: 'insensitive' } },
+          { pinId: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } }
         ]
-      };
-      console.log('Status filter - ALL filter applied (pins without status)');
+      });
     }
 
-    // Add tag filter
-    if (tag && tag !== '') {
-      if (tag === 'No Tags') {
-        where.tags = {
-          equals: []  // This will match pins where tags is an empty array
-        };
-      } else {
-        where.tags = {
-          has: tag
-        };
-      }
-    }
-    
-    // Add year filter
-    if (years.length > 0) {
-      where.year = {
-        in: years
-      };
+    // Add tag filter if specified
+    if (tag) {
+      whereConditions.push({ tags: { has: tag } });
     }
 
-    // Series filter
-    if (series) {
-      where.series = { equals: series, mode: 'insensitive' };
+    // Add category filters if specified
+    if (categories?.length) {
+      whereConditions.push({ categories: { hasSome: categories } });
     }
 
-    // Origin filter
-    if (origin) {
-      where.origin = { equals: origin, mode: 'insensitive' };
+    // Add origin filters if specified
+    if (origins?.length) {
+      whereConditions.push({ origins: { hasSome: origins } });
     }
 
-    // Edition filter
-    const edition = searchParams.get('edition');
-    if (edition) {
-      where.edition = { equals: edition, mode: 'insensitive' };
+    // Add series filters if specified
+    if (series?.length) {
+      whereConditions.push({ series: { hasSome: series } });
     }
 
-    // Categories filter
-    if (categories && categories.length > 0) {
-      where.tags = {
-        hasSome: categories
-      };
+    // Add year filters if specified
+    if (years?.length) {
+      whereConditions.push({ year: { in: years } });
     }
 
-    // Origins filter from params
-    if (origins && origins.length > 0) {
-      where.origin = {
-        in: origins
-      };
-    }
-
-    // Series filter from params
-    if (seriesArray && seriesArray.length > 0) {
-      where.series = {
-        in: seriesArray
-      };
-    }
-    
-    // Limited Edition filter
+    // Add limited edition filter if specified
     if (isLimitedEdition) {
-      where.isLimitedEdition = true;
+      whereConditions.push({ isLimitedEdition: true });
     }
-    
-    // Mystery filter
+
+    // Add mystery filter if specified
     if (isMystery) {
-      where.isMystery = true;
+      whereConditions.push({ isMystery: true });
     }
 
-    console.log('API Query where clause:', JSON.stringify(where, null, 2));
+    // Combine all conditions with AND
+    const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
-    // Get available filters based on current status selection
-    if (getFiltersOnly) {
-      try {
-        // If no where conditions, don't apply any filters
-        if (Object.keys(where).length === 0) {
-          where = {};
-        }
-
-        console.log('Fetching filters with where:', JSON.stringify(where, null, 2)); // Debug log
-
-        const pins = await prisma.pin.findMany({
+    // If filtersOnly is true, only return the available filters
+    if (filtersOnly) {
+      const [categories, origins, series, years] = await Promise.all([
+        prisma.pin.findMany({
           where,
-          select: {
-            year: true,
-            series: true,
-            origin: true,
-            edition: true,
-            tags: true
-          }
-        });
+          select: { categories: true },
+          distinct: ['categories']
+        }),
+        prisma.pin.findMany({
+          where,
+          select: { origins: true },
+          distinct: ['origins']
+        }),
+        prisma.pin.findMany({
+          where,
+          select: { series: true },
+          distinct: ['series']
+        }),
+        prisma.pin.findMany({
+          where,
+          select: { year: true },
+          distinct: ['year']
+        })
+      ]);
 
-        console.log('Found pins for filters:', pins.length); // Debug log
-
-        // Extract unique values with null checks
-        const filters = {
-          years: [...new Set(pins.filter(pin => pin?.year !== null && pin?.year !== undefined).map(pin => pin.year))],
-          series: [...new Set(pins.filter(pin => pin?.series !== null && pin?.series !== undefined).map(pin => pin.series))],
-          origins: [...new Set(pins.filter(pin => pin?.origin !== null && pin?.origin !== undefined).map(pin => pin.origin))],
-          tags: [...new Set(pins.flatMap(pin => Array.isArray(pin?.tags) ? pin.tags : []))]
-        };
-
-        console.log('Processed filters:', filters); // Debug log
-
-        // Sort filters
-        filters.years.sort((a, b) => b - a); // Years descending
-        filters.series.sort();
-        filters.origins.sort();
-        filters.tags.sort();
-
-        return NextResponse.json(filters);
-      } catch (error) {
-        console.error('Error in filter processing:', error);
-        return NextResponse.json({ 
-          error: 'Failed to process filters',
-          details: error.message,
-          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        }, { status: 500 });
-      }
+      return NextResponse.json({
+        categories: [...new Set(categories.flatMap(p => p.categories))].sort(),
+        origins: [...new Set(origins.flatMap(p => p.origins))].sort(),
+        series: [...new Set(series.flatMap(p => p.series))].sort(),
+        years: [...new Set(years.map(p => p.year))].sort((a, b) => b - a)
+      });
     }
 
-    // Execute the query with pagination
-    console.log('API: Executing Prisma query with where clause:', JSON.stringify(where, null, 2));
-    
-    const [pins, totalCount] = await Promise.all([
-      prisma.pin.findMany({
-        where,
-        orderBy: {
-          [sortField]: sortOrder
-        },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      prisma.pin.count({ where })
-    ]);
+    // Get sort field and direction
+    let orderBy = {};
+    if (sort === 'Recently Updated') {
+      orderBy = { updatedAt: 'desc' };
+    } else if (sort === 'Recently Added') {
+      orderBy = { createdAt: 'desc' };
+    } else if (sort === 'Name') {
+      orderBy = { pinName: 'asc' };
+    } else if (sort === 'ID') {
+      orderBy = { pinId: 'asc' };
+    }
 
-    console.log('API: Query results:', {
-      pinsFound: pins.length,
-      totalCount,
-      firstPin: pins[0]
+    // Get total count for pagination
+    const totalCount = await prisma.pin.count({ where });
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    // Get pins with pagination
+    const pins = await prisma.pin.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        pinId: true,
+        pinName: true,
+        description: true,
+        imageUrl: true,
+        year: true,
+        isCollected: true,
+        isWishlist: true,
+        isDeleted: true,
+        isUnderReview: true,
+        isLimitedEdition: true,
+        isMystery: true,
+        categories: true,
+        origins: true,
+        series: true,
+        tags: true,
+        notes: true,
+        updatedAt: true,
+        createdAt: true
+      }
     });
 
     return NextResponse.json({
       pins,
-      totalCount,
       currentPage: page,
-      totalPages: Math.ceil(totalCount / pageSize)
+      totalPages,
+      totalCount
     });
 
   } catch (error) {
-    console.error('API Error:', error);
-    return NextResponse.json({ 
-      error: error.message || 'Failed to fetch pins',
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    }, { status: 500 });
+    console.error('Error in GET /api/pins:', error);
+    return NextResponse.json({ error: 'Failed to fetch pins' }, { status: 500 });
   }
 }
 
