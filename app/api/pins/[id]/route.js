@@ -13,9 +13,12 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: 'Invalid pin ID' }, { status: 400 });
     }
     
-    // Get the pin without relations
+    // Get the pin with comments
     const pin = await prisma.pin.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        comments: true
+      }
     });
 
     if (!pin) {
@@ -23,28 +26,26 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: 'Pin not found' }, { status: 404 });
     }
 
-    // Try to fetch user data from the JSON file
+    // Try to fetch user photos from the JSON file
     try {
       const userDataDir = path.join(process.cwd(), 'public', 'data');
       const userDataFile = path.join(userDataDir, `pin_${pin.id}_data.json`);
       
       const userData = JSON.parse(await fs.readFile(userDataFile, 'utf8'));
       
-      // Add user data to the pin
+      // Add user photos to the pin
       pin.userPhotos = userData.userPhotos || [];
-      pin.comments = userData.comments || [];
     } catch (err) {
-      // If the file doesn't exist or can't be read, use empty arrays
+      // If the file doesn't exist or can't be read, use empty array
       pin.userPhotos = [];
-      pin.comments = [];
     }
     
     console.log('Found pin:', {
       id: pin.id,
       pinId: pin.pinId,
       pinName: pin.pinName,
-      userPhotosCount: pin.userPhotos.length,
-      commentsCount: pin.comments.length
+      userPhotosCount: pin.userPhotos?.length || 0,
+      commentsCount: pin.comments?.length || 0
     });
     
     return NextResponse.json(pin);
@@ -67,7 +68,7 @@ export async function PUT(req, { params }) {
     }));
     
     // Extract imageDataUrl if present
-    const { imageDataUrl, ...pinData } = data;
+    const { imageDataUrl, userDataForFile, ...pinData } = data;
     
     // Process data URL if present
     let imageUrl = pinData.imageUrl;
@@ -130,7 +131,7 @@ export async function PUT(req, { params }) {
       
       console.log('Pin updated successfully:', updatedPin.id);
       
-      // Try to save user photos and comments to a JSON file
+      // Try to save user photos to a JSON file
       try {
         const userDataDir = path.join(process.cwd(), 'public', 'data');
         const userDataFile = path.join(userDataDir, `pin_${id}_data.json`);
@@ -142,26 +143,29 @@ export async function PUT(req, { params }) {
         const userData = {
           userPhotos: Array.isArray(pinData.userImages) 
             ? pinData.userImages.map(url => ({ url }))
-            : [],
-          comments: Array.isArray(pinData.comments)
-            ? pinData.comments
             : []
         };
         
         // Write to file
         await fs.writeFile(userDataFile, JSON.stringify(userData, null, 2));
         
-        console.log(`Saved ${userData.userPhotos.length} photos and ${userData.comments.length} comments for pin ${id}`);
+        console.log(`Saved ${userData.userPhotos.length} photos for pin ${id}`);
         
         // Add the user data to the response
         updatedPin.userPhotos = userData.userPhotos;
-        updatedPin.comments = userData.comments;
       } catch (err) {
         console.error('Error saving user data for pin:', err);
         // Continue with empty arrays if there's an error
         updatedPin.userPhotos = [];
-        updatedPin.comments = [];
       }
+
+      // Fetch comments from the database
+      const comments = await prisma.comment.findMany({
+        where: { pinId: id }
+      });
+      
+      // Add comments to the response
+      updatedPin.comments = comments;
 
       return NextResponse.json(updatedPin);
     } catch (updateError) {

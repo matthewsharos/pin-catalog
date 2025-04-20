@@ -12,10 +12,29 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
   const [currentPinIndex, setCurrentPinIndex] = useState(currentIndex || 0);
   const [flashingButtons, setFlashingButtons] = useState({});
   const [imageAnimating, setImageAnimating] = useState(false);
+  const [isAddingComment, setIsAddingComment] = useState(false);
 
   useEffect(() => {
-    setFormData(pin || {});
-    setComments(pin?.comments || []);
+    // Format the date properly when pin changes
+    if (pin) {
+      const formattedPin = { ...pin };
+      
+      // Format releaseDate as YYYY-MM-DD for the date input if it exists
+      if (pin.releaseDate) {
+        const date = new Date(pin.releaseDate);
+        if (!isNaN(date.getTime())) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          formattedPin.releaseDate = `${year}-${month}-${day}`;
+        } else {
+          formattedPin.releaseDate = '';
+        }
+      }
+      
+      setFormData(formattedPin);
+      setComments(pin.comments || []);
+    }
   }, [pin]);
 
   const handleTagsUpdate = (updatedPin) => {
@@ -34,10 +53,12 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
     setIsSubmitting(true);
 
     try {
+      // Create a copy of formData without comments
+      const { comments: _, ...pinDataWithoutComments } = formData;
+      
       const updatedPinData = {
-        ...formData,
-        comments,
-        tags: formData.tags // Preserve existing tags
+        ...pinDataWithoutComments,
+        tags: formData.tags || [] // Preserve existing tags
       };
       
       const response = await fetch(`/api/pins/${pin.id}`, {
@@ -52,6 +73,8 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
       }
 
       const updatedPin = await response.json();
+      // Preserve comments in the updated pin
+      updatedPin.comments = comments;
       onUpdate(updatedPin);
       toast.success('Pin updated successfully');
     } catch (error) {
@@ -90,24 +113,24 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
     // Start image animation
     setImageAnimating(true);
     
-    // Reset all status flags first
-    const updatedPin = { 
-      ...pin,
-      isCollected: false,
-      isWishlist: false,
-      isDeleted: false,
-      isUnderReview: false
-    };
+    // Create a copy of the current form data
+    const updatedPin = { ...formData };
     
     // Check if the clicked status is already active
     const isActive = 
-      (status === 'collected' && pin.isCollected) ||
-      (status === 'wishlist' && pin.isWishlist) ||
-      (status === 'uncollected' && pin.isDeleted) ||
-      (status === 'underReview' && pin.isUnderReview);
+      (status === 'collected' && formData.isCollected) ||
+      (status === 'wishlist' && formData.isWishlist) ||
+      (status === 'uncollected' && formData.isDeleted) ||
+      (status === 'underReview' && formData.isUnderReview);
     
-    // If the status was not already active, set the appropriate flag
-    if (!isActive) {
+    // Reset all status flags first
+    updatedPin.isCollected = false;
+    updatedPin.isWishlist = false;
+    updatedPin.isDeleted = false;
+    updatedPin.isUnderReview = false;
+    
+    // If the status was not already active and not 'all', set the appropriate flag
+    if (!isActive && status !== 'all') {
       if (status === 'collected') {
         updatedPin.isCollected = true;
       } else if (status === 'wishlist') {
@@ -119,34 +142,69 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
       }
     }
     
+    // Update the local form data immediately
+    setFormData(updatedPin);
+    
     // Wait for animation to complete before updating
     setTimeout(() => {
       // Store the current index before updating
-      const currentIndex = pins.findIndex(p => p.id === pin.id);
+      const currentIndex = pins ? pins.findIndex(p => p.id === updatedPin.id) : -1;
       
       // Update the pin in the parent component
-      onUpdate(updatedPin, currentIndex);
+      if (typeof onUpdate === 'function') {
+        onUpdate(updatedPin, currentIndex);
+      }
       
       // Reset animation state
       setImageAnimating(false);
     }, 300);
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!newComment.trim()) return;
     
-    const comment = {
-      id: Date.now().toString(),
-      text: newComment.trim(),
-      createdAt: new Date().toISOString()
-    };
+    setIsAddingComment(true);
     
-    setComments(prev => [...prev, comment]);
-    setNewComment('');
+    try {
+      const response = await fetch(`/api/pins/${pin.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newComment.trim() }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to add comment');
+      }
+      
+      const addedComment = await response.json();
+      
+      setComments(prev => [...prev, addedComment]);
+      setNewComment('');
+      toast.success('Comment added');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast.error('Failed to add comment');
+    } finally {
+      setIsAddingComment(false);
+    }
   };
 
-  const handleDeleteComment = (commentId) => {
-    setComments(prev => prev.filter(comment => comment.id !== commentId));
+  const handleDeleteComment = async (commentId) => {
+    try {
+      const response = await fetch(`/api/pins/${pin.id}/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete comment');
+      }
+      
+      setComments(prev => prev.filter(comment => comment.id !== commentId));
+      toast.success('Comment deleted');
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast.error('Failed to delete comment');
+    }
   };
 
   const navigatePin = (direction) => {
@@ -387,7 +445,7 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
                     {comments.map(comment => (
                       <div key={comment.id} className="flex items-start justify-between bg-gray-700 rounded p-1.5">
                         <div className="flex-1">
-                          <p className="text-xs text-white">{comment.text}</p>
+                          <p className="text-xs text-white">{comment.content}</p>
                           <p className="text-xs text-gray-400">
                             {new Date(comment.createdAt).toLocaleString()}
                           </p>
@@ -416,9 +474,12 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
                   />
                   <button
                     onClick={handleAddComment}
-                    className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-r-lg hover:bg-blue-700 transition-colors"
+                    disabled={isAddingComment || !newComment.trim()}
+                    className={`bg-blue-600 text-white text-xs px-3 py-1.5 rounded-r-lg hover:bg-blue-700 transition-colors ${
+                      isAddingComment ? 'opacity-70 cursor-not-allowed' : ''
+                    }`}
                   >
-                    Add
+                    {isAddingComment ? 'Adding...' : 'Add'}
                   </button>
                 </div>
               </div>
