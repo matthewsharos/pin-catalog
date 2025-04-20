@@ -135,9 +135,15 @@ export async function GET(req) {
 
     // Add tag filter
     if (tag && tag !== '') {
-      where.tags = {
-        has: tag
-      };
+      if (tag === 'No Tags') {
+        where.tags = {
+          isEmpty: true
+        };
+      } else {
+        where.tags = {
+          has: tag
+        };
+      }
     }
     
     // Add year filter

@@ -29,10 +29,10 @@ export default function StatusFilters({
       try {
         setLoading(true);
         const response = await axios.get('/api/tags');
-        // Sort tags alphabetically by name
-        const sortedTags = response.data
+        // Sort tags alphabetically by name and add "No Tags" option at the top
+        const sortedTags = ['No Tags', ...response.data
           .map(tag => tag.name)
-          .sort((a, b) => a.localeCompare(b));
+          .sort((a, b) => a.localeCompare(b))];
         setTags(sortedTags);
       } catch (error) {
         console.error('Error fetching tags:', error);
