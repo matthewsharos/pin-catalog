@@ -27,7 +27,8 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
     try {
       const updatedPinData = {
         ...formData,
-        comments
+        comments,
+        tags: pin.tags // Preserve existing tags
       };
       
       const response = await fetch(`/api/pins/${pin.id}`, {
@@ -36,13 +37,16 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
         body: JSON.stringify(updatedPinData),
       });
 
-      if (!response.ok) throw new Error('Failed to update pin');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update pin');
+      }
 
       const updatedPin = await response.json();
       onUpdate(updatedPin);
       toast.success('Pin updated successfully');
     } catch (error) {
-      toast.error('Failed to update pin');
+      toast.error(error.message || 'Failed to update pin');
       console.error('Error updating pin:', error);
     } finally {
       setIsSubmitting(false);
@@ -265,13 +269,24 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
             >
               <FaCandyCane size={18} />
             </a>
-            <button 
-              onClick={() => setShowTagModal(true)}
-              className="bg-gray-800 text-white p-2 rounded-lg hover:bg-gray-700"
-              title="Manage Tags"
-            >
-              <FaTag size={18} />
-            </button>
+            <div className="flex items-center">
+              <button 
+                onClick={() => setShowTagModal(true)}
+                className="bg-gray-800 text-white p-2 rounded-lg hover:bg-gray-700 flex items-center"
+                title="Manage Tags"
+              >
+                <FaTag size={18} />
+              </button>
+              {pin.tags && pin.tags.length > 0 && (
+                <div className="ml-2 flex flex-wrap gap-1">
+                  {pin.tags.map((tag, index) => (
+                    <span key={index} className="bg-purple-900 text-white text-xs px-2 py-0.5 rounded-full">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Form Fields */}
