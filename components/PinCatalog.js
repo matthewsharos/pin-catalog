@@ -475,11 +475,13 @@ export default function PinCatalog() {
       return newPins;
     });
     
-    // Send update to the server if it's a status change
-    if ('isCollected' in updatedPin || 'isWishlist' in updatedPin || 'isDeleted' in updatedPin || 'isUnderReview' in updatedPin) {
-      updatePinStatus(updatedPin);
+    // If this is a status change or tag update, refresh the pins list
+    if ('isCollected' in updatedPin || 'isWishlist' in updatedPin || 
+        'isDeleted' in updatedPin || 'isUnderReview' in updatedPin || 
+        'tags' in updatedPin) {
+      fetchPins(1, false);
     }
-  }, [selectedPin]);
+  }, [selectedPin, fetchPins]);
 
   const updatePinStatus = async (pin) => {
     try {

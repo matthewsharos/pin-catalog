@@ -69,12 +69,20 @@ export default function EditTagsModal({ pin, onClose, onSave }) {
   const handleSave = async () => {
     try {
       setLoading(true);
-      await axios.put(`/api/pins/${pin.id}`, {
-        tags: selectedTags
+      const response = await axios.put(`/api/pins/${pin.id}`, {
+        tags: selectedTags,
+        pinName: pin.pinName,
+        series: pin.series,
+        isCollected: pin.isCollected,
+        isWishlist: pin.isWishlist,
+        isDeleted: pin.isDeleted,
+        isUnderReview: pin.isUnderReview
       });
       
+      const updatedPin = response.data;
       toast.success('Tags updated successfully');
-      onSave({ ...pin, tags: selectedTags });
+      onSave(updatedPin);
+      onClose();
     } catch (error) {
       console.error('Error updating tags:', error);
       toast.error('Failed to update tags');

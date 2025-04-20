@@ -18,6 +18,13 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
     setComments(pin?.comments || []);
   }, [pin]);
 
+  const handleTagsUpdate = (updatedPin) => {
+    // Update the local form data with the new pin data
+    setFormData(updatedPin);
+    // Update the pin in the parent component
+    onUpdate(updatedPin);
+  };
+
   if (!pin) return null;
 
   const handleSubmit = async (e) => {
@@ -426,12 +433,9 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
       {/* Tag Modal */}
       {showTagModal && (
         <EditTagsModal
-          pin={pin}
+          pin={formData}
           onClose={() => setShowTagModal(false)}
-          onSave={(updatedPin) => {
-            setFormData(prev => ({ ...prev, tags: updatedPin.tags }));
-            setShowTagModal(false);
-          }}
+          onSave={handleTagsUpdate}
         />
       )}
     </div>
