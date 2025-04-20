@@ -690,6 +690,12 @@ export default function PinCatalog() {
       // Add current timestamp to the update
       const now = new Date();
       
+      // Add a timestamp to the pin for image refresh
+      const pinWithRefreshKey = {
+        ...pin,
+        imageRefreshKey: now.getTime()
+      };
+      
       const response = await fetch(`/api/pins/${pin.id}`, {
         method: 'PUT',
         headers: {
@@ -702,7 +708,8 @@ export default function PinCatalog() {
           isDeleted: pin.isDeleted,
           isUnderReview: pin.isUnderReview,
           tags: pin.tags || [],
-          updatedAt: now.toISOString() // Update the timestamp
+          updatedAt: now.toISOString(), // Update the timestamp
+          imageRefreshKey: now.getTime() // Add refresh key
         }),
       });
       

@@ -153,7 +153,7 @@ export default function PinGrid({
           >
             {pin.imageUrl ? (
               <img
-                src={pin.imageUrl}
+                src={pin.imageRefreshKey ? `${pin.imageUrl}${pin.imageUrl.includes('?') ? '&' : '?'}v=${pin.imageRefreshKey}` : pin.imageUrl}
                 alt={pin.pinName}
                 className="w-full h-full object-cover"
                 loading="lazy"

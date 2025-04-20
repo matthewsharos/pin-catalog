@@ -250,7 +250,11 @@ export default function PinModal({ pin, onClose, onUpdate, onDelete, pins, curre
           <div className="flex justify-center mb-4">
             <div className="relative w-full max-w-md">
               <img 
-                src={pin.imageUrl || '/placeholder-pin.png'} 
+                src={pin.imageUrl ? 
+                  (pin.imageRefreshKey ? 
+                    `${pin.imageUrl}${pin.imageUrl.includes('?') ? '&' : '?'}v=${pin.imageRefreshKey}` 
+                    : pin.imageUrl) 
+                  : '/placeholder-pin.png'} 
                 alt={pin.pinName} 
                 className={`w-full h-auto max-h-[500px] object-contain rounded-lg shadow-lg transition-all duration-300 ${
                   imageAnimating ? 'opacity-0 scale-95' : 'opacity-100'
