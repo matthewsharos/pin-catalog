@@ -192,11 +192,6 @@ export default function PinGrid({
                 <h3 className="text-sm font-medium text-white truncate">
                   {pin.pinName || 'Unnamed Pin'}
                 </h3>
-                {pin.series && (
-                  <p className="text-xs text-gray-500 truncate mt-0.5">
-                    {pin.series}
-                  </p>
-                )}
                 
                 {/* Display tags if available */}
                 {pin.tags && pin.tags.length > 0 && (
@@ -220,6 +215,12 @@ export default function PinGrid({
                       <span className="text-xs text-gray-500">+{pin.tags.length - 2}</span>
                     )}
                   </div>
+                )}
+
+                {pin.series && (
+                  <p className="text-xs text-gray-500 truncate mt-0.5">
+                    {pin.series}
+                  </p>
                 )}
               </div>
 

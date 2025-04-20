@@ -72,13 +72,8 @@ export default function EditTagsModal({ pin, onClose, onSave }) {
     try {
       setLoading(true);
       const response = await axios.put(`/api/pins/${pin.id}`, {
-        tags: selectedTags,
-        pinName: pin.pinName,
-        series: pin.series,
-        isCollected: pin.isCollected,
-        isWishlist: pin.isWishlist,
-        isDeleted: pin.isDeleted,
-        isUnderReview: pin.isUnderReview
+        id: pin.id,
+        tags: selectedTags
       });
       
       const updatedPin = response.data;
