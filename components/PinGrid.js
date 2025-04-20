@@ -1,7 +1,7 @@
 "use client";
 
 import { FaCheck, FaTimes, FaHeart, FaStar } from 'react-icons/fa';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function PinGrid({
   pins,
@@ -14,6 +14,14 @@ export default function PinGrid({
 }) {
   const [animatingPins, setAnimatingPins] = useState({});
   const [flashingButtons, setFlashingButtons] = useState({});
+
+  useEffect(() => {
+    console.log('PinGrid received pins:', { 
+      pinsLength: pins?.length,
+      firstPin: pins?.[0],
+      loading
+    });
+  }, [pins, loading]);
 
   // Function to get grid columns class based on zoom level
   const getGridColumnsClass = () => {
@@ -105,7 +113,7 @@ export default function PinGrid({
     <div ref={contentRef} className={`grid ${getGridColumnsClass()} gap-4 px-2 md:px-4 lg:px-6`}>
       {pins.map((pin, index) => (
         <div
-          key={pin.id}
+          key={`${pin.id}-${pin.pinId}-${index}`}
           ref={index === pins.length - 1 ? lastPinElementRef : null}
           className={`relative bg-gray-900 rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 md:hover:shadow-xl ${
             animatingPins[pin.id] ? 'opacity-0 scale-95' : 'opacity-100'

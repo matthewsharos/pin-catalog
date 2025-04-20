@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../../lib/prisma';
 
-const prisma = new PrismaClient();
+export const dynamic = 'force-dynamic';
 
 // GET - Fetch all pins with pagination, sorting, and filtering
 // Also used to fetch top 10 pins for verification
 export async function GET(req) {
   try {
+    console.log('API: Starting GET request');
     const searchParams = new URL(req.url).searchParams;
     const page = parseInt(searchParams.get('page')) || 1;
     const pageSize = parseInt(searchParams.get('pageSize')) || 30;
@@ -19,6 +20,17 @@ export async function GET(req) {
     let sortField = 'updatedAt';
     let sortOrder = 'desc';
     
+    // Log initial query parameters
+    console.log('API: Query params:', {
+      page,
+      pageSize,
+      collected,
+      wishlist,
+      uncollected,
+      underReview,
+      all: searchParams.get('all')
+    });
+
     // Process sort option
     if (sort) {
       switch (sort) {
@@ -66,14 +78,17 @@ export async function GET(req) {
 
     // Status filters
     if (collected === 'true' || wishlist === 'true' || uncollected === 'true' || underReview === 'true' || searchParams.get('all') === 'true') {
-      const statusConditions = [];
-      
+      // Only add one status condition since they should be mutually exclusive
       if (collected === 'true') {
-        statusConditions.push({ isCollected: true });
-      }
-      
-      if (uncollected === 'true') {
-        statusConditions.push({ 
+        where.AND.push({ isCollected: true });
+      } else if (uncollected === 'true') {
+        where.AND.push({ isDeleted: true });
+      } else if (wishlist === 'true') {
+        where.AND.push({ isWishlist: true });
+      } else if (underReview === 'true') {
+        where.AND.push({ isUnderReview: true });
+      } else if (searchParams.get('all') === 'true') {
+        where.AND.push({ 
           AND: [
             { isCollected: false },
             { isDeleted: false },
@@ -82,30 +97,12 @@ export async function GET(req) {
           ]
         });
       }
-      
-      if (wishlist === 'true') {
-        statusConditions.push({ isWishlist: true });
-      }
-
-      if (underReview === 'true') {
-        statusConditions.push({ isUnderReview: true });
-      }
-
-      if (searchParams.get('all') === 'true') {
-        statusConditions.push({ 
-          AND: [
-            { isCollected: false },
-            { isDeleted: false },
-            { isWishlist: false },
-            { isUnderReview: false }
-          ]
-        });
-      }
-
-      if (statusConditions.length > 0) {
-        where.AND.push({ OR: statusConditions });
-      }
+    } else {
+      // If no status filters are provided, show non-deleted pins by default
+      where.AND.push({ isDeleted: false });
     }
+
+    console.log('API Query where clause:', JSON.stringify(where, null, 2));
 
     // Get available filters based on current status selection
     if (getFiltersOnly) {
@@ -273,18 +270,26 @@ export async function GET(req) {
       where.AND.push({ isMystery: true });
     }
 
-    // Get pins with pagination
-    const [pins, totalCount] = await prisma.$transaction([
+    // Execute the query with pagination
+    console.log('API: Executing Prisma query with where clause:', JSON.stringify(where, null, 2));
+    
+    const [pins, totalCount] = await Promise.all([
       prisma.pin.findMany({
         where,
         orderBy: {
           [sortField]: sortOrder
         },
         skip: (page - 1) * pageSize,
-        take: pageSize
+        take: pageSize,
       }),
       prisma.pin.count({ where })
     ]);
+
+    console.log('API: Query results:', {
+      pinsFound: pins.length,
+      totalCount,
+      firstPin: pins[0]
+    });
 
     return NextResponse.json({
       pins,
@@ -294,8 +299,11 @@ export async function GET(req) {
     });
 
   } catch (error) {
-    console.error('Error in GET /api/pins:', error);
-    return NextResponse.json({ error: error.message || 'Failed to fetch pins' }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json({ 
+      error: error.message || 'Failed to fetch pins',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
 }
 

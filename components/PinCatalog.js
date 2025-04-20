@@ -69,66 +69,101 @@ export default function PinCatalog() {
 
   // Fetch pins with abort controller to cancel previous requests
   const fetchPins = useCallback(async (pageNum = 1, append = false) => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    
     try {
-      // Cancel any in-flight requests
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      
-      // Create a new abort controller for this request
-      abortControllerRef.current = new AbortController();
-      const signal = abortControllerRef.current.signal;
-      
       setLoading(true);
       
+      // Build query parameters
       const params = new URLSearchParams();
-      params.append('page', pageNum);
-      params.append('search', searchQuery);
+      params.set('page', pageNum);
+      params.set('search', searchQuery);
+      params.set('sort', sortOption);
       
-      if (statusFilters.collected) params.append('collected', 'true');
-      if (statusFilters.uncollected) params.append('uncollected', 'true');
-      if (statusFilters.wishlist) params.append('wishlist', 'true');
-      if (statusFilters.underReview) params.append('underReview', 'true');
-      if (statusFilters.all) params.append('all', 'true');
-
-      if (filterCategories.length) params.append('categories', filterCategories.join(','));
-      if (filterOrigins.length) params.append('origins', filterOrigins.join(','));
-      if (filterSeries.length) params.append('series', filterSeries.join(','));
-      if (filterIsLimitedEdition) params.append('isLimitedEdition', 'true');
-      if (filterIsMystery) params.append('isMystery', 'true');
-      if (yearFilters.length) params.append('years', yearFilters.join(','));
-      params.append('sort', sortOption);
-
-      const response = await fetch(`/api/pins?${params.toString()}`, { signal });
+      // Add status filters
+      if (Object.values(statusFilters).some(v => v)) {
+        Object.entries(statusFilters).forEach(([key, value]) => {
+          if (value) params.set(key, 'true');
+        });
+      } else {
+        params.set('all', 'true');
+      }
+      
+      // Add filter parameters
+      if (filterCategories.length) params.set('categories', filterCategories.join(','));
+      if (filterOrigins.length) params.set('origins', filterOrigins.join(','));
+      if (filterSeries.length) params.set('series', filterSeries.join(','));
+      if (filterIsLimitedEdition) params.set('isLimitedEdition', 'true');
+      if (filterIsMystery) params.set('isMystery', 'true');
+      if (yearFilters.length) params.set('years', yearFilters.join(','));
+      
+      // Log the API request URL for debugging
+      console.log('Fetching pins with URL:', `/api/pins?${params.toString()}`);
+      
+      const response = await fetch(`/api/pins?${params.toString()}`, { 
+        signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
       
       // If request was aborted, just return
-      if (signal.aborted) return;
+      if (signal.aborted) {
+        console.log('Request was aborted');
+        return;
+      }
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('API error:', errorData);
         throw new Error(errorData.error || 'Failed to fetch pins');
       }
       
       const data = await response.json();
+      console.log('Received data from API:', {
+        totalCount: data.totalCount,
+        pinsLength: data.pins?.length,
+        firstPin: data.pins?.[0],
+        currentPage: data.currentPage,
+        totalPages: data.totalPages
+      });
+      
       setTotal(data.totalCount);
       setHasMore(pageNum < data.totalPages);
       
       // Only update pins if the request wasn't aborted during the await
       if (!signal.aborted) {
-        setPins(prevPins => append ? [...prevPins, ...data.pins] : data.pins);
+        console.log('Updating pins state:', {
+          append,
+          currentLength: pins.length,
+          newLength: append ? pins.length + data.pins.length : data.pins.length
+        });
+        setPins(prevPins => {
+          const newPins = append ? [...prevPins, ...data.pins] : data.pins;
+          console.log('New pins state:', {
+            length: newPins.length,
+            firstPin: newPins[0]
+          });
+          return newPins;
+        });
       }
+      
     } catch (error) {
-      // Ignore abort errors as they're expected
-      if (error.name !== 'AbortError') {
+      if (error.name === 'AbortError') {
+        console.log('Fetch aborted');
+      } else {
         console.error('Error fetching pins:', error);
-        toast.error('Failed to load pins');
       }
     } finally {
-      // Only update loading state if the request wasn't aborted
-      if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+      if (!signal.aborted) {
         setLoading(false);
       }
     }
+    
+    return () => {
+      controller.abort();
+    };
   }, [searchQuery, statusFilters, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, sortOption]);
 
   // Fetch available filters with abort controller
@@ -152,7 +187,7 @@ export default function PinCatalog() {
       if (statusFilters.wishlist) params.append('wishlist', 'true');
       if (statusFilters.underReview) params.append('underReview', 'true');
       if (statusFilters.all) params.append('all', 'true');
-      
+
       // Add current search query
       if (searchQuery) params.append('search', searchQuery);
       
@@ -171,6 +206,7 @@ export default function PinCatalog() {
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('API error:', errorData);
         throw new Error(errorData.error || 'Failed to fetch filters');
       }
       
@@ -199,6 +235,13 @@ export default function PinCatalog() {
   // Effects
   // Initial load
   useEffect(() => {
+    console.log('PinCatalog initial state:', {
+      pinsLength: pins.length,
+      total,
+      hasMore,
+      loading,
+      statusFilters
+    });
     setPage(1);
     fetchPins(1, false);
     
