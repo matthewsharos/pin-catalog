@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 export const fetchCache = 'force-no-store';
 
 // GET - Fetch all pins with pagination, sorting, and filtering
@@ -106,10 +105,15 @@ export async function GET(req) {
         where.OR = [...(where.OR || []), ...statusConditions];
       }
     } else {
-      // If no status filters are provided, show non-deleted pins by default
-      where.isDeleted = false;
+      // When 'all' is true, only show pins that don't have any status set
+      where.AND = [
+        { isCollected: false },
+        { isWishlist: false },
+        { isDeleted: false },
+        { isUnderReview: false }
+      ];
     }
-    
+
     // Add tag filter
     if (tag) {
       where.tags = {
@@ -196,12 +200,12 @@ export async function GET(req) {
 
         console.log('Found pins for filters:', pins.length); // Debug log
 
-        // Extract unique values
+        // Extract unique values with null checks
         const filters = {
-          years: [...new Set(pins.map(pin => pin.year).filter(Boolean))],
-          series: [...new Set(pins.map(pin => pin.series).filter(Boolean))],
-          origins: [...new Set(pins.map(pin => pin.origin).filter(Boolean))],
-          tags: [...new Set(pins.flatMap(pin => pin.tags || []))]
+          years: [...new Set(pins.filter(pin => pin?.year !== null && pin?.year !== undefined).map(pin => pin.year))],
+          series: [...new Set(pins.filter(pin => pin?.series !== null && pin?.series !== undefined).map(pin => pin.series))],
+          origins: [...new Set(pins.filter(pin => pin?.origin !== null && pin?.origin !== undefined).map(pin => pin.origin))],
+          tags: [...new Set(pins.flatMap(pin => Array.isArray(pin?.tags) ? pin.tags : []))]
         };
 
         console.log('Processed filters:', filters); // Debug log
@@ -215,7 +219,11 @@ export async function GET(req) {
         return NextResponse.json(filters);
       } catch (error) {
         console.error('Error in filter processing:', error);
-        return NextResponse.json({ error: 'Failed to process filters' }, { status: 500 });
+        return NextResponse.json({ 
+          error: 'Failed to process filters',
+          details: error.message,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        }, { status: 500 });
       }
     }
 

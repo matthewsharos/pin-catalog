@@ -14,6 +14,15 @@ export default function StatusFilters({
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
+  // Define status filter options in a single array to prevent duplicates
+  const statusOptions = [
+    { id: 'all', label: 'All', icon: <FaInbox className="mr-1 text-xs" />, activeColor: 'bg-blue-600' },
+    { id: 'collected', label: 'Owned', icon: <FaCheck className="mr-1 text-xs" />, activeColor: 'bg-green-600' },
+    { id: 'uncollected', label: 'Uncollected', icon: <FaTimes className="mr-1 text-xs" />, activeColor: 'bg-yellow-600' },
+    { id: 'wishlist', label: 'Wishlist', icon: <FaHeart className="mr-1 text-xs" />, activeColor: 'bg-blue-400' },
+    { id: 'underReview', label: 'Review', icon: <FaStar className="mr-1 text-xs" />, activeColor: 'bg-amber-500' }
+  ];
+
   useEffect(() => {
     // Fetch tags when component mounts
     const fetchTags = async () => {
@@ -49,72 +58,24 @@ export default function StatusFilters({
 
   return (
     <div className="flex items-center">
-      <button
-        onClick={(e) => onStatusClick('all', e)}
-        className={`h-7 px-2 text-xs font-medium transition-colors flex items-center justify-center rounded-l-md ${
-          statusFilters.all
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-        }`}
-        data-filter="status"
-        data-status="all"
-      >
-        <FaInbox className="mr-1 text-xs" />
-        All
-      </button>
-      <button
-        onClick={(e) => onStatusClick('collected', e)}
-        className={`h-7 px-2 text-xs font-medium transition-colors flex items-center justify-center border-l border-gray-800 ${
-          statusFilters.collected
-            ? 'bg-green-600 text-white'
-            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-        }`}
-        data-filter="status"
-        data-status="collected"
-      >
-        <FaCheck className="mr-1 text-xs" />
-        Owned
-      </button>
-      <button
-        onClick={(e) => onStatusClick('uncollected', e)}
-        className={`h-7 px-2 text-xs font-medium transition-colors flex items-center justify-center border-l border-gray-800 ${
-          statusFilters.uncollected
-            ? 'bg-yellow-600 text-white'
-            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-        }`}
-        data-filter="status"
-        data-status="uncollected"
-      >
-        <FaTimes className="mr-1 text-xs" />
-        Uncollected
-      </button>
-      <button
-        onClick={(e) => onStatusClick('wishlist', e)}
-        className={`h-7 px-2 text-xs font-medium transition-colors flex items-center justify-center border-l border-gray-800 ${
-          statusFilters.wishlist
-            ? 'bg-blue-400 text-white'
-            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-        }`}
-        title="Hold ⌘/Ctrl or Shift to select multiple statuses"
-        data-filter="status"
-        data-status="wishlist"
-      >
-        <FaHeart className="mr-1 text-xs" />
-        Wishlist
-      </button>
-      <button
-        onClick={(e) => onStatusClick('underReview', e)}
-        className={`h-7 px-2 text-xs font-medium transition-colors flex items-center justify-center border-l border-gray-800 ${
-          statusFilters.underReview
-            ? 'bg-amber-500 text-white'
-            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-        }`}
-        data-filter="status"
-        data-status="underReview"
-      >
-        <FaStar className="mr-1 text-xs" />
-        Review
-      </button>
+      {statusOptions.map((option, index) => (
+        <button
+          key={option.id}
+          onClick={(e) => onStatusClick(option.id, e)}
+          className={`h-7 px-2 text-xs font-medium transition-colors flex items-center justify-center 
+            ${index === 0 ? 'rounded-l-md' : 'border-l border-gray-800'} 
+            ${statusFilters?.[option.id] 
+              ? `${option.activeColor} text-white` 
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          data-filter="status"
+          data-status={option.id}
+          title={option.id === 'wishlist' ? "Hold ⌘/Ctrl or Shift to select multiple statuses" : undefined}
+        >
+          {option.icon}
+          {option.label}
+        </button>
+      ))}
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setShowTagDropdown(!showTagDropdown)}

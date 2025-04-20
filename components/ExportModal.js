@@ -35,48 +35,48 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       const params = new URLSearchParams();
       
       // Add status filters
-      if (filters.statusFilters) {
+      if (filters?.statusFilters) {
         Object.entries(filters.statusFilters).forEach(([key, value]) => {
           if (value) params.append(key, 'true');
         });
       }
       
       // Add search query
-      if (filters.searchQuery) {
+      if (filters?.searchQuery) {
         params.append('search', filters.searchQuery);
       }
       
       // Add year filters
-      if (filters.yearFilters && filters.yearFilters.length > 0) {
+      if (filters?.yearFilters && filters.yearFilters.length > 0) {
         params.append('years', filters.yearFilters.join(','));
       }
       
       // Add category filters
-      if (filters.filterCategories && filters.filterCategories.length > 0) {
+      if (filters?.filterCategories && filters.filterCategories.length > 0) {
         params.append('categories', filters.filterCategories.join(','));
       }
       
       // Add origin filters
-      if (filters.filterOrigins && filters.filterOrigins.length > 0) {
+      if (filters?.filterOrigins && filters.filterOrigins.length > 0) {
         params.append('origins', filters.filterOrigins.join(','));
       }
       
       // Add series filters
-      if (filters.filterSeries && filters.filterSeries.length > 0) {
+      if (filters?.filterSeries && filters.filterSeries.length > 0) {
         params.append('series', filters.filterSeries.join(','));
       }
       
       // Add special filters
-      if (filters.filterIsLimitedEdition) {
+      if (filters?.filterIsLimitedEdition) {
         params.append('isLimitedEdition', 'true');
       }
       
-      if (filters.filterIsMystery) {
+      if (filters?.filterIsMystery) {
         params.append('isMystery', 'true');
       }
       
       // Add sort option
-      if (filters.sortOption) {
+      if (filters?.sortOption) {
         params.append('sort', filters.sortOption);
       }
       
@@ -310,7 +310,7 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       let filterTexts = [];
       
       // Add status filters
-      if (filters.statusFilters) {
+      if (filters?.statusFilters) {
         const activeStatuses = Object.entries(filters.statusFilters)
           .filter(([key, value]) => value && key !== 'all')
           .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1));
@@ -321,41 +321,41 @@ export default function ExportModal({ isOpen, onClose, pins, filters }) {
       }
       
       // Add year filters
-      if (filters.yearFilters && filters.yearFilters.length > 0) {
+      if (filters?.yearFilters && filters.yearFilters.length > 0) {
         filterTexts.push(`Year: ${filters.yearFilters.join(', ')}`);
       }
       
       // Add category filters
-      if (filters.filterCategories && filters.filterCategories.length > 0) {
+      if (filters?.filterCategories && filters.filterCategories.length > 0) {
         filterTexts.push(`Categories: ${filters.filterCategories.join(', ')}`);
       }
       
       // Add origin filters
-      if (filters.filterOrigins && filters.filterOrigins.length > 0) {
+      if (filters?.filterOrigins && filters.filterOrigins.length > 0) {
         filterTexts.push(`Origins: ${filters.filterOrigins.join(', ')}`);
       }
       
       // Add series filters
-      if (filters.filterSeries && filters.filterSeries.length > 0) {
+      if (filters?.filterSeries && filters.filterSeries.length > 0) {
         filterTexts.push(`Series: ${filters.filterSeries.join(', ')}`);
       }
       
       // Add special filters
-      if (filters.filterIsLimitedEdition) {
+      if (filters?.filterIsLimitedEdition) {
         filterTexts.push('Limited Edition');
       }
       
-      if (filters.filterIsMystery) {
+      if (filters?.filterIsMystery) {
         filterTexts.push('Mystery');
       }
       
       // Add search query
-      if (filters.searchQuery) {
+      if (filters?.searchQuery) {
         filterTexts.push(`Search: "${filters.searchQuery}"`);
       }
       
       // Add sort option
-      if (filters.sortOption) {
+      if (filters?.sortOption) {
         filterTexts.push(`Sort: ${filters.sortOption}`);
       }
       
