@@ -95,7 +95,7 @@ export default function PinCatalog() {
       params.set('sort', sortOption);
       
       if (searchQuery) params.set('search', searchQuery);
-      if (selectedTag) params.set('tag', selectedTag);
+      if (selectedTag !== null) params.set('tag', selectedTag);
       
       // Handle status filters
       if (statusFilters) {
@@ -800,10 +800,24 @@ export default function PinCatalog() {
               {selectedTag}
               <button
                 onClick={() => {
+                  // Clear both the selected tag and filter categories
                   setSelectedTag(null);
                   setFilterCategories([]);
+                  
+                  // Force a refresh of the pins with the updated filters
+                  // Cancel any in-flight requests first
+                  if (abortControllerRef.current) {
+                    abortControllerRef.current.abort();
+                  }
+                  
+                  // Reset to page 1 and fetch pins with cleared tag filter
+                  setPage(1);
+                  setTimeout(() => {
+                    fetchPins(1, false);
+                  }, 0);
                 }}
                 className="ml-2 hover:text-gray-300"
+                aria-label="Clear tag filter"
               >
                 <FaTimes size={12} />
               </button>

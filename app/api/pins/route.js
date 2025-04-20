@@ -128,7 +128,7 @@ export async function GET(req) {
     }
 
     // Add tag filter
-    if (tag) {
+    if (tag && tag !== '') {
       where.tags = {
         has: tag
       };
