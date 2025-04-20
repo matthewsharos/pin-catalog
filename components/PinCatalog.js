@@ -97,14 +97,17 @@ export default function PinCatalog() {
       if (searchQuery) params.set('search', searchQuery);
       if (selectedTag) params.set('tag', selectedTag);
       
-      // Only add status filters if they're not in the default state
-      if (statusFilters && !statusFilters.all) {
-        if (statusFilters.collected) params.set('collected', 'true');
-        if (statusFilters.uncollected) params.set('uncollected', 'true');
-        if (statusFilters.wishlist) params.set('wishlist', 'true');
-        if (statusFilters.underReview) params.set('underReview', 'true');
-      } else if (statusFilters && statusFilters.all) {
-        params.set('all', 'true');
+      // Handle status filters
+      if (statusFilters) {
+        if (statusFilters.all) {
+          params.set('all', 'true');
+        } else {
+          // Only add specific status filters if 'all' is not selected
+          if (statusFilters.collected) params.set('collected', 'true');
+          if (statusFilters.uncollected) params.set('uncollected', 'true');
+          if (statusFilters.wishlist) params.set('wishlist', 'true');
+          if (statusFilters.underReview) params.set('underReview', 'true');
+        }
       }
       
       // Add filter parameters
@@ -211,25 +214,23 @@ export default function PinCatalog() {
       const params = new URLSearchParams();
       params.append('filtersOnly', 'true');
       
-      // Only add status filters if they're not in the default state
-      if (statusFilters && !statusFilters.all) {
-        if (statusFilters.collected) params.append('collected', 'true');
-        if (statusFilters.uncollected) params.append('uncollected', 'true');
-        if (statusFilters.wishlist) params.append('wishlist', 'true');
-        if (statusFilters.underReview) params.append('underReview', 'true');
+      // Handle status filters
+      if (statusFilters) {
+        if (statusFilters.all) {
+          params.append('all', 'true');
+        } else {
+          // Only add specific status filters if 'all' is not selected
+          if (statusFilters.collected) params.append('collected', 'true');
+          if (statusFilters.uncollected) params.append('uncollected', 'true');
+          if (statusFilters.wishlist) params.append('wishlist', 'true');
+          if (statusFilters.underReview) params.append('underReview', 'true');
+        }
       }
       
-      // Add all current filter states to get dynamic filter options
-      if (statusFilters?.collected) params.append('collected', 'true');
-      if (statusFilters?.uncollected) params.append('uncollected', 'true');
-      if (statusFilters?.wishlist) params.append('wishlist', 'true');
-      if (statusFilters?.underReview) params.append('underReview', 'true');
-      if (statusFilters?.all) params.append('all', 'true');
-
       // Add current search query
       if (searchQuery) params.append('search', searchQuery);
       
-      // Add current filter selections to get dynamic options
+      // Add current filter selections to get dynamic filter options
       if (filterCategories.length) params.append('categories', filterCategories.join(','));
       if (filterOrigins.length) params.append('origins', filterOrigins.join(','));
       if (filterSeries.length) params.append('series', filterSeries.join(','));
@@ -305,14 +306,17 @@ export default function PinCatalog() {
         if (searchQuery) params.set('search', searchQuery);
         if (selectedTag) params.set('tag', selectedTag);
         
-        // Only add status filters if they're not in the default state
-        if (statusFilters && !statusFilters.all) {
-          if (statusFilters.collected) params.set('collected', 'true');
-          if (statusFilters.uncollected) params.set('uncollected', 'true');
-          if (statusFilters.wishlist) params.set('wishlist', 'true');
-          if (statusFilters.underReview) params.set('underReview', 'true');
-        } else if (statusFilters && statusFilters.all) {
-          params.set('all', 'true');
+        // Handle status filters
+        if (statusFilters) {
+          if (statusFilters.all) {
+            params.set('all', 'true');
+          } else {
+            // Only add specific status filters if 'all' is not selected
+            if (statusFilters.collected) params.set('collected', 'true');
+            if (statusFilters.uncollected) params.set('uncollected', 'true');
+            if (statusFilters.wishlist) params.set('wishlist', 'true');
+            if (statusFilters.underReview) params.set('underReview', 'true');
+          }
         }
         
         // Add filter parameters
@@ -388,34 +392,44 @@ export default function PinCatalog() {
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [statusFilters, sortOption, yearFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, fetchPins, initialized]);
+  }, [statusFilters, sortOption, yearFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, initialized]);
 
   // Fetch available filters when modal is opened
   useEffect(() => {
-    if (showFilterModal) {
+    if (showFilterModal && initialized) {
       fetchAvailableFilters();
     }
-  }, [showFilterModal, fetchAvailableFilters]);
+  }, [showFilterModal, initialized]);
 
   // Fetch years when dropdown is opened
   useEffect(() => {
-    if (showYearDropdown) {
+    if (showYearDropdown && initialized) {
       fetchAvailableFilters();
     }
-  }, [showYearDropdown, fetchAvailableFilters]);
+  }, [showYearDropdown, initialized]);
 
   // Update available filters when filter selections change
   useEffect(() => {
-    fetchAvailableFilters();
-  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, fetchAvailableFilters]);
+    if (!initialized) return;
+    
+    const timer = setTimeout(() => {
+      fetchAvailableFilters();
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, initialized]);
 
   // Update filterCategories when selectedTag changes
   useEffect(() => {
     if (selectedTag) {
       // Only update if filterCategories doesn't already include this tag
       if (!filterCategories.includes(selectedTag)) {
+        // Use a functional update to avoid dependency on filterCategories
         setFilterCategories([selectedTag]);
       }
+    } else if (!selectedTag && filterCategories.length > 0) {
+      // Only clear filterCategories if selectedTag is null and there are categories
+      setFilterCategories([]);
     }
   }, [selectedTag, filterCategories]);
 
@@ -477,34 +491,48 @@ export default function PinCatalog() {
       if (event.metaKey || event.ctrlKey || event.shiftKey) {
         // Toggle the clicked status
         newFilters[status] = !newFilters[status];
+        
         // If any specific status is selected, turn off 'all'
         if (status !== 'all' && newFilters[status]) {
           newFilters.all = false;
+        }
+        
+        // If 'all' is selected, turn off all other statuses
+        if (status === 'all' && newFilters.all) {
+          newFilters.collected = false;
+          newFilters.wishlist = false;
+          newFilters.uncollected = false;
+          newFilters.underReview = false;
         }
       } else {
         // Reset all filters to false
         Object.keys(newFilters).forEach(key => {
           newFilters[key] = false;
         });
+        
         // Set only the clicked status to true
         newFilters[status] = true;
+        
+        // If 'all' is selected, make sure other status flags are false
+        if (status === 'all') {
+          newFilters.collected = false;
+          newFilters.wishlist = false;
+          newFilters.uncollected = false;
+          newFilters.underReview = false;
+        }
       }
 
       // If no specific status is selected, turn on 'all'
-      if (newFilters && Object.entries(newFilters).every(([key, value]) => key === 'all' || !value)) {
-        return defaultStatusFilters;
-      }
-
-      // If 'all' is selected, make sure other status flags are false
-      if (newFilters.all) {
-        newFilters.collected = false;
-        newFilters.wishlist = false;
-        newFilters.uncollected = false;
-        newFilters.underReview = false;
+      const hasActiveStatus = Object.entries(newFilters).some(([key, value]) => key !== 'all' && value);
+      if (!hasActiveStatus) {
+        return defaultStatusFilters; // Reset to default (all: true, others: false)
       }
 
       return newFilters;
     });
+    
+    // Reset page to 1 when changing filters
+    setPage(1);
   }, []);
 
   const handleFilterChange = useCallback((type, value) => {
@@ -532,7 +560,7 @@ export default function PinCatalog() {
         break;
     }
     setPage(1);
-  }, [fetchPins]);
+  }, []);
 
   const handleSearchChange = useCallback((value) => {
     // Cancel any in-flight requests
@@ -542,7 +570,7 @@ export default function PinCatalog() {
     
     setSearchQuery(value);
     setPage(1);
-  }, [fetchPins]);
+  }, []);
 
   const handleYearChange = useCallback((year) => {
     // Cancel any in-flight requests
@@ -560,7 +588,7 @@ export default function PinCatalog() {
     });
     
     setPage(1);
-  }, [fetchPins]);
+  }, []);
 
   const handleSortChange = useCallback((option) => {
     // Cancel any in-flight requests
@@ -571,7 +599,7 @@ export default function PinCatalog() {
     setSortOption(option);
     setShowSortDropdown(false);
     setPage(1);
-  }, [fetchPins]);
+  }, []);
 
   const handlePinUpdate = useCallback((updatedPin, currentIndex) => {
     // Update the pin in the current view
@@ -579,9 +607,46 @@ export default function PinCatalog() {
       // Create a copy of the pins array
       const newPins = [...prevPins];
       
-      // Find and update the pin
+      // Find the pin index
       const pinIndex = newPins.findIndex(pin => pin.id === updatedPin.id);
-      if (pinIndex !== -1) {
+      if (pinIndex === -1) return newPins; // Pin not found
+      
+      // Check if the pin should remain visible based on current filters
+      const shouldRemovePin = (() => {
+        // If "No Status" filter is active and the pin now has a status, remove it
+        if (statusFilters.all && 
+            (updatedPin.isCollected || updatedPin.isWishlist || 
+             updatedPin.isDeleted || updatedPin.isUnderReview)) {
+          return true;
+        }
+        
+        // If specific status filters are active, check if the pin still matches
+        if (!statusFilters.all) {
+          const matchesCurrentFilter = 
+            (statusFilters.collected && updatedPin.isCollected) ||
+            (statusFilters.wishlist && updatedPin.isWishlist) ||
+            (statusFilters.uncollected && updatedPin.isDeleted) ||
+            (statusFilters.underReview && updatedPin.isUnderReview);
+          
+          if (!matchesCurrentFilter) {
+            return true;
+          }
+        }
+        
+        return false;
+      })();
+      
+      // If the pin should be removed based on filters, remove it with animation
+      if (shouldRemovePin) {
+        // Remove the pin from the array
+        newPins.splice(pinIndex, 1);
+        
+        // Update total count
+        setTimeout(() => {
+          setTotal(prev => prev - 1);
+        }, 300);
+      } else {
+        // Otherwise, update the pin in the array
         newPins[pinIndex] = updatedPin;
       }
       
@@ -606,13 +671,20 @@ export default function PinCatalog() {
       return newPins;
     });
     
-    // If this is a status change or tag update, refresh the pins list
+    // If this is a status change or tag update, update the pin in the database
     if ('isCollected' in updatedPin || 'isWishlist' in updatedPin || 
         'isDeleted' in updatedPin || 'isUnderReview' in updatedPin || 
         'tags' in updatedPin) {
-      fetchPins(1, false);
+      
+      // Call the API to update the pin status in the database
+      updatePinStatus(updatedPin);
+      
+      // Schedule a background refresh after animation completes
+      setTimeout(() => {
+        fetchPins(1, false);
+      }, 500);
     }
-  }, [selectedPin, fetchPins]);
+  }, [selectedPin, fetchPins, statusFilters]);
 
   const updatePinStatus = async (pin) => {
     try {
@@ -625,20 +697,27 @@ export default function PinCatalog() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          id: pin.id,
           isCollected: pin.isCollected,
           isWishlist: pin.isWishlist,
           isDeleted: pin.isDeleted,
           isUnderReview: pin.isUnderReview,
+          tags: pin.tags || [],
           updatedAt: now.toISOString() // Update the timestamp
         }),
       });
       
       if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error response from server:', errorData);
         throw new Error('Failed to update pin status');
       }
       
-      // No need to refresh pins immediately since we've already removed the pin
-      // from the view and the modal is closed. This prevents the sorting from resetting.
+      const updatedPin = await response.json();
+      console.log('Pin status updated successfully:', updatedPin);
+      
+      // No need to refresh pins immediately since we've already updated the pin
+      // in the view and we'll refresh the list after this.
     } catch (error) {
       console.error('Error updating pin status:', error);
       toast.error('Failed to update pin status');

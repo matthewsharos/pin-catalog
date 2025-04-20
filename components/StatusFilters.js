@@ -16,7 +16,7 @@ export default function StatusFilters({
 
   // Define status filter options in a single array to prevent duplicates
   const statusOptions = [
-    { id: 'all', label: 'All', icon: <FaInbox className="mr-1 text-xs" />, activeColor: 'bg-blue-600' },
+    { id: 'all', label: 'No Status', icon: <FaInbox className="mr-1 text-xs" />, activeColor: 'bg-blue-600' },
     { id: 'collected', label: 'Owned', icon: <FaCheck className="mr-1 text-xs" />, activeColor: 'bg-green-600' },
     { id: 'uncollected', label: 'Uncollected', icon: <FaTimes className="mr-1 text-xs" />, activeColor: 'bg-yellow-600' },
     { id: 'wishlist', label: 'Wishlist', icon: <FaHeart className="mr-1 text-xs" />, activeColor: 'bg-blue-400' },

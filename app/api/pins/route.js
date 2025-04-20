@@ -102,20 +102,29 @@ export async function GET(req) {
       if (uncollected) statusConditions.push({ isDeleted: true });
       if (wishlist) statusConditions.push({ isWishlist: true });
       if (underReview) statusConditions.push({ isUnderReview: true });
+      
       if (statusConditions.length > 0) {
-        where.OR = [...(where.OR || []), ...statusConditions];
+        // Use OR for status conditions
+        where = {
+          ...where,
+          OR: [
+            ...(where.OR || []),
+            ...statusConditions
+          ]
+        };
       }
       console.log('Status filter - specific statuses:', { statusConditions });
     } else {
-      // When 'all' is true, only show pins where all status flags are false (AND condition)
-      // This means that pins with any of the status flags set to true will be excluded
-      where.AND = [
-        { isCollected: false },
-        { isWishlist: false },
-        { isDeleted: false },
-        { isUnderReview: false }
-      ];
-      console.log('Status filter - ALL filter applied with AND condition');
+      // When 'all' is selected, we want pins that don't have any status set
+      // Show pins where all status flags are false
+      where = {
+        ...where,
+        isCollected: false,
+        isWishlist: false,
+        isDeleted: false,
+        isUnderReview: false
+      };
+      console.log('Status filter - ALL filter applied (pins without status)');
     }
 
     // Add tag filter

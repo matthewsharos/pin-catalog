@@ -63,8 +63,7 @@ export default function PinGrid({
     updatedPin.isDeleted = false;
     updatedPin.isUnderReview = false;
     
-    // If the status was already active, we're toggling it off (all flags remain false)
-    // Otherwise, set the appropriate flag based on the clicked status
+    // If the status was not already active, set the appropriate flag
     if (!isActive) {
       if (status === 'collected') {
         updatedPin.isCollected = true;
@@ -102,12 +101,10 @@ export default function PinGrid({
     
     // Apply the update after animation completes
     setTimeout(() => {
-      onStatusChange(updatedPin, currentIndex);
-      setAnimatingPins(prev => ({
-        ...prev,
-        [pin.id]: false
-      }));
-    }, 300);
+      if (typeof onStatusChange === 'function') {
+        onStatusChange(updatedPin, currentIndex);
+      }
+    }, 300); // Keep this at 300ms to match the animation duration
   };
 
   return (
@@ -116,8 +113,8 @@ export default function PinGrid({
         <div
           key={`${pin.id}-${pin.pinId}-${index}`}
           ref={index === pins.length - 1 ? lastPinElementRef : null}
-          className={`relative bg-gray-900 rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 md:hover:shadow-xl ${
-            animatingPins[pin.id] ? 'opacity-0 scale-95' : 'opacity-100'
+          className={`relative bg-gray-900 rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 ${
+            animatingPins[pin.id] ? 'opacity-0 scale-95 translate-y-4' : 'opacity-100 hover:scale-105 md:hover:shadow-xl'
           }`}
         >
           {/* Status Indicator */}
