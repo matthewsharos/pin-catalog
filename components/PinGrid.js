@@ -195,11 +195,11 @@ export default function PinGrid({
                 
                 {/* Display tags if available */}
                 {pin.tags && pin.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {pin.tags.slice(0, 2).map((tag, index) => (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {pin.tags.map((tag, index) => (
                       <span 
                         key={index} 
-                        className="bg-purple-900 text-white text-xs px-1.5 py-0.5 rounded-full cursor-pointer hover:bg-purple-700 transition-colors"
+                        className="bg-purple-900 text-white text-xs px-2 py-0.5 rounded-full cursor-pointer hover:bg-purple-700 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent opening the pin modal
                           if (typeof setSelectedTag === 'function') {
@@ -208,12 +208,9 @@ export default function PinGrid({
                         }}
                         title={`Filter by tag: ${tag}`}
                       >
-                        {tag.length > 10 ? `${tag.substring(0, 8)}...` : tag}
+                        {tag.length > 12 ? `${tag.substring(0, 10)}...` : tag}
                       </span>
                     ))}
-                    {pin.tags.length > 2 && (
-                      <span className="text-xs text-gray-500">+{pin.tags.length - 2}</span>
-                    )}
                   </div>
                 )}
 

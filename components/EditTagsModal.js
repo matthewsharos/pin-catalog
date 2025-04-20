@@ -72,7 +72,7 @@ export default function EditTagsModal({ pin, onClose, onSave }) {
     try {
       setLoading(true);
       const response = await axios.put(`/api/pins/${pin.id}`, {
-        id: pin.id,
+        ...pin, // Send all existing pin data
         tags: selectedTags
       });
       

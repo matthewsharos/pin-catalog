@@ -14,10 +14,12 @@ export async function GET(req) {
       }
     });
 
-    // Extract and flatten all tags
+    // Extract and flatten all tags, ensuring we handle null/undefined tags
     const allTags = pins.reduce((acc, pin) => {
       if (pin.tags && Array.isArray(pin.tags)) {
-        return [...acc, ...pin.tags];
+        // Filter out any null/undefined/empty tags
+        const validTags = pin.tags.filter(tag => tag && typeof tag === 'string' && tag.trim());
+        return [...acc, ...validTags];
       }
       return acc;
     }, []);
@@ -29,10 +31,13 @@ export async function GET(req) {
     }, {});
 
     // Convert to array of objects with tag name and count
-    const tagsWithCounts = Object.entries(tagCounts).map(([tag, count]) => ({
-      name: tag,
-      count
-    })).sort((a, b) => a.name.localeCompare(b.name));
+    const tagsWithCounts = Object.entries(tagCounts)
+      .map(([tag, count]) => ({
+        name: tag.trim(),
+        count
+      }))
+      .filter(tag => tag.name) // Remove any empty tags
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     return NextResponse.json(tagsWithCounts);
   } catch (error) {

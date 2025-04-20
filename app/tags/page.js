@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FaPlus, FaTimes, FaArrowLeft, FaTrash, FaCheck, FaEdit, FaTags, FaSearch, FaFilter } from 'react-icons/fa';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -32,30 +32,47 @@ export default function TagsPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  // Filter tags based on search query
-  const filteredTags = tags.filter(tag => 
-    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter tags based on search query, with null checks
+  const filteredTags = useMemo(() => {
+    if (!tags || !Array.isArray(tags)) return [];
+    return tags.filter(tag => 
+      tag?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [tags, searchQuery]);
 
-  // Filter pins based on search query
-  const filteredPins = pins.filter(pin => 
-    pin.pinName?.toLowerCase().includes(pinSearchQuery.toLowerCase()) ||
-    pin.pinId?.toLowerCase().includes(pinSearchQuery.toLowerCase()) ||
-    pin.series?.toLowerCase().includes(pinSearchQuery.toLowerCase()) ||
-    pin.origin?.toLowerCase().includes(pinSearchQuery.toLowerCase())
-  );
+  // Filter pins based on search query, with null checks
+  const filteredPins = useMemo(() => {
+    if (!pins || !Array.isArray(pins)) return [];
+    return pins.filter(pin => {
+      const searchLower = pinSearchQuery.toLowerCase();
+      return (
+        pin?.pinName?.toLowerCase().includes(searchLower) ||
+        pin?.pinId?.toLowerCase().includes(searchLower) ||
+        pin?.series?.toLowerCase().includes(searchLower) ||
+        pin?.origin?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [pins, pinSearchQuery]);
 
-  // Fetch all tags
-  const fetchTags = async () => {
+  // Fetch all tags with error retry
+  const fetchTags = async (retryCount = 0) => {
     try {
       setLoading(true);
       const response = await axios.get('/api/tags');
+      if (!response.data || !Array.isArray(response.data)) {
+        throw new Error('Invalid tags data received');
+      }
       setTags(response.data);
       setError(null);
     } catch (err) {
       console.error('Error fetching tags:', err);
-      setError('Failed to load tags');
-      toast.error('Failed to load tags');
+      if (retryCount < 3) {
+        // Retry with exponential backoff
+        setTimeout(() => fetchTags(retryCount + 1), Math.pow(2, retryCount) * 1000);
+      } else {
+        setError('Failed to load tags');
+        toast.error('Failed to load tags');
+      }
     } finally {
       setLoading(false);
     }

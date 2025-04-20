@@ -11,10 +11,15 @@ export async function POST(req) {
       .split(/[\n,]/) // Split by newlines or commas
       .map(id => id.trim())
       .filter(Boolean)
-      .map(id => id.replace(/\D/g, '')); // Remove any non-digit characters
+      .map(id => {
+        // Extract numbers from the ID, handling various formats
+        const matches = id.match(/(\d+)/);
+        return matches ? matches[1] : '';
+      })
+      .filter(Boolean); // Remove empty IDs
     
     if (pinIds.length === 0) {
-      return NextResponse.json({ error: 'Please enter at least one Pin&Pop ID' }, { status: 400 });
+      return NextResponse.json({ error: 'Please enter at least one valid Pin&Pop ID' }, { status: 400 });
     }
 
     const results = {
@@ -38,6 +43,11 @@ export async function POST(req) {
             pin: existingPin
           });
           continue;
+        }
+
+        // Add delay between requests to avoid rate limiting
+        if (results.added.length > 0 || results.failed.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         // Scrape pin details only if pin doesn't exist
