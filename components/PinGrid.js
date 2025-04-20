@@ -15,6 +15,7 @@ export default function PinGrid({
 }) {
   const [animatingPins, setAnimatingPins] = useState({});
   const [flashingButtons, setFlashingButtons] = useState({});
+  const [imageStates, setImageStates] = useState({});
 
   useEffect(() => {
     console.log('PinGrid received pins:', { 
@@ -42,6 +43,21 @@ export default function PinGrid({
       default:
         return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
     }
+  };
+
+  // Function to handle image loading states
+  const handleImageLoad = (pinId) => {
+    setImageStates(prev => ({
+      ...prev,
+      [pinId]: { loading: false, error: false }
+    }));
+  };
+
+  const handleImageError = (pinId) => {
+    setImageStates(prev => ({
+      ...prev,
+      [pinId]: { loading: false, error: true }
+    }));
   };
 
   const handleStatusChange = (e, pin, status) => {
@@ -107,6 +123,9 @@ export default function PinGrid({
     }, 300); // Keep this at 300ms to match the animation duration
   };
 
+  // Create a base64 placeholder SVG
+  const placeholderSvg = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiMxRjI5MzciLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzRCNTU2MyIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
+
   return (
     <div ref={contentRef} className={`grid ${getGridColumnsClass()} gap-4 px-2 md:px-4 lg:px-6`}>
       {pins && pins.length > 0 ? (
@@ -157,21 +176,34 @@ export default function PinGrid({
 
               {/* Pin Image */}
               <div 
-                className="aspect-square bg-gray-800 cursor-pointer p-1 md:p-2"
+                className="aspect-square bg-gray-800 cursor-pointer p-1 md:p-2 relative"
                 onClick={() => onPinClick(pin, index)}
               >
                 {pin.imageUrl ? (
-                  <img
-                    src={`/api/image-proxy?url=${encodeURIComponent(pin.imageUrl)}${pin.imageRefreshKey ? `&t=${pin.imageRefreshKey}` : ''}`}
-                    alt={pin.pinName}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      console.error(`Error loading image for pin ${pin.id}:`, e);
-                      // Use a data URI for the placeholder to avoid additional HTTP requests
-                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiMxRjI5MzciLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzRCNTU2MyIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
-                    }}
-                  />
+                  <>
+                    <img
+                      src={pin.imageUrl.startsWith('data:') ? pin.imageUrl : `/api/image-proxy?url=${encodeURIComponent(pin.imageUrl)}${pin.imageRefreshKey ? `&t=${pin.imageRefreshKey}` : ''}`}
+                      alt={pin.pinName || 'Pin image'}
+                      className={`w-full h-full object-cover transition-opacity duration-300 ${
+                        imageStates[pin.id]?.loading === false && !imageStates[pin.id]?.error ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      loading="lazy"
+                      onLoad={() => handleImageLoad(pin.id)}
+                      onError={() => handleImageError(pin.id)}
+                    />
+                    {(!imageStates[pin.id] || imageStates[pin.id]?.loading) && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="animate-pulse bg-gray-700 w-full h-full"></div>
+                      </div>
+                    )}
+                    {imageStates[pin.id]?.error && (
+                      <img
+                        src={placeholderSvg}
+                        alt="No image available"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-800">
                     <span className="text-gray-600">No Image</span>
