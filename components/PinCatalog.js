@@ -124,7 +124,8 @@ export default function PinCatalog() {
       const response = await fetch(`/api/pins?${params.toString()}`, { 
         signal,
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
         }
       });
       
@@ -146,8 +147,7 @@ export default function PinCatalog() {
         pinsLength: data.pins?.length,
         firstPin: data.pins?.[0],
         currentPage: data.currentPage,
-        totalPages: data.totalPages,
-        fullData: data // Log the full data structure
+        totalPages: data.totalPages
       });
       
       // Check if data.pins exists before updating state
@@ -183,6 +183,11 @@ export default function PinCatalog() {
       } else {
         console.error('Error fetching pins:', error);
         toast.error('Failed to load pins');
+        
+        // If there was an error and we're not appending, set pins to empty array
+        if (!append) {
+          setPins([]);
+        }
       }
     } finally {
       // Always set loading to false when the request completes, regardless of abort status
@@ -488,6 +493,11 @@ export default function PinCatalog() {
       abortControllerRef.current.abort();
     }
     
+    // Clear the current pins and show loading state immediately
+    setPins([]);
+    setLoading(true);
+    
+    // Update status filters
     setStatusFilters(prevFilters => {
       // Create a copy of the current filters
       const newFilters = { ...prevFilters };
@@ -539,16 +549,11 @@ export default function PinCatalog() {
     // Reset page to 1 when changing filters
     setPage(1);
     
-    // Always fetch fresh data from the server when changing status filters
-    // This ensures that all updated pins are correctly displayed
+    // Directly fetch fresh data from the server with a very short delay
+    // to ensure state updates have been processed
     setTimeout(() => {
-      // Clear the current pins to show loading state
-      setPins([]);
-      setLoading(true);
-      
-      // Fetch fresh data from the server
       fetchPins(1, false);
-    }, 50);
+    }, 10);
   }, [fetchPins]);
 
   const handleFilterChange = useCallback((type, value) => {
