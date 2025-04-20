@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 
-export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
 export const fetchCache = 'force-no-store';
 
 // GET - Fetch all pins matching filters for export (no pagination)
 export async function GET(req) {
   try {
-    const url = new URL(req.url);
-    const searchParams = url.searchParams;
+    const { searchParams } = new URL(req.url);
     
     // Get filter parameters
     const status = searchParams.get('status');

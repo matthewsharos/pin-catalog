@@ -2,12 +2,11 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
-export const fetchCache = 'force-no-store';
 
 export async function GET(request) {
   try {
-    const url = new URL(request.url);
-    const imageUrl = url.searchParams.get('url');
+    const { searchParams } = new URL(request.url);
+    const imageUrl = searchParams.get('url');
     
     if (!imageUrl) {
       return new NextResponse('Missing URL parameter', { status: 400 });
