@@ -11,6 +11,14 @@ import PinModal from './PinModal';
 import AddPinModal from './AddPinModal';
 import ExportModal from './ExportModal';
 
+const defaultStatusFilters = {
+  all: true,
+  collected: false,
+  uncollected: false,
+  wishlist: false,
+  underReview: false
+};
+
 export default function PinCatalog() {
   // State
   const [pins, setPins] = useState([]);
@@ -25,13 +33,7 @@ export default function PinCatalog() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [selectedTag, setSelectedTag] = useState(null);
-  const [statusFilters, setStatusFilters] = useState({
-    all: true,
-    collected: false,
-    uncollected: false,
-    wishlist: false,
-    underReview: false
-  });
+  const [statusFilters, setStatusFilters] = useState(defaultStatusFilters);
   const [initialized, setInitialized] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(3);
 
@@ -250,17 +252,26 @@ export default function PinCatalog() {
   }, [statusFilters, searchQuery, filterCategories, filterOrigins, filterSeries, filterIsLimitedEdition, filterIsMystery, yearFilters, initialized]);
 
   // Effects
-  // Initial load
+  // Initialize component
   useEffect(() => {
-    console.log('PinCatalog initial state:', {
+    console.log('Initializing PinCatalog with default filters');
+    setStatusFilters(defaultStatusFilters);
+    setInitialized(true);
+  }, []);
+
+  // Initial data fetch
+  useEffect(() => {
+    if (!initialized) return;
+    
+    console.log('PinCatalog initial data fetch:', {
       pinsLength: pins.length,
       total,
       hasMore,
       loading,
       statusFilters
     });
+    
     setPage(1);
-    setInitialized(true);
     fetchPins(1, false);
     
     // Cleanup function to abort any pending requests when component unmounts
@@ -269,7 +280,7 @@ export default function PinCatalog() {
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchPins]);
+  }, [initialized, fetchPins]);
 
   // Refresh pins when filters change
   useEffect(() => {
@@ -331,13 +342,7 @@ export default function PinCatalog() {
     }
     
     setSearchQuery('');
-    setStatusFilters({
-      all: true,
-      collected: false,
-      uncollected: false,
-      wishlist: false,
-      underReview: false
-    });
+    setStatusFilters(defaultStatusFilters);
     setFilterCategories([]);
     setFilterOrigins([]);
     setFilterSeries([]);
@@ -352,55 +357,35 @@ export default function PinCatalog() {
   }, [fetchPins]);
 
   const handleStatusClick = useCallback((status, event) => {
-    event.preventDefault();
-    const multiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
-    
-    // Cancel any in-flight requests
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    
-    setStatusFilters(prev => {
-      let newFilters = { ...prev };
-      
-      if (status === 'all') {
-        newFilters = {
-          all: !prev.all,
-          collected: false,
-          uncollected: false,
-          wishlist: false,
-          underReview: false
-        };
-      } else if (multiSelect) {
+    setStatusFilters(prevFilters => {
+      // Create a copy of the current filters
+      const newFilters = { ...prevFilters };
+
+      // Handle modifier keys for multi-select
+      if (event.metaKey || event.ctrlKey || event.shiftKey) {
         // Toggle the clicked status
-        newFilters[status] = !prev[status];
-        
-        // If we're enabling a specific status, disable 'all'
-        if (newFilters[status]) {
+        newFilters[status] = !newFilters[status];
+        // If any specific status is selected, turn off 'all'
+        if (status !== 'all' && newFilters[status]) {
           newFilters.all = false;
         }
-        
-        // If no status is selected, enable 'all'
-        const hasActiveFilter = Object.entries(newFilters)
-          .filter(([key]) => key !== 'all')
-          .some(([_, value]) => value);
-          
-        if (!hasActiveFilter) {
-          newFilters.all = true;
-        }
       } else {
-        // Single selection mode - set only the clicked status to true
+        // Reset all filters to false
         Object.keys(newFilters).forEach(key => {
-          newFilters[key] = key === status;
+          newFilters[key] = false;
         });
+        // Set only the clicked status to true
+        newFilters[status] = true;
       }
-      
-      // Force an immediate fetch with the updated filters
-      setPage(1);
-      
+
+      // If no specific status is selected, turn on 'all'
+      if (Object.entries(newFilters).every(([key, value]) => key === 'all' || !value)) {
+        return defaultStatusFilters;
+      }
+
       return newFilters;
     });
-  }, [fetchPins]);
+  }, []);
 
   const handleFilterChange = useCallback((type, value) => {
     // Cancel any in-flight requests
