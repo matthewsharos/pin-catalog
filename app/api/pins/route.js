@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
+export const fetchCache = 'force-no-store';
 
 // GET - Fetch all pins with pagination, sorting, and filtering
 // Also used to fetch top 10 pins for verification
 export async function GET(req) {
   try {
-    console.log('API: Starting GET request');
-    const { searchParams } = new URL(req.url);
+    const url = new URL(req.url);
+    const searchParams = url.searchParams;
     const page = parseInt(searchParams.get('page')) || 1;
     const search = searchParams.get('search') || '';
     const sort = searchParams.get('sort') || 'Recently Updated';
