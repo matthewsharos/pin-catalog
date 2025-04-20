@@ -16,6 +16,54 @@ export async function GET(req) {
     const search = searchParams.get('search') || '';
     const tag = searchParams.get('tag');
     const sort = searchParams.get('sort') || 'Recently Updated';
+    const filtersOnly = searchParams.get('filtersOnly') === 'true';
+
+    // If filtersOnly is true, fetch available filters
+    if (filtersOnly) {
+      try {
+        // Use Prisma's groupBy to get distinct values efficiently
+        const [categories, origins, series, years] = await Promise.all([
+          prisma.pin.findMany({
+            where: { categories: { isEmpty: false } },
+            select: { categories: true },
+            distinct: ['categories']
+          }),
+          prisma.pin.findMany({
+            where: { origins: { isEmpty: false } },
+            select: { origins: true },
+            distinct: ['origins']
+          }),
+          prisma.pin.findMany({
+            where: { series: { isEmpty: false } },
+            select: { series: true },
+            distinct: ['series']
+          }),
+          prisma.pin.findMany({
+            where: { year: { not: null } },
+            select: { year: true },
+            distinct: ['year'],
+            orderBy: { year: 'desc' }
+          })
+        ]);
+
+        // Process the results to get unique values
+        const filters = {
+          categories: [...new Set(categories.flatMap(p => p.categories))].filter(Boolean).sort(),
+          origins: [...new Set(origins.flatMap(p => p.origins))].filter(Boolean).sort(),
+          series: [...new Set(series.flatMap(p => p.series))].filter(Boolean).sort(),
+          years: [...new Set(years.map(p => p.year))].filter(Boolean).sort((a, b) => b - a)
+        };
+
+        return NextResponse.json(filters);
+      } catch (error) {
+        console.error('Error fetching filters:', error);
+        return NextResponse.json({ 
+          error: 'Failed to fetch filters',
+          details: error.message,
+          timestamp: new Date().toISOString()
+        }, { status: 500 });
+      }
+    }
     
     // Parse array parameters
     const years = searchParams.get('years')?.split(',').filter(Boolean).map(Number) || [];
